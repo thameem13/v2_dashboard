@@ -3,130 +3,331 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>V2 Flow Dashboard</title>
+<title>V2 Flow Dashboard Pro</title>
 <style>
-  :root{
-    box-sizing:border-box;
-    --bg:#0b0e11;--panel:#151a21;--panel2:#1b222b;--line:#2a333f;
-    --txt:#e6edf3;--dim:#8b98a8;--green:#3fb950;--red:#f85149;
-    --amber:#d29922;--blue:#58a6ff;--a:#3fb950;--b:#58a6ff;
+  :root {
+    box-sizing: border-box;
+    --bg: #0b0e11;
+    --panel: #151a21;
+    --panel2: #1b222b;
+    --line: #2a333f;
+    --txt: #e6edf3;
+    --dim: #8b98a8;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+    --blue: #58a6ff;
+    --a: #3fb950;
+    --b: #58a6ff;
+    --pulse-green: rgba(63, 185, 80, 0.4);
   }
-  *{box-sizing:inherit;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden}
-  body{background:var(--bg);color:var(--txt);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    font-size:13px;line-height:1.4;display:flex;flex-direction:column}
+  * { box-sizing: inherit; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    user-select: text;
+  }
 
-  /* TOP */
-  #top{flex-shrink:0;padding:10px 12px 0;background:var(--bg)}
-  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-  h1{font-size:15px;font-weight:600}
-  .sub{color:var(--dim);font-size:11px}
-  button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
-    border-radius:6px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer}
-  button:active{background:var(--line)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:8px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
-  .card .label{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
-  .card .val{font-size:17px;font-weight:600;margin-top:2px}
-  .status{grid-column:1/-1;border-radius:7px;padding:10px 14px;font-size:14px;font-weight:600;
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .status.live{background:rgba(63,185,80,.12);border:1px solid var(--green);color:var(--green)}
-  .status.quiet{background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)}
-  .err{background:rgba(248,81,73,.12);border:1px solid var(--red);color:var(--red);
-    padding:8px 10px;border-radius:7px;margin-bottom:8px}
+  /* TOP SECTION */
+  #top { flex-shrink: 0; padding: 10px 12px 0; background: var(--bg); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
+  .sub { color: var(--dim); font-size: 11px; margin-top: 1px; }
+  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  
+  button, select.ctrl-select {
+    background: var(--panel2);
+    color: var(--txt);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    outline: none;
+  }
+  button:hover, select.ctrl-select:hover { background: #222b37; border-color: var(--dim); }
+  button:active { background: var(--line); }
+  button.active-toggle { border-color: var(--green); color: var(--green); }
 
-  /* TABS */
-  .tabs{display:flex;gap:4px;margin-bottom:0;padding:0 12px;flex-shrink:0}
-  .tab{padding:6px 16px;border-radius:6px 6px 0 0;border:1px solid var(--line);
-    border-bottom:none;background:var(--panel2);color:var(--dim);cursor:pointer;font-size:12px;font-weight:600}
-  .tab.active{background:var(--panel);color:var(--txt);border-bottom:1px solid var(--panel)}
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-bottom: 8px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; position: relative; }
+  .card .label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  .card .val { font-size: 17px; font-weight: 700; margin-top: 2px; }
 
-  /* SCROLLABLE TABLE */
-  .tab-content{display:none;flex:1;overflow:hidden;flex-direction:column}
-  .tab-content.active{display:flex}
-  .table-wrap{flex:1;overflow-y:auto;overflow-x:auto;
-    border:1px solid var(--line);border-radius:0 8px 8px 8px;margin:0 12px 10px}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  thead tr{position:sticky;z-index:2;background:var(--panel2)}
-  thead tr:first-child{top:0}
-  thead tr.filter-row{top:26px}
-  th{padding:5px 7px;text-align:right;white-space:nowrap;
-    border-bottom:1px solid var(--line);color:var(--dim);font-weight:600;
-    font-size:10px;text-transform:uppercase;letter-spacing:.4px}
-  th:first-child,td:first-child{text-align:left;padding-left:10px}
-  thead .filter-row th{padding:3px 4px}
-  thead .filter-row input,thead .filter-row select{
-    width:100%;background:var(--bg);color:var(--txt);
-    border:1px solid var(--line);border-radius:4px;
-    padding:2px 4px;font-family:inherit;font-size:10px;outline:none}
-  thead .filter-row input:focus,thead .filter-row select:focus{border-color:var(--blue)}
-  td{padding:5px 7px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
-  td:first-child{text-align:left}
-  td.reason-col{text-align:left;white-space:normal;max-width:200px;font-size:11px;color:var(--dim)}
-  td.reason-col.fired{color:var(--green);font-weight:700}
-  tr.sig{background:rgba(63,185,80,.07)}
-  tr.flip td{color:var(--dim);font-style:italic}
-  tr.hidden{display:none}
-  .flowpos{color:var(--green)}.flowneg{color:var(--red)}
-  .call{color:var(--green)}.put{color:var(--red)}.muted{color:var(--dim)}
-  .gate-y{color:var(--green)}.gate-n{color:#5a636e}
-  .pill{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700}
-  .pA{background:var(--a);color:#04260d}.pB{background:var(--b);color:#04223f}
-  .pC{background:#30363d;color:var(--dim)}.pD{background:#30363d;color:var(--dim)}
-  .up{color:var(--green)}.dn{color:var(--red)}.flat{color:var(--dim)}
-  #foot{flex-shrink:0;color:var(--dim);font-size:10px;text-align:center;padding:0 12px 6px}
+  /* VALUE AREA GAUGE */
+  .va-track { position: relative; width: 100%; height: 6px; background: #222b37; border-radius: 3px; margin-top: 6px; }
+  .va-range { position: absolute; height: 100%; background: rgba(88, 166, 255, 0.4); border-radius: 3px; }
+  .va-poc { position: absolute; width: 3px; height: 10px; top: -2px; background: var(--amber); border-radius: 1px; }
+  .va-price { position: absolute; width: 6px; height: 10px; top: -2px; background: var(--green); border-radius: 2px; transform: translateX(-50%); box-shadow: 0 0 4px var(--green); }
+
+  /* STATUS BAR */
+  .status {
+    grid-column: 1 / -1;
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .status.live {
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+  .status.quiet { background: var(--panel2); border: 1px solid var(--line); color: var(--dim); }
+  
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 4px;
+  }
+  .dot.pulse {
+    animation: pulse 1.6s infinite ease-in-out;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 var(--pulse-green); }
+    70% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+  }
+
+  .err {
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 8px 10px;
+    border-radius: 7px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  /* TABS & META */
+  .tab-header-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 12px; flex-shrink: 0; }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    padding: 6px 14px;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    background: var(--panel2);
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.1s, color 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab:hover { color: var(--txt); }
+  .tab.active { background: var(--panel); color: var(--txt); border-bottom: 1px solid var(--panel); }
+  .row-count-badge { font-size: 11px; color: var(--dim); padding-bottom: 3px; font-weight: 500; }
+
+  /* SCROLLABLE TABLE & STICKY CONFIG */
+  .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .tab-content.active { display: flex; }
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 0 8px 8px 8px;
+    margin: 0 12px 8px;
+    background: var(--panel);
+  }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+  
+  /* Sticky headers */
+  thead tr { position: sticky; z-index: 10; background: var(--panel2); }
+  thead tr:first-child { top: 0; }
+  thead tr.filter-row { top: 27px; z-index: 11; }
+
+  th {
+    padding: 6px 7px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line);
+    color: var(--dim);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--txt); background: rgba(255,255,255,0.03); }
+  th.sorted-asc::after { content: " ▲"; color: var(--blue); font-size: 9px; }
+  th.sorted-desc::after { content: " ▼"; color: var(--blue); font-size: 9px; }
+
+  /* Sticky First Column (Time) */
+  th:first-child, td:first-child {
+    text-align: left;
+    padding-left: 10px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--panel2);
+  }
+  tbody td:first-child {
+    background: var(--panel);
+    border-right: 1px solid rgba(42, 51, 63, 0.4);
+  }
+  thead tr:first-child th:first-child { z-index: 15; }
+  thead tr.filter-row th:first-child { z-index: 15; }
+  tr.sig td:first-child { background: #15221d !important; }
+
+  /* Filter inputs */
+  thead .filter-row th { padding: 3px 4px; }
+  thead .filter-row input, thead .filter-row select {
+    width: 100%;
+    background: var(--bg);
+    color: var(--txt);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-family: inherit;
+    font-size: 10px;
+    outline: none;
+  }
+  thead .filter-row input:focus, thead .filter-row select:focus {
+    border-color: var(--blue);
+  }
+
+  td { padding: 5px 7px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  td.reason-col { text-align: left; white-space: normal; max-width: 220px; font-size: 11px; color: var(--dim); }
+  td.reason-col.fired { color: var(--green); font-weight: 700; }
+  tr.sig { background: rgba(63, 185, 80, 0.08); }
+  tr.flip td { color: var(--dim); font-style: italic; }
+  tr.hidden { display: none !important; }
+
+  /* Indicators & Visual Bars */
+  .flowpos { color: var(--green); font-weight: 600; }
+  .flowneg { color: var(--red); font-weight: 600; }
+  .call { color: var(--green); font-weight: 600; }
+  .put { color: var(--red); font-weight: 600; }
+  .muted { color: var(--dim); }
+  .gate-y { color: var(--green); font-weight: 700; }
+  .gate-n { color: #5a636e; }
+  .pill { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+  .pA { background: var(--a); color: #04260d; }
+  .pB { background: var(--b); color: #04223f; }
+  .pC { background: #30363d; color: var(--dim); }
+  .pD { background: #30363d; color: var(--dim); }
+  .up { color: var(--green); }
+  .dn { color: var(--red); }
+  .flat { color: var(--dim); }
+
+  /* RATIO STACKED BAR */
+  .ratio-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  .ratio-bar {
+    width: 36px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    flex-shrink: 0;
+  }
+  .ratio-bar-call { background: var(--green); height: 100%; }
+
+  /* RELATIVE VOLUME BADGE */
+  .rvol-high { background: rgba(210, 153, 34, 0.2); color: var(--amber); border-radius: 3px; padding: 1px 4px; font-size: 10px; }
+
+  #foot {
+    flex-shrink: 0;
+    color: var(--dim);
+    font-size: 10px;
+    text-align: center;
+    padding: 0 12px 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 </style>
 </head>
 <body>
 
 <div id="top">
   <div class="row">
-    <div><h1>V2 Flow Dashboard</h1><div class="sub" id="sub">Loading...</div></div>
-    <div style="display:flex;gap:6px">
+    <div>
+      <h1>V2 Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
+      <div class="sub" id="sub">Connecting to Supabase...</div>
+    </div>
+    <div class="controls">
+      <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
+      <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
+        <option value="10000" selected>Auto: 10s</option>
+        <option value="30000">Auto: 30s</option>
+        <option value="60000">Auto: 60s</option>
+        <option value="0">Manual</option>
+      </select>
+      <button onclick="exportCurrentCSV()">Export CSV</button>
       <button onclick="clearFilters()">Clear filters</button>
-      <button onclick="loadAll()">Refresh</button>
+      <button id="refresh-btn" onclick="loadAll()">Refresh</button>
     </div>
   </div>
   <div id="err"></div>
   <div class="grid" id="cards"></div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
-  <div class="tab" onclick="switchTab('vol')">Option Volume</div>
+<!-- TABS & META -->
+<div class="tab-header-row">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
+    <div class="tab" onclick="switchTab('vol')">Option Volume</div>
+  </div>
+  <div class="row-count-badge" id="row-counts">Loading records...</div>
 </div>
 
 <!-- TAB 1: FLOW -->
 <div id="tab-flow" class="tab-content active">
   <div class="table-wrap">
-  <table>
+  <table id="tbl-flow">
     <thead>
       <tr>
-        <th>Time</th><th>Price</th><th>Strike</th><th>Flow</th><th>Dir</th>
-        <th>POC</th><th>Room</th><th>Fl</th><th>Vol</th><th>Inst</th><th>Rm</th><th>Cln</th>
-        <th>Score</th><th>Grade</th><th style="text-align:left;min-width:180px">Status / Reason</th>
+        <th class="sortable" onclick="handleSort('flow', 0, false)">Time</th>
+        <th class="sortable" onclick="handleSort('flow', 1, true)">Price</th>
+        <th class="sortable" onclick="handleSort('flow', 2, true)">Strike</th>
+        <th class="sortable" onclick="handleSort('flow', 3, true)">Flow</th>
+        <th class="sortable" onclick="handleSort('flow', 4, false)">Dir</th>
+        <th class="sortable" onclick="handleSort('flow', 5, true)">POC</th>
+        <th class="sortable" onclick="handleSort('flow', 6, true)">Room</th>
+        <th>Fl</th><th>Vol</th><th>Inst</th><th>Rm</th><th>Cln</th>
+        <th class="sortable" onclick="handleSort('flow', 12, true)">Score</th>
+        <th class="sortable" onclick="handleSort('flow', 13, false)">Grade</th>
+        <th style="text-align:left;min-width:180px">Status / Reason</th>
       </tr>
       <tr class="filter-row">
-        <th><input type="text" id="f-time" placeholder="e.g. 10:05" oninput="applyFlowFilters()"></th>
-        <th><input type="text" id="f-price" placeholder="price" oninput="applyFlowFilters()"></th>
-        <th><input type="text" id="f-strike" placeholder="strike" oninput="applyFlowFilters()"></th>
-        <th><input type="text" id="f-flow" placeholder="flow" oninput="applyFlowFilters()"></th>
-        <th><select id="f-dir" onchange="applyFlowFilters()">
+        <th><input type="text" id="f-time" placeholder="e.g. 10:05" oninput="debounceFilter()"></th>
+        <th><input type="text" id="f-price" placeholder="> 500" oninput="debounceFilter()"></th>
+        <th><input type="text" id="f-strike" placeholder="strike" oninput="debounceFilter()"></th>
+        <th><input type="text" id="f-flow" placeholder="> 100 / < -50" oninput="debounceFilter()"></th>
+        <th><select id="f-dir" onchange="debounceFilter()">
           <option value="">All</option><option value="PUT">PUT</option>
           <option value="CALL">CALL</option><option value="-">None</option>
         </select></th>
-        <th><input type="text" id="f-poc" placeholder="poc" oninput="applyFlowFilters()"></th>
-        <th><input type="text" id="f-room" placeholder="room" oninput="applyFlowFilters()"></th>
+        <th><input type="text" id="f-poc" placeholder="poc" oninput="debounceFilter()"></th>
+        <th><input type="text" id="f-room" placeholder="room" oninput="debounceFilter()"></th>
         <th colspan="5"></th>
-        <th><input type="text" id="f-score" placeholder="score" oninput="applyFlowFilters()"></th>
-        <th><select id="f-grade" onchange="applyFlowFilters()">
+        <th><input type="text" id="f-score" placeholder=">= 4" oninput="debounceFilter()"></th>
+        <th><select id="f-grade" onchange="debounceFilter()">
           <option value="">All</option><option value="A">A</option>
           <option value="B">B</option><option value="C">C</option><option value="D">D</option>
         </select></th>
-        <th><select id="f-status" onchange="applyFlowFilters()">
+        <th><select id="f-status" onchange="debounceFilter()">
           <option value="">All</option><option value="ALERTED">Alerted</option>
           <option value="not POC">POC fail</option><option value="room too">Room fail</option>
           <option value="flow below">Flow fail</option><option value="outside">Time window</option>
@@ -142,33 +343,41 @@
 <!-- TAB 2: VOLUME -->
 <div id="tab-vol" class="tab-content">
   <div class="table-wrap">
-  <table>
+  <table id="tbl-vol">
     <thead>
       <tr>
-        <th>Time</th><th>Price</th><th>Strike</th>
-        <th>Calls OTM</th><th>Puts OTM</th>
-        <th>Calls ITM+ATM</th><th>Puts ITM+ATM</th>
-        <th>Total Calls</th><th>Total Puts</th>
-        <th>Total Vol</th><th>Avg Vol</th>
-        <th>Total Chg%</th><th>Call Chg%</th><th>Put Chg%</th>
-        <th>C/P Ratio</th>
+        <th class="sortable" onclick="handleSort('vol', 0, false)">Time</th>
+        <th class="sortable" onclick="handleSort('vol', 1, true)">Price</th>
+        <th class="sortable" onclick="handleSort('vol', 2, true)">Strike</th>
+        <th class="sortable" onclick="handleSort('vol', 3, true)">Calls OTM</th>
+        <th class="sortable" onclick="handleSort('vol', 4, true)">Puts OTM</th>
+        <th class="sortable" onclick="handleSort('vol', 5, true)">Calls ITM+ATM</th>
+        <th class="sortable" onclick="handleSort('vol', 6, true)">Puts ITM+ATM</th>
+        <th class="sortable" onclick="handleSort('vol', 7, true)">Total Calls</th>
+        <th class="sortable" onclick="handleSort('vol', 8, true)">Total Puts</th>
+        <th class="sortable" onclick="handleSort('vol', 9, true)">Total Vol</th>
+        <th class="sortable" onclick="handleSort('vol', 10, true)">Avg Vol</th>
+        <th class="sortable" onclick="handleSort('vol', 11, true)">Total Chg%</th>
+        <th class="sortable" onclick="handleSort('vol', 12, true)">Call Chg%</th>
+        <th class="sortable" onclick="handleSort('vol', 13, true)">Put Chg%</th>
+        <th class="sortable" onclick="handleSort('vol', 14, true)">C/P Ratio</th>
       </tr>
       <tr class="filter-row">
-        <th><input type="text" id="v-time" placeholder="time" oninput="applyVolFilters()"></th>
+        <th><input type="text" id="v-time" placeholder="time" oninput="debounceFilter()"></th>
         <th colspan="2"></th>
         <th colspan="6"></th>
-        <th><input type="text" id="v-vol" placeholder="total vol" oninput="applyVolFilters()"></th>
+        <th><input type="text" id="v-vol" placeholder="> 50000" oninput="debounceFilter()"></th>
         <th></th>
-        <th><select id="v-chg" onchange="applyVolFilters()">
+        <th><select id="v-chg" onchange="debounceFilter()">
           <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
         </select></th>
-        <th><select id="v-callchg" onchange="applyVolFilters()">
+        <th><select id="v-callchg" onchange="debounceFilter()">
           <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
         </select></th>
-        <th><select id="v-putchg" onchange="applyVolFilters()">
+        <th><select id="v-putchg" onchange="debounceFilter()">
           <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
         </select></th>
-        <th><select id="v-ratio" onchange="applyVolFilters()">
+        <th><select id="v-ratio" onchange="debounceFilter()">
           <option value="">All</option>
           <option value="call-heavy">Call heavy (&gt;1.0)</option>
           <option value="put-heavy">Put heavy (&lt;1.0)</option>
@@ -180,229 +389,530 @@
   </div>
 </div>
 
-<div id="foot"></div>
+<div id="foot">
+  <span id="foot-status">observe & log - polarity unconfirmed</span>
+  <span id="foot-time">Last update: -</span>
+</div>
 
 <script>
-var SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
-var SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
+const SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
+const SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
 
-function fmtTime(ts){
-  var m=ts.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-  if(!m) return ts;
-  var h=+m[4],mi=m[5],ap=h>=12?'PM':'AM'; h=h%12||12;
-  return h+':'+mi+' '+ap;
+let soundEnabled = true;
+let pollTimer = null;
+let isFetching = false;
+let activeTab = 'flow';
+let lastAlertTimestamp = null;
+
+const sortConfig = {
+  flow: { col: null, asc: true },
+  vol: { col: null, asc: true }
+};
+
+/* ── AUDIO SYSTEM (Synthetic Chime) ── */
+function playChime() {
+  if (!soundEnabled) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    
+    // Play dual-tone pleasant alert: E5 (659Hz) -> A5 (880Hz)
+    const playTone = (freq, start, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + duration);
+    };
+
+    playTone(659.25, 0.0, 0.25);
+    playTone(880.00, 0.15, 0.40);
+  } catch (e) {
+    console.warn('Audio play failed:', e);
+  }
 }
-function fmtNum(n){ if(n==null) return '-'; return (+n).toLocaleString(); }
-function gate(v){return v?'<span class="gate-y">Y</span>':'<span class="gate-n">-</span>';}
-function gradePill(g){return '<span class="pill p'+g+'">'+g+'</span>';}
 
-function switchTab(name){
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    t.classList.toggle('active', ['flow','vol'][i]===name);
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  btn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+  btn.classList.toggle('active-toggle', soundEnabled);
+  if (soundEnabled) playChime();
+}
+
+/* ── UTILITIES & ESCAPING ── */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtTime(ts) {
+  if (!ts) return '-';
+  const m = String(ts).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+  if (!m) return escapeHtml(ts);
+  let h = +m[4], mi = m[5], ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${mi} ${ap}`;
+}
+
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '-';
+  return (+n).toLocaleString();
+}
+
+function gate(v) {
+  return v ? '<span class="gate-y">Y</span>' : '<span class="gate-n">-</span>';
+}
+
+function gradePill(g) {
+  const safe = escapeHtml(g || '-');
+  return `<span class="pill p${safe}">${safe}</span>`;
+}
+
+/* ── SMART NUMERIC FILTER EVALUATOR ── */
+function matchNumericOrText(filterStr, cellText) {
+  if (!filterStr) return true;
+  const filter = filterStr.trim();
+  const cleanVal = parseFloat(String(cellText).replace(/,/g, '').replace(/%/g, ''));
+
+  if (!isNaN(cleanVal)) {
+    if (filter.startsWith('>=')) return cleanVal >= parseFloat(filter.slice(2));
+    if (filter.startsWith('<=')) return cleanVal <= parseFloat(filter.slice(2));
+    if (filter.startsWith('>'))  return cleanVal >  parseFloat(filter.slice(1));
+    if (filter.startsWith('<'))  return cleanVal <  parseFloat(filter.slice(1));
+    if (filter.startsWith('='))  return cleanVal === parseFloat(filter.slice(1));
+  }
+  return cellText.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+}
+
+/* ── TAB SWITCHING ── */
+function switchTab(name) {
+  activeTab = name;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['flow', 'vol'][i] === name);
   });
-  document.getElementById('tab-flow').classList.toggle('active', name==='flow');
-  document.getElementById('tab-vol').classList.toggle('active', name==='vol');
+  document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
+  document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
+  updateRowCounts();
 }
 
-/* ── FLOW FILTERS ── */
-function applyFlowFilters(){
-  var ft=(document.getElementById('f-time').value||'').toLowerCase();
-  var fp=(document.getElementById('f-price').value||'').toLowerCase();
-  var fst=(document.getElementById('f-strike').value||'').toLowerCase();
-  var ff=(document.getElementById('f-flow').value||'').toLowerCase();
-  var fd=(document.getElementById('f-dir').value||'').toLowerCase();
-  var fpc=(document.getElementById('f-poc').value||'').toLowerCase();
-  var fr=(document.getElementById('f-room').value||'').toLowerCase();
-  var fsc=(document.getElementById('f-score').value||'').toLowerCase();
-  var fg=(document.getElementById('f-grade').value||'').toLowerCase();
-  var frs=(document.getElementById('f-status').value||'').toLowerCase();
-  document.querySelectorAll('#tbody-flow tr').forEach(function(row){
-    var c=row.querySelectorAll('td'); if(!c.length) return;
-    var show=true;
-    if(ft  && c[0].textContent.toLowerCase().indexOf(ft)<0)  show=false;
-    if(fp  && c[1].textContent.toLowerCase().indexOf(fp)<0)  show=false;
-    if(fst && c[2].textContent.toLowerCase().indexOf(fst)<0) show=false;
-    if(ff  && c[3].textContent.toLowerCase().indexOf(ff)<0)  show=false;
-    if(fd){var d=c[4].textContent.toLowerCase().trim();
-      if(fd==='-'&&d!=='-') show=false;
-      else if(fd!=='-'&&d.indexOf(fd)<0) show=false;}
-    if(fpc && c[5].textContent.toLowerCase().indexOf(fpc)<0) show=false;
-    if(fr  && c[6].textContent.toLowerCase().indexOf(fr)<0)  show=false;
-    if(fsc && c[12].textContent.toLowerCase().indexOf(fsc)<0) show=false;
-    if(fg  && c[13].textContent.toLowerCase().indexOf(fg)<0) show=false;
-    if(frs && c[14].textContent.toLowerCase().indexOf(frs)<0) show=false;
-    row.classList.toggle('hidden',!show);
+/* ── DEBOUNCED FILTERING ── */
+let debounceTimeout = null;
+function debounceFilter() {
+  clearTimeout(debounceTimeout);
+  debounceTimeout = setTimeout(() => {
+    applyFlowFilters();
+    applyVolFilters();
+    updateRowCounts();
+  }, 120);
+}
+
+function applyFlowFilters() {
+  const ft  = (document.getElementById('f-time').value || '').trim();
+  const fp  = (document.getElementById('f-price').value || '').trim();
+  const fst = (document.getElementById('f-strike').value || '').trim();
+  const ff  = (document.getElementById('f-flow').value || '').trim();
+  const fd  = (document.getElementById('f-dir').value || '').toLowerCase();
+  const fpc = (document.getElementById('f-poc').value || '').trim();
+  const fr  = (document.getElementById('f-room').value || '').trim();
+  const fsc = (document.getElementById('f-score').value || '').trim();
+  const fg  = (document.getElementById('f-grade').value || '').toLowerCase();
+  const frs = (document.getElementById('f-status').value || '').toLowerCase();
+
+  document.querySelectorAll('#tbody-flow tr').forEach(row => {
+    const c = row.querySelectorAll('td');
+    if (!c.length) return;
+    let show = true;
+
+    if (ft && c[0].textContent.toLowerCase().indexOf(ft.toLowerCase()) < 0) show = false;
+    if (fp && !matchNumericOrText(fp, c[1].textContent)) show = false;
+    if (fst && !matchNumericOrText(fst, c[2].textContent)) show = false;
+    if (ff && !matchNumericOrText(ff, c[3].textContent)) show = false;
+
+    if (fd) {
+      const d = c[4].textContent.toLowerCase().trim();
+      if (fd === '-' && d !== '-') show = false;
+      else if (fd !== '-' && d.indexOf(fd) < 0) show = false;
+    }
+
+    if (fpc && !matchNumericOrText(fpc, c[5].textContent)) show = false;
+    if (fr && !matchNumericOrText(fr, c[6].textContent)) show = false;
+    if (fsc && !matchNumericOrText(fsc, c[12].textContent)) show = false;
+    if (fg && c[13].textContent.toLowerCase().indexOf(fg) < 0) show = false;
+    if (frs && c[14].textContent.toLowerCase().indexOf(frs) < 0) show = false;
+
+    row.classList.toggle('hidden', !show);
   });
 }
 
-/* ── VOLUME FILTERS ── */
-function applyVolFilters(){
-  var vt=(document.getElementById('v-time').value||'').toLowerCase();
-  var vv=(document.getElementById('v-vol').value||'').toLowerCase();
-  var vc=(document.getElementById('v-chg').value||'').toLowerCase();
-  var vcc=(document.getElementById('v-callchg').value||'').toLowerCase();
-  var vpc=(document.getElementById('v-putchg').value||'').toLowerCase();
-  var vr=(document.getElementById('v-ratio').value||'').toLowerCase();
-  document.querySelectorAll('#tbody-vol tr').forEach(function(row){
-    var c=row.querySelectorAll('td'); if(!c.length) return;
-    var show=true;
-    if(vt && c[0].textContent.toLowerCase().indexOf(vt)<0) show=false;
-    if(vv && c[8].textContent.replace(/,/g,'').toLowerCase().indexOf(vv)<0) show=false;
-    if(vc){var chgCls=row.dataset.chg||'';
-      if(vc==='up'&&chgCls!=='up') show=false;
-      if(vc==='dn'&&chgCls!=='dn') show=false;}
-    if(vcc){var callChgCls=row.dataset.callchg||'';
-      if(vcc==='up'&&callChgCls!=='up') show=false;
-      if(vcc==='dn'&&callChgCls!=='dn') show=false;}
-    if(vpc){var putChgCls=row.dataset.putchg||'';
-      if(vpc==='up'&&putChgCls!=='up') show=false;
-      if(vpc==='dn'&&putChgCls!=='dn') show=false;}
-    if(vr){var ratio=parseFloat(row.dataset.ratio||'0');
-      if(vr==='call-heavy'&&ratio<=1.0) show=false;
-      if(vr==='put-heavy'&&ratio>=1.0)  show=false;}
-    row.classList.toggle('hidden',!show);
+function applyVolFilters() {
+  const vt  = (document.getElementById('v-time').value || '').trim().toLowerCase();
+  const vv  = (document.getElementById('v-vol').value || '').trim();
+  const vc  = (document.getElementById('v-chg').value || '').toLowerCase();
+  const vcc = (document.getElementById('v-callchg').value || '').toLowerCase();
+  const vpc = (document.getElementById('v-putchg').value || '').toLowerCase();
+  const vr  = (document.getElementById('v-ratio').value || '').toLowerCase();
+
+  document.querySelectorAll('#tbody-vol tr').forEach(row => {
+    const c = row.querySelectorAll('td');
+    if (!c.length) return;
+    let show = true;
+
+    if (vt && c[0].textContent.toLowerCase().indexOf(vt) < 0) show = false;
+    if (vv && !matchNumericOrText(vv, c[9].textContent)) show = false;
+
+    if (vc) {
+      const chgCls = row.dataset.chg || '';
+      if (vc === 'up' && chgCls !== 'up') show = false;
+      if (vc === 'dn' && chgCls !== 'dn') show = false;
+    }
+    if (vcc) {
+      const callChgCls = row.dataset.callchg || '';
+      if (vcc === 'up' && callChgCls !== 'up') show = false;
+      if (vcc === 'dn' && callChgCls !== 'dn') show = false;
+    }
+    if (vpc) {
+      const putChgCls = row.dataset.putchg || '';
+      if (vpc === 'up' && putChgCls !== 'up') show = false;
+      if (vpc === 'dn' && putChgCls !== 'dn') show = false;
+    }
+    if (vr) {
+      const ratio = parseFloat(row.dataset.ratio || '0');
+      if (vr === 'call-heavy' && ratio <= 1.0) show = false;
+      if (vr === 'put-heavy' && ratio >= 1.0) show = false;
+    }
+
+    row.classList.toggle('hidden', !show);
   });
 }
 
-function clearFilters(){
-  ['f-time','f-price','f-strike','f-flow','f-poc','f-room','f-score',
-   'v-time','v-vol'].forEach(function(id){ document.getElementById(id).value=''; });
-  ['f-dir','f-grade','f-status','v-chg','v-callchg','v-putchg','v-ratio'].forEach(function(id){
-    document.getElementById(id).value='';
-  });
-  applyFlowFilters(); applyVolFilters();
+function updateRowCounts() {
+  const tbodyId = activeTab === 'flow' ? '#tbody-flow' : '#tbody-vol';
+  const total = document.querySelectorAll(`${tbodyId} tr`).length;
+  const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
+  document.getElementById('row-counts').textContent = `Showing ${visible} of ${total} records`;
 }
 
-/* ── LOAD ── */
-async function rpc(fn){
-  var r=await fetch(SUPA_URL+"/rest/v1/rpc/"+fn,{
-    method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({})
-  });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
+function clearFilters() {
+  document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
+  document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
+  applyFlowFilters();
+  applyVolFilters();
+  updateRowCounts();
 }
 
-async function loadAll(){
-  document.getElementById('err').innerHTML='';
-  try{
-    var flow=await rpc('v2_dashboard_today');
-    var vol=await rpc('v2_volume_today');
+/* ── COLUMN SORT ENGINE ── */
+function handleSort(tabName, colIndex, isNumeric) {
+  const cfg = sortConfig[tabName];
+  if (cfg.col === colIndex) {
+    cfg.asc = !cfg.asc;
+  } else {
+    cfg.col = colIndex;
+    cfg.asc = true;
+  }
+
+  const table = document.getElementById(tabName === 'flow' ? 'tbl-flow' : 'tbl-vol');
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+  });
+  const th = table.querySelectorAll('thead tr:first-child th')[colIndex];
+  if (th) th.classList.add(cfg.asc ? 'sorted-asc' : 'sorted-desc');
+
+  const tbody = document.getElementById(tabName === 'flow' ? 'tbody-flow' : 'tbody-vol');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort((a, b) => {
+    const cellA = a.children[colIndex]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
+    const cellB = b.children[colIndex]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
+
+    if (isNumeric) {
+      const numA = parseFloat(cellA) || 0;
+      const numB = parseFloat(cellB) || 0;
+      return cfg.asc ? (numA - numB) : (numB - numA);
+    }
+    return cfg.asc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+/* ── CSV EXPORT ── */
+function exportCurrentCSV() {
+  const table = document.getElementById(activeTab === 'flow' ? 'tbl-flow' : 'tbl-vol');
+  const rows = Array.from(table.querySelectorAll('tr:not(.hidden):not(.filter-row)'));
+  if (!rows.length) return alert('No data to export.');
+
+  const csv = rows.map(r => {
+    const cells = Array.from(r.querySelectorAll('th, td')).map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
+    return cells.join(',');
+  }).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${activeTab}_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── DATA FETCHING & RENDERING ── */
+async function rpc(fn) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function loadAll() {
+  if (isFetching) return;
+  isFetching = true;
+  const refBtn = document.getElementById('refresh-btn');
+  refBtn.textContent = 'Loading...';
+  document.getElementById('err').innerHTML = '';
+
+  try {
+    const [flow, vol] = await Promise.all([
+      rpc('v2_dashboard_today'),
+      rpc('v2_volume_today')
+    ]);
+
     renderCards(flow);
     renderFlow(flow);
     renderVol(vol);
-    document.getElementById('foot').textContent=
-      'Updated '+new Date().toLocaleTimeString()+' | auto-refresh 60s | observe & log - polarity unconfirmed';
-  }catch(e){
-    document.getElementById('err').innerHTML='<div class="err">Could not load data: '+e.message+'</div>';
-    document.getElementById('sub').textContent='Load failed';
+    updateRowCounts();
+
+    const now = new Date();
+    document.getElementById('foot-time').textContent = `Last synced: ${now.toLocaleTimeString()}`;
+  } catch (e) {
+    document.getElementById('err').innerHTML = `<div class="err">Could not load data: ${escapeHtml(e.message)}</div>`;
+    document.getElementById('sub').textContent = 'Load failed';
+  } finally {
+    isFetching = false;
+    refBtn.textContent = 'Refresh';
   }
 }
 
-function renderCards(rows){
-  if(!rows||!rows.length){
-    document.getElementById('cards').innerHTML='<div class="status quiet">No data yet.</div>';
-    document.getElementById('sub').textContent='No data'; return;
+function renderCards(rows) {
+  if (!rows || !rows.length) {
+    document.getElementById('cards').innerHTML = '<div class="status quiet">No session data recorded today.</div>';
+    document.getElementById('sub').textContent = 'No data';
+    document.getElementById('live-dot').style.display = 'none';
+    return;
   }
-  var last=rows[rows.length-1];
-  var sigs=rows.filter(function(x){return x.has_signal;});
-  var open=rows[0].price, close=last.price;
-  var trend=close>open?'UP':(close<open?'DOWN':'FLAT');
-  var trendColor=trend==='UP'?'call':(trend==='DOWN'?'put':'muted');
-  var day=rows[0].candle_time_ny.slice(0,10);
-  document.getElementById('sub').textContent=
-    'Session '+day+' | '+rows.length+' candles | last '+fmtTime(last.candle_time_ny);
 
-  var statusHtml;
-  if(last.has_signal){
-    var d=last.direction,cls=d==='PUT'?'put':'call';
-    statusHtml='<div class="status live"><span class="dot"></span> LIVE SIGNAL &nbsp; '+gradePill(last.grade)+
-      ' <span class="'+cls+'">'+d+'</span> | strike '+last.atm_strike+
-      ' | flow '+last.flow+' | room '+last.room+'</div>';
+  const last = rows[rows.length - 1];
+  const sigs = rows.filter(x => x.has_signal);
+  const open = rows[0].price;
+  const close = last.price;
+  const trend = close > open ? 'UP' : (close < open ? 'DOWN' : 'FLAT');
+  const trendColor = trend === 'UP' ? 'call' : (trend === 'DOWN' ? 'put' : 'muted');
+  const day = (last.candle_time_ny || '').slice(0, 10);
+  document.getElementById('sub').textContent =
+    `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
+
+  const liveDot = document.getElementById('live-dot');
+  let statusHtml = '';
+  if (last.has_signal) {
+    liveDot.style.display = 'inline-block';
+    const d = escapeHtml(last.direction);
+    const cls = d === 'PUT' ? 'put' : 'call';
+    statusHtml = `
+      <div class="status live">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="dot pulse"></span>
+          <span>LIVE SIGNAL</span>
+          ${gradePill(last.grade)}
+          <span class="${cls}">${d}</span>
+        </div>
+        <div style="font-size:12px;font-weight:500">
+          Strike <b>${escapeHtml(last.atm_strike)}</b> &nbsp;|&nbsp; 
+          Flow <b>${escapeHtml(last.flow)}</b> &nbsp;|&nbsp; 
+          Room <b>${escapeHtml(last.room)}</b>
+        </div>
+      </div>`;
+
+    if (last.candle_time_ny !== lastAlertTimestamp) {
+      lastAlertTimestamp = last.candle_time_ny;
+      playChime();
+    }
   } else {
-    statusHtml='<div class="status quiet">No active signal on the latest candle ('+
-      fmtTime(last.candle_time_ny)+').</div>';
+    liveDot.style.display = 'none';
+    statusHtml = `<div class="status quiet">No active signal on latest candle (${fmtTime(last.candle_time_ny)}).</div>`;
   }
-  document.getElementById('cards').innerHTML=statusHtml+
-    '<div class="card"><div class="label">SPY</div><div class="val">'+close+'</div></div>'+
-    '<div class="card"><div class="label">Day Trend</div><div class="val '+trendColor+'">'+trend+'</div></div>'+
-    '<div class="card"><div class="label">Signals Today</div><div class="val">'+sigs.length+'</div></div>'+
-    '<div class="card"><div class="label">POC / VAL / VAH</div><div class="val" style="font-size:13px">'+
-      (last.poc==null?'-':last.poc)+' / '+(last.val==null?'-':last.val)+' / '+(last.vah==null?'-':last.vah)+'</div></div>'+
-    '<div class="card"><div class="label">Latest Flow</div><div class="val '+(last.flow>=0?'flowpos':'flowneg')+'">'+last.flow+'</div></div>';
+
+  let vaGaugeHtml = '';
+  if (last.poc != null && last.val != null && last.vah != null && last.price != null) {
+    const minVal = Math.min(last.val, last.price) - 1;
+    const maxVal = Math.max(last.vah, last.price) + 1;
+    const span = (maxVal - minVal) || 1;
+    const valPct = Math.max(0, Math.min(100, ((last.val - minVal) / span) * 100));
+    const vahPct = Math.max(0, Math.min(100, ((last.vah - minVal) / span) * 100));
+    const pocPct = Math.max(0, Math.min(100, ((last.poc - minVal) / span) * 100));
+    const prcPct = Math.max(0, Math.min(100, ((last.price - minVal) / span) * 100));
+
+    vaGaugeHtml = `
+      <div class="va-track" title="VAL: ${last.val} | POC: ${last.poc} | VAH: ${last.vah}">
+        <div class="va-range" style="left:${valPct}%;width:${Math.max(2, vahPct - valPct)}%"></div>
+        <div class="va-poc" style="left:${pocPct}%"></div>
+        <div class="va-price" style="left:${prcPct}%"></div>
+      </div>`;
+  }
+
+  document.getElementById('cards').innerHTML = `
+    ${statusHtml}
+    <div class="card">
+      <div class="label">SPY Last</div>
+      <div class="val">${escapeHtml(close)}</div>
+    </div>
+    <div class="card">
+      <div class="label">Session Trend</div>
+      <div class="val ${trendColor}">${trend}</div>
+    </div>
+    <div class="card">
+      <div class="label">Signals Today</div>
+      <div class="val">${sigs.length}</div>
+    </div>
+    <div class="card">
+      <div class="label">POC / VAL / VAH</div>
+      <div class="val" style="font-size:13px">${last.poc ?? '-'} / ${last.val ?? '-'} / ${last.vah ?? '-'}</div>
+      ${vaGaugeHtml}
+    </div>
+    <div class="card">
+      <div class="label">Latest Flow</div>
+      <div class="val ${last.flow >= 0 ? 'flowpos' : 'flowneg'}">${escapeHtml(last.flow ?? '-')}</div>
+    </div>
+  `;
 }
 
-function renderFlow(rows){
-  if(!rows||!rows.length){document.getElementById('tbody-flow').innerHTML=''; return;}
-  var body=rows.slice().reverse().map(function(x){
-    var dirCls=x.direction==='PUT'?'put':(x.direction==='CALL'?'call':'muted');
-    var flowCls=x.flow>=0?'flowpos':'flowneg';
-    var statusCell='',statusClass='reason-col';
-    if(x.has_signal){statusCell=gradePill(x.grade)+' ALERTED';statusClass+=' fired';}
-    else if(x.direction==='none'){statusCell='<span class="muted">flow below threshold</span>';}
-    else{statusCell=(x.reason||'-').replace(/^no signal - /i,'');}
-    return '<tr class="'+(x.has_signal?'sig':'')+' '+(x.is_flip?'flip':'')+'">'+
-      '<td>'+fmtTime(x.candle_time_ny)+'</td>'+
-      '<td>'+x.price+'</td>'+
-      '<td>'+x.atm_strike+(x.is_flip?' (flip)':'')+'</td>'+
-      '<td class="'+flowCls+'">'+x.flow+'</td>'+
-      '<td class="'+dirCls+'">'+(x.direction==='none'?'-':x.direction)+'</td>'+
-      '<td class="muted">'+(x.poc==null?'-':x.poc)+'</td>'+
-      '<td>'+(x.room==null?'-':x.room)+'</td>'+
-      '<td>'+(x.s_flow||0)+'</td>'+
-      '<td>'+(x.s_vol||0)+'</td>'+
-      '<td>'+(x.s_inst||0)+'</td>'+
-      '<td>'+gate(x.room_ok)+'</td>'+
-      '<td>'+gate(x.s_clean>0)+'</td>'+
-      '<td>'+(x.direction==='none'?'':x.score)+'</td>'+
-      '<td>'+(x.direction==='none'?'':gradePill(x.grade))+'</td>'+
-      '<td class="'+statusClass+'">'+statusCell+'</td>'+
-    '</tr>';
+function renderFlow(rows) {
+  if (!rows || !rows.length) {
+    document.getElementById('tbody-flow').innerHTML = '';
+    return;
+  }
+  const body = rows.slice().reverse().map(x => {
+    const dirCls = x.direction === 'PUT' ? 'put' : (x.direction === 'CALL' ? 'call' : 'muted');
+    const flowCls = x.flow >= 0 ? 'flowpos' : 'flowneg';
+    let statusCell = '', statusClass = 'reason-col';
+
+    if (x.has_signal) {
+      statusCell = `${gradePill(x.grade)} ALERTED`;
+      statusClass += ' fired';
+    } else if (x.direction === 'none') {
+      statusCell = '<span class="muted">flow below threshold</span>';
+    } else {
+      statusCell = escapeHtml((x.reason || '-').replace(/^no signal - /i, ''));
+    }
+
+    return `
+      <tr class="${x.has_signal ? 'sig' : ''} ${x.is_flip ? 'flip' : ''}">
+        <td>${fmtTime(x.candle_time_ny)}</td>
+        <td>${escapeHtml(x.price)}</td>
+        <td>${escapeHtml(x.atm_strike)}${x.is_flip ? ' (flip)' : ''}</td>
+        <td class="${flowCls}">${escapeHtml(x.flow)}</td>
+        <td class="${dirCls}">${x.direction === 'none' ? '-' : escapeHtml(x.direction)}</td>
+        <td class="muted">${x.poc == null ? '-' : escapeHtml(x.poc)}</td>
+        <td>${x.room == null ? '-' : escapeHtml(x.room)}</td>
+        <td>${escapeHtml(x.s_flow || 0)}</td>
+        <td>${escapeHtml(x.s_vol || 0)}</td>
+        <td>${escapeHtml(x.s_inst || 0)}</td>
+        <td>${gate(x.room_ok)}</td>
+        <td>${gate(x.s_clean > 0)}</td>
+        <td>${x.direction === 'none' ? '' : escapeHtml(x.score)}</td>
+        <td>${x.direction === 'none' ? '' : gradePill(x.grade)}</td>
+        <td class="${statusClass}">${statusCell}</td>
+      </tr>`;
   }).join('');
-  document.getElementById('tbody-flow').innerHTML=body;
+
+  document.getElementById('tbody-flow').innerHTML = body;
   applyFlowFilters();
 }
 
-function renderVol(rows){
-  if(!rows||!rows.length){document.getElementById('tbody-vol').innerHTML=''; return;}
-  var body=rows.slice().reverse().map(function(x){
-    var pct    = x.total_pct_chg;
-    var cpct   = x.calls_pct_chg;
-    var ppct   = x.puts_pct_chg;
-    var chgCls  = pct==null?'flat':(pct>0?'up':'dn');
-    var callChgCls = cpct==null?'flat':(cpct>0?'up':'dn');
-    var putChgCls  = ppct==null?'flat':(ppct>0?'up':'dn');
-    var chgTxt  = pct==null?'-':((pct>0?'+':'')+pct+'%');
-    var cChgTxt = cpct==null?'-':((cpct>0?'+':'')+cpct+'%');
-    var pChgTxt = ppct==null?'-':((ppct>0?'+':'')+ppct+'%');
-    var ratio   = x.call_put_ratio;
-    var ratioCls= ratio==null?'flat':(ratio>1?'call':'put');
-    var ratioTxt= ratio==null?'-':ratio;
-    return '<tr data-chg="'+chgCls+'" data-callchg="'+callChgCls+'" data-putchg="'+putChgCls+'" data-ratio="'+(ratio||0)+'">'+
-      '<td>'+fmtTime(x.candle_time_ny)+'</td>'+
-      '<td>'+x.price+'</td>'+
-      '<td>'+x.atm_strike+'</td>'+
-      '<td class="call">'+fmtNum(x.calls_otm)+'</td>'+
-      '<td class="put">'+fmtNum(x.puts_otm)+'</td>'+
-      '<td class="call">'+fmtNum(x.calls_itm_atm)+'</td>'+
-      '<td class="put">'+fmtNum(x.puts_itm_atm)+'</td>'+
-      '<td class="call"><b>'+fmtNum(x.total_calls)+'</b></td>'+
-      '<td class="put"><b>'+fmtNum(x.total_puts)+'</b></td>'+
-      '<td><b>'+fmtNum(x.total_vol)+'</b></td>'+
-      '<td class="muted">'+fmtNum(x.avg_vol)+'</td>'+
-      '<td class="'+chgCls+'">'+chgTxt+'</td>'+
-      '<td class="'+callChgCls+'">'+cChgTxt+'</td>'+
-      '<td class="'+putChgCls+'">'+pChgTxt+'</td>'+
-      '<td class="'+ratioCls+'">'+ratioTxt+'</td>'+
-    '</tr>';
+function renderVol(rows) {
+  if (!rows || !rows.length) {
+    document.getElementById('tbody-vol').innerHTML = '';
+    return;
+  }
+  const body = rows.slice().reverse().map(x => {
+    const pct = x.total_pct_chg;
+    const cpct = x.calls_pct_chg;
+    const ppct = x.puts_pct_chg;
+    const chgCls = pct == null ? 'flat' : (pct > 0 ? 'up' : 'dn');
+    const callChgCls = cpct == null ? 'flat' : (cpct > 0 ? 'up' : 'dn');
+    const putChgCls = ppct == null ? 'flat' : (ppct > 0 ? 'up' : 'dn');
+    const chgTxt = pct == null ? '-' : `${pct > 0 ? '+' : ''}${pct}%`;
+    const cChgTxt = cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`;
+    const pChgTxt = ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`;
+    const ratio = x.call_put_ratio;
+    const ratioCls = ratio == null ? 'flat' : (ratio > 1 ? 'call' : 'put');
+
+    const totCalls = x.total_calls || 0;
+    const totPuts = x.total_puts || 0;
+    const sum = totCalls + totPuts;
+    const callShare = sum > 0 ? Math.round((totCalls / sum) * 100) : 50;
+
+    const ratioBarHtml = `
+      <div class="ratio-wrap">
+        <span class="${ratioCls}">${ratio ?? '-'}</span>
+        <div class="ratio-bar" title="Calls: ${callShare}% | Puts: ${100 - callShare}%">
+          <div class="ratio-bar-call" style="width:${callShare}%"></div>
+        </div>
+      </div>`;
+
+    const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
+      ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
+
+    return `
+      <tr data-chg="${chgCls}" data-callchg="${callChgCls}" data-putchg="${putChgCls}" data-ratio="${ratio || 0}">
+        <td>${fmtTime(x.candle_time_ny)}</td>
+        <td>${escapeHtml(x.price)}</td>
+        <td>${escapeHtml(x.atm_strike)}</td>
+        <td class="call">${fmtNum(x.calls_otm)}</td>
+        <td class="put">${fmtNum(x.puts_otm)}</td>
+        <td class="call">${fmtNum(x.calls_itm_atm)}</td>
+        <td class="put">${fmtNum(x.puts_itm_atm)}</td>
+        <td class="call"><b>${fmtNum(x.total_calls)}</b></td>
+        <td class="put"><b>${fmtNum(x.total_puts)}</b></td>
+        <td>${rvolBadge}<b>${fmtNum(x.total_vol)}</b></td>
+        <td class="muted">${fmtNum(x.avg_vol)}</td>
+        <td class="${chgCls}">${chgTxt}</td>
+        <td class="${callChgCls}">${cChgTxt}</td>
+        <td class="${putChgCls}">${pChgTxt}</td>
+        <td>${ratioBarHtml}</td>
+      </tr>`;
   }).join('');
-  document.getElementById('tbody-vol').innerHTML=body;
+
+  document.getElementById('tbody-vol').innerHTML = body;
   applyVolFilters();
 }
 
+function changeInterval() {
+  if (pollTimer) clearInterval(pollTimer);
+  const ms = parseInt(document.getElementById('poll-interval').value, 10);
+  if (ms > 0) {
+    pollTimer = setInterval(loadAll, ms);
+  }
+}
+
 loadAll();
-setInterval(loadAll, 60000);
+changeInterval();
 </script>
 </body>
 </html>
