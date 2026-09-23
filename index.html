@@ -1,740 +1,1543 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>V2 Flow Dashboard Pro</title>
-<style>
-  :root {
-    box-sizing: border-box;
-    --bg: #0b0e11;
-    --panel: #151a21;
-    --panel2: #1b222b;
-    --line: #2a333f;
-    --txt: #e6edf3;
-    --dim: #8b98a8;
-    --green: #3fb950;
-    --red: #f85149;
-    --amber: #d29922;
-    --blue: #58a6ff;
-    --a: #3fb950;
-    --b: #58a6ff;
-    --pulse-green: rgba(63, 185, 80, 0.4);
-  }
-  * { box-sizing: inherit; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; }
-  body {
-    background: var(--bg);
-    color: var(--txt);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    font-size: 13px;
-    line-height: 1.4;
-    display: flex;
-    flex-direction: column;
-    user-select: text;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>V2 Flow Dashboard Pro</title>
+  <style>
+    :root {
+      box-sizing: border-box;
+      --bg: #0b0e11;
+      --panel: #151a21;
+      --panel2: #1b222b;
+      --line: #2a333f;
+      --txt: #e6edf3;
+      --dim: #8b98a8;
+      --green: #3fb950;
+      --red: #f85149;
+      --amber: #d29922;
+      --blue: #58a6ff;
+      --a: #3fb950;
+      --b: #58a6ff;
+      --pulse-green: rgba(63, 185, 80, 0.4);
+    }
 
-  /* TOP SECTION */
-  #top { flex-shrink: 0; padding: 10px 12px 0; background: var(--bg); }
-  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-  h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
-  .sub { color: var(--dim); font-size: 11px; margin-top: 1px; }
-  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  
-  button, select.ctrl-select {
-    background: var(--panel2);
-    color: var(--txt);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-family: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    outline: none;
-  }
-  button:hover, select.ctrl-select:hover { background: #222b37; border-color: var(--dim); }
-  button:active { background: var(--line); }
-  button.active-toggle { border-color: var(--green); color: var(--green); }
+    /* ── LIGHT THEME (#8) ── */
+    [data-theme="light"] {
+      --bg: #f0f3f6;
+      --panel: #ffffff;
+      --panel2: #e9ecf0;
+      --line: #d0d7de;
+      --txt: #1f2328;
+      --dim: #656d76;
+      --pulse-green: rgba(63, 185, 80, 0.3);
+    }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-bottom: 8px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; position: relative; }
-  .card .label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-  .card .val { font-size: 17px; font-weight: 700; margin-top: 2px; }
+    [data-theme="light"] tbody td:first-child {
+      background: #ffffff;
+    }
 
-  /* VALUE AREA GAUGE */
-  .va-track { position: relative; width: 100%; height: 6px; background: #222b37; border-radius: 3px; margin-top: 6px; }
-  .va-range { position: absolute; height: 100%; background: rgba(88, 166, 255, 0.4); border-radius: 3px; }
-  .va-poc { position: absolute; width: 3px; height: 10px; top: -2px; background: var(--amber); border-radius: 1px; }
-  .va-price { position: absolute; width: 6px; height: 10px; top: -2px; background: var(--green); border-radius: 2px; transform: translateX(-50%); box-shadow: 0 0 4px var(--green); }
+    [data-theme="light"] thead th:first-child {
+      background: var(--panel2);
+    }
 
-  /* STATUS BAR */
-  .status {
-    grid-column: 1 / -1;
-    border-radius: 7px;
-    padding: 9px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .status.live {
-    background: rgba(63, 185, 80, 0.12);
-    border: 1px solid var(--green);
-    color: var(--green);
-  }
-  .status.quiet { background: var(--panel2); border: 1px solid var(--line); color: var(--dim); }
-  
-  .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--green);
-    margin-right: 4px;
-  }
-  .dot.pulse {
-    animation: pulse 1.6s infinite ease-in-out;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 var(--pulse-green); }
-    70% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
-  }
+    [data-theme="light"] tr.sig td:first-child {
+      background: #e9f7ec !important;
+    }
 
-  .err {
-    background: rgba(248, 81, 73, 0.12);
-    border: 1px solid var(--red);
-    color: var(--red);
-    padding: 8px 10px;
-    border-radius: 7px;
-    margin-bottom: 8px;
-    font-size: 12px;
-  }
+    [data-theme="light"] .kbd-panel {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
 
-  /* TABS & META */
-  .tab-header-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 12px; flex-shrink: 0; }
-  .tabs { display: flex; gap: 4px; }
-  .tab {
-    padding: 6px 14px;
-    border-radius: 6px 6px 0 0;
-    border: 1px solid var(--line);
-    border-bottom: none;
-    background: var(--panel2);
-    color: var(--dim);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: background 0.1s, color 0.1s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .tab:hover { color: var(--txt); }
-  .tab.active { background: var(--panel); color: var(--txt); border-bottom: 1px solid var(--panel); }
-  .row-count-badge { font-size: 11px; color: var(--dim); padding-bottom: 3px; font-weight: 500; }
+    * {
+      box-sizing: inherit;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* SCROLLABLE TABLE & STICKY CONFIG */
-  .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-  .tab-content.active { display: flex; }
-  .table-wrap {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
-    border: 1px solid var(--line);
-    border-radius: 0 8px 8px 8px;
-    margin: 0 12px 8px;
-    background: var(--panel);
-  }
-  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
-  
-  /* Sticky headers */
-  thead tr { position: sticky; z-index: 10; background: var(--panel2); }
-  thead tr:first-child { top: 0; }
-  thead tr.filter-row { top: 27px; z-index: 11; }
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
 
-  th {
-    padding: 6px 7px;
-    text-align: right;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--line);
-    color: var(--dim);
-    font-weight: 600;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-  }
-  th.sortable { cursor: pointer; user-select: none; }
-  th.sortable:hover { color: var(--txt); background: rgba(255,255,255,0.03); }
-  th.sorted-asc::after { content: " ▲"; color: var(--blue); font-size: 9px; }
-  th.sorted-desc::after { content: " ▼"; color: var(--blue); font-size: 9px; }
+    body {
+      background: var(--bg);
+      color: var(--txt);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      user-select: text;
+    }
 
-  /* Sticky First Column (Time) */
-  th:first-child, td:first-child {
-    text-align: left;
-    padding-left: 10px;
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background: var(--panel2);
-  }
-  tbody td:first-child {
-    background: var(--panel);
-    border-right: 1px solid rgba(42, 51, 63, 0.4);
-  }
-  thead tr:first-child th:first-child { z-index: 15; }
-  thead tr.filter-row th:first-child { z-index: 15; }
-  tr.sig td:first-child { background: #15221d !important; }
+    /* ── SANS-SERIF FOR NON-DATA UI (#14) ── */
+    h1,
+    .sub,
+    .card .label,
+    .status,
+    .tab,
+    .row-count-badge,
+    button,
+    select.ctrl-select,
+    #foot,
+    .err,
+    .va-legend,
+    .kbd-panel {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
 
-  /* Filter inputs */
-  thead .filter-row th { padding: 3px 4px; }
-  thead .filter-row input, thead .filter-row select {
-    width: 100%;
-    background: var(--bg);
-    color: var(--txt);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 2px 4px;
-    font-family: inherit;
-    font-size: 10px;
-    outline: none;
-  }
-  thead .filter-row input:focus, thead .filter-row select:focus {
-    border-color: var(--blue);
-  }
+    /* TOP SECTION */
+    #top {
+      flex-shrink: 0;
+      padding: 10px 12px 0;
+      background: var(--bg);
+    }
 
-  td { padding: 5px 7px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
-  td.reason-col { text-align: left; white-space: normal; max-width: 220px; font-size: 11px; color: var(--dim); }
-  td.reason-col.fired { color: var(--green); font-weight: 700; }
-  tr.sig { background: rgba(63, 185, 80, 0.08); }
-  tr.flip td { color: var(--dim); font-style: italic; }
-  tr.hidden { display: none !important; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
 
-  /* Indicators & Visual Bars */
-  .flowpos { color: var(--green); font-weight: 600; }
-  .flowneg { color: var(--red); font-weight: 600; }
-  .call { color: var(--green); font-weight: 600; }
-  .put { color: var(--red); font-weight: 600; }
-  .muted { color: var(--dim); }
-  .gate-y { color: var(--green); font-weight: 700; }
-  .gate-n { color: #5a636e; }
-  .pill { display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }
-  .pA { background: var(--a); color: #04260d; }
-  .pB { background: var(--b); color: #04223f; }
-  .pC { background: #30363d; color: var(--dim); }
-  .pD { background: #30363d; color: var(--dim); }
-  .up { color: var(--green); }
-  .dn { color: var(--red); }
-  .flat { color: var(--dim); }
+    h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-  /* RATIO STACKED BAR */
-  .ratio-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
-  .ratio-bar {
-    width: 36px;
-    height: 6px;
-    background: var(--red);
-    border-radius: 3px;
-    overflow: hidden;
-    display: flex;
-    flex-shrink: 0;
-  }
-  .ratio-bar-call { background: var(--green); height: 100%; }
+    .sub {
+      color: var(--dim);
+      font-size: 11px;
+      margin-top: 1px;
+    }
 
-  /* RELATIVE VOLUME BADGE */
-  .rvol-high { background: rgba(210, 153, 34, 0.2); color: var(--amber); border-radius: 3px; padding: 1px 4px; font-size: 10px; }
+    .controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-  #foot {
-    flex-shrink: 0;
-    color: var(--dim);
-    font-size: 10px;
-    text-align: center;
-    padding: 0 12px 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-</style>
+    button,
+    select.ctrl-select {
+      background: var(--panel2);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      outline: none;
+    }
+
+    button:hover,
+    select.ctrl-select:hover {
+      background: #222b37;
+      border-color: var(--dim);
+    }
+
+    [data-theme="light"] button:hover,
+    [data-theme="light"] select.ctrl-select:hover {
+      background: #d8dce2;
+    }
+
+    button:active {
+      background: var(--line);
+    }
+
+    button.active-toggle {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      position: relative;
+    }
+
+    .card .label {
+      color: var(--dim);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 600;
+    }
+
+    .card .val {
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* VALUE AREA GAUGE */
+    .va-track {
+      position: relative;
+      width: 100%;
+      height: 6px;
+      background: #222b37;
+      border-radius: 3px;
+      margin-top: 6px;
+    }
+
+    [data-theme="light"] .va-track {
+      background: #d0d7de;
+    }
+
+    .va-range {
+      position: absolute;
+      height: 100%;
+      background: rgba(88, 166, 255, 0.4);
+      border-radius: 3px;
+    }
+
+    .va-poc {
+      position: absolute;
+      width: 3px;
+      height: 10px;
+      top: -2px;
+      background: var(--amber);
+      border-radius: 1px;
+    }
+
+    .va-price {
+      position: absolute;
+      width: 6px;
+      height: 10px;
+      top: -2px;
+      background: var(--green);
+      border-radius: 2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 4px var(--green);
+    }
+
+    /* ── VA GAUGE LEGEND (#11) ── */
+    .va-legend {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+      font-size: 9px;
+      color: var(--dim);
+    }
+
+    .va-legend span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .va-legend .leg-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .va-legend .leg-price .leg-dot {
+      background: var(--green);
+      box-shadow: 0 0 3px var(--green);
+    }
+
+    .va-legend .leg-poc .leg-dot {
+      background: var(--amber);
+    }
+
+    .va-legend .leg-va .leg-dot {
+      background: rgba(88, 166, 255, 0.6);
+      width: 12px;
+      border-radius: 2px;
+    }
+
+    /* ── SPARKLINE (#9) ── */
+    .sparkline-wrap {
+      margin-top: 5px;
+      height: 22px;
+    }
+
+    .sparkline-wrap canvas {
+      width: 100%;
+      height: 22px;
+      display: block;
+      border-radius: 2px;
+    }
+
+    /* STATUS BAR */
+    .status {
+      grid-column: 1 / -1;
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status.live {
+      background: rgba(63, 185, 80, 0.12);
+      border: 1px solid var(--green);
+      color: var(--green);
+    }
+
+    .status.quiet {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--dim);
+    }
+
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 4px;
+    }
+
+    .dot.pulse {
+      animation: pulse 1.6s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 var(--pulse-green);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(63, 185, 80, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(63, 185, 80, 0);
+      }
+    }
+
+    .err {
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 8px 10px;
+      border-radius: 7px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    /* TABS & META */
+    .tab-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid var(--line);
+      border-bottom: none;
+      background: var(--panel2);
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.1s, color 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab:hover {
+      color: var(--txt);
+    }
+
+    .tab.active {
+      background: var(--panel);
+      color: var(--txt);
+      border-bottom: 1px solid var(--panel);
+    }
+
+    .row-count-badge {
+      font-size: 11px;
+      color: var(--dim);
+      padding-bottom: 3px;
+      font-weight: 500;
+    }
+
+    /* SCROLLABLE TABLE & STICKY CONFIG */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 0 8px 8px 8px;
+      margin: 0 12px 8px;
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 12px;
+    }
+
+    /* Sticky headers */
+    thead tr {
+      position: sticky;
+      z-index: 10;
+      background: var(--panel2);
+    }
+
+    thead tr:first-child {
+      top: 0;
+    }
+
+    thead tr.filter-row {
+      top: 27px;
+      z-index: 11;
+    }
+
+    th {
+      padding: 6px 7px;
+      text-align: right;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+      color: var(--dim);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      color: var(--txt);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    th.sorted-asc::after {
+      content: " ▲";
+      color: var(--blue);
+      font-size: 9px;
+    }
+
+    th.sorted-desc::after {
+      content: " ▼";
+      color: var(--blue);
+      font-size: 9px;
+    }
+
+    /* Sticky First Column (Time) */
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      padding-left: 10px;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--panel2);
+    }
+
+    tbody td:first-child {
+      background: var(--panel);
+      border-right: 1px solid rgba(42, 51, 63, 0.4);
+    }
+
+    thead tr:first-child th:first-child {
+      z-index: 15;
+    }
+
+    thead tr.filter-row th:first-child {
+      z-index: 15;
+    }
+
+    tr.sig td:first-child {
+      background: #15221d !important;
+    }
+
+    /* Filter inputs */
+    thead .filter-row th {
+      padding: 3px 4px;
+    }
+
+    thead .filter-row input,
+    thead .filter-row select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-family: inherit;
+      font-size: 10px;
+      outline: none;
+    }
+
+    thead .filter-row input:focus,
+    thead .filter-row select:focus {
+      border-color: var(--blue);
+    }
+
+    td {
+      padding: 5px 7px;
+      text-align: right;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.1s;
+    }
+
+    td.reason-col {
+      text-align: left;
+      white-space: normal;
+      max-width: 220px;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    td.reason-col.fired {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    tr.sig {
+      background: rgba(63, 185, 80, 0.08);
+    }
+
+    /* ── SIGNAL ROW LEFT-BORDER ACCENT (#13) ── */
+    tr.sig td:first-child {
+      border-left: 3px solid var(--green);
+      padding-left: 7px;
+    }
+
+    tr.flip td {
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    tr.hidden {
+      display: none !important;
+    }
+
+    /* ── ROW HOVER HIGHLIGHT (#10) ── */
+    tbody tr:hover td {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    tbody tr.sig:hover td {
+      background: rgba(63, 185, 80, 0.14);
+    }
+
+    [data-theme="light"] tbody tr:hover td {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    [data-theme="light"] tbody tr.sig:hover td {
+      background: rgba(63, 185, 80, 0.1);
+    }
+
+    /* Indicators & Visual Bars */
+    .flowpos {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .flowneg {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .call {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .put {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--dim);
+    }
+
+    .gate-y {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .gate-n {
+      color: #5a636e;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .pA {
+      background: var(--a);
+      color: #04260d;
+    }
+
+    .pB {
+      background: var(--b);
+      color: #04223f;
+    }
+
+    .pC {
+      background: #30363d;
+      color: var(--dim);
+    }
+
+    .pD {
+      background: #30363d;
+      color: var(--dim);
+    }
+
+    .up {
+      color: var(--green);
+    }
+
+    .dn {
+      color: var(--red);
+    }
+
+    .flat {
+      color: var(--dim);
+    }
+
+    /* RATIO STACKED BAR */
+    .ratio-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .ratio-bar {
+      width: 36px;
+      height: 6px;
+      background: var(--red);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .ratio-bar-call {
+      background: var(--green);
+      height: 100%;
+    }
+
+    /* RELATIVE VOLUME BADGE */
+    .rvol-high {
+      background: rgba(210, 153, 34, 0.2);
+      color: var(--amber);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-size: 10px;
+    }
+
+    /* ── LOADING SKELETON (#3) ── */
+    .skeleton-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      height: 62px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skeleton-card::after,
+    .skeleton-row::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+      animation: shimmer 1.8s infinite;
+    }
+
+    .skeleton-card .skel-label {
+      width: 50%;
+      height: 8px;
+      background: var(--line);
+      border-radius: 3px;
+      opacity: 0.5;
+    }
+
+    .skeleton-card .skel-val {
+      width: 40%;
+      height: 14px;
+      background: var(--line);
+      border-radius: 3px;
+      margin-top: 8px;
+      opacity: 0.4;
+    }
+
+    .skeleton-row {
+      height: 30px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    /* ── STALE SYNC INDICATOR (#4) ── */
+    #foot-time.stale {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    /* ── KEYBOARD SHORTCUTS PANEL (#7) ── */
+    .kbd-panel {
+      display: none;
+      position: fixed;
+      bottom: 30px;
+      right: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: var(--dim);
+      z-index: 200;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      line-height: 1.8;
+    }
+
+    .kbd-panel.visible {
+      display: block;
+    }
+
+    .kbd-panel h4 {
+      color: var(--txt);
+      font-size: 11px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kbd-panel kbd {
+      display: inline-block;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 0px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    #foot {
+      flex-shrink: 0;
+      color: var(--dim);
+      font-size: 10px;
+      text-align: center;
+      padding: 0 12px 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
 </head>
+
 <body>
 
-<div id="top">
-  <div class="row">
-    <div>
-      <h1>V2 Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
-      <div class="sub" id="sub">Connecting to Supabase...</div>
+  <div id="top">
+    <div class="row">
+      <div>
+        <h1>V2 Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
+        <div class="sub" id="sub">Connecting to Supabase...</div>
+      </div>
+      <div class="controls">
+        <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
+        <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
+          <option value="10000" selected>Auto: 10s</option>
+          <option value="30000">Auto: 30s</option>
+          <option value="60000">Auto: 60s</option>
+          <option value="0">Manual</option>
+        </select>
+        <button onclick="exportCurrentCSV()">Export CSV</button>
+        <button onclick="clearFilters()">Clear filters</button>
+        <button id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+        <button id="refresh-btn" onclick="loadAll()">Refresh</button>
+      </div>
     </div>
-    <div class="controls">
-      <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
-      <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
-        <option value="10000" selected>Auto: 10s</option>
-        <option value="30000">Auto: 30s</option>
-        <option value="60000">Auto: 60s</option>
-        <option value="0">Manual</option>
-      </select>
-      <button onclick="exportCurrentCSV()">Export CSV</button>
-      <button onclick="clearFilters()">Clear filters</button>
-      <button id="refresh-btn" onclick="loadAll()">Refresh</button>
+    <div id="err"></div>
+    <div class="grid" id="cards">
+      <!-- Skeleton loading state shown on first load -->
+      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
     </div>
   </div>
-  <div id="err"></div>
-  <div class="grid" id="cards"></div>
-</div>
 
-<!-- TABS & META -->
-<div class="tab-header-row">
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
-    <div class="tab" onclick="switchTab('vol')">Option Volume</div>
+  <!-- TABS & META -->
+  <div class="tab-header-row">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
+      <div class="tab" onclick="switchTab('vol')">Option Volume</div>
+    </div>
+    <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
-  <div class="row-count-badge" id="row-counts">Loading records...</div>
-</div>
 
-<!-- TAB 1: FLOW -->
-<div id="tab-flow" class="tab-content active">
-  <div class="table-wrap">
-  <table id="tbl-flow">
-    <thead>
-      <tr>
-        <th class="sortable" onclick="handleSort('flow', 0, false)">Time</th>
-        <th class="sortable" onclick="handleSort('flow', 1, true)">Price</th>
-        <th class="sortable" onclick="handleSort('flow', 2, true)">Strike</th>
-        <th class="sortable" onclick="handleSort('flow', 3, true)">Flow</th>
-        <th class="sortable" onclick="handleSort('flow', 4, false)">Dir</th>
-        <th class="sortable" onclick="handleSort('flow', 5, true)">POC</th>
-        <th class="sortable" onclick="handleSort('flow', 6, true)">Room</th>
-        <th>Fl</th><th>Vol</th><th>Inst</th><th>Rm</th><th>Cln</th>
-        <th class="sortable" onclick="handleSort('flow', 12, true)">Score</th>
-        <th class="sortable" onclick="handleSort('flow', 13, false)">Grade</th>
-        <th style="text-align:left;min-width:180px">Status / Reason</th>
-      </tr>
-      <tr class="filter-row">
-        <th><input type="text" id="f-time" placeholder="e.g. 10:05" oninput="debounceFilter()"></th>
-        <th><input type="text" id="f-price" placeholder="> 500" oninput="debounceFilter()"></th>
-        <th><input type="text" id="f-strike" placeholder="strike" oninput="debounceFilter()"></th>
-        <th><input type="text" id="f-flow" placeholder="> 100 / < -50" oninput="debounceFilter()"></th>
-        <th><select id="f-dir" onchange="debounceFilter()">
-          <option value="">All</option><option value="PUT">PUT</option>
-          <option value="CALL">CALL</option><option value="-">None</option>
-        </select></th>
-        <th><input type="text" id="f-poc" placeholder="poc" oninput="debounceFilter()"></th>
-        <th><input type="text" id="f-room" placeholder="room" oninput="debounceFilter()"></th>
-        <th colspan="5"></th>
-        <th><input type="text" id="f-score" placeholder=">= 4" oninput="debounceFilter()"></th>
-        <th><select id="f-grade" onchange="debounceFilter()">
-          <option value="">All</option><option value="A">A</option>
-          <option value="B">B</option><option value="C">C</option><option value="D">D</option>
-        </select></th>
-        <th><select id="f-status" onchange="debounceFilter()">
-          <option value="">All</option><option value="ALERTED">Alerted</option>
-          <option value="not POC">POC fail</option><option value="room too">Room fail</option>
-          <option value="flow below">Flow fail</option><option value="outside">Time window</option>
-          <option value="grade C">Grade C/D</option><option value="flip">Flip candle</option>
-        </select></th>
-      </tr>
-    </thead>
-    <tbody id="tbody-flow"></tbody>
-  </table>
+  <!-- TAB 1: FLOW -->
+  <div id="tab-flow" class="tab-content active">
+    <div class="table-wrap" id="flow-wrap">
+      <table id="tbl-flow">
+        <thead>
+          <tr>
+            <th class="sortable" onclick="handleSort('flow', 0, false)">Time</th>
+            <th class="sortable" onclick="handleSort('flow', 1, true)">Price</th>
+            <th class="sortable" onclick="handleSort('flow', 2, true)">Strike</th>
+            <th class="sortable" onclick="handleSort('flow', 3, true)">Flow</th>
+            <th class="sortable" onclick="handleSort('flow', 4, false)">Dir</th>
+            <th class="sortable" onclick="handleSort('flow', 5, true)">POC</th>
+            <th class="sortable" onclick="handleSort('flow', 6, true)">Room</th>
+            <th>Fl</th>
+            <th>Vol</th>
+            <th>Inst</th>
+            <th>Rm</th>
+            <th>Cln</th>
+            <th class="sortable" onclick="handleSort('flow', 12, true)">Score</th>
+            <th class="sortable" onclick="handleSort('flow', 13, false)">Grade</th>
+            <th style="text-align:left;min-width:180px">Status / Reason</th>
+          </tr>
+          <tr class="filter-row">
+            <th><input type="text" id="f-time" placeholder="e.g. 10:05" oninput="debounceFilter()"></th>
+            <th><input type="text" id="f-price" placeholder="> 500" oninput="debounceFilter()"></th>
+            <th><input type="text" id="f-strike" placeholder="strike" oninput="debounceFilter()"></th>
+            <th><input type="text" id="f-flow" placeholder="> 100 / < -50" oninput="debounceFilter()"></th>
+            <th><select id="f-dir" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="PUT">PUT</option>
+                <option value="CALL">CALL</option>
+                <option value="-">None</option>
+              </select></th>
+            <th><input type="text" id="f-poc" placeholder="poc" oninput="debounceFilter()"></th>
+            <th><input type="text" id="f-room" placeholder="room" oninput="debounceFilter()"></th>
+            <th colspan="5"></th>
+            <th><input type="text" id="f-score" placeholder=">= 4" oninput="debounceFilter()"></th>
+            <th><select id="f-grade" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select></th>
+            <th><select id="f-status" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="ALERTED">Alerted</option>
+                <option value="not POC">POC fail</option>
+                <option value="room too">Room fail</option>
+                <option value="flow below">Flow fail</option>
+                <option value="outside">Time window</option>
+                <option value="grade C">Grade C/D</option>
+                <option value="flip">Flip candle</option>
+              </select></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-flow">
+          <!-- Skeleton rows shown on first load -->
+          <tr><td colspan="15"><div class="skeleton-row"></div></td></tr>
+          <tr><td colspan="15"><div class="skeleton-row"></div></td></tr>
+          <tr><td colspan="15"><div class="skeleton-row"></div></td></tr>
+          <tr><td colspan="15"><div class="skeleton-row"></div></td></tr>
+          <tr><td colspan="15"><div class="skeleton-row"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<!-- TAB 2: VOLUME -->
-<div id="tab-vol" class="tab-content">
-  <div class="table-wrap">
-  <table id="tbl-vol">
-    <thead>
-      <tr>
-        <th class="sortable" onclick="handleSort('vol', 0, false)">Time</th>
-        <th class="sortable" onclick="handleSort('vol', 1, true)">Price</th>
-        <th class="sortable" onclick="handleSort('vol', 2, true)">Strike</th>
-        <th class="sortable" onclick="handleSort('vol', 3, true)">Calls OTM</th>
-        <th class="sortable" onclick="handleSort('vol', 4, true)">Puts OTM</th>
-        <th class="sortable" onclick="handleSort('vol', 5, true)">Calls ITM+ATM</th>
-        <th class="sortable" onclick="handleSort('vol', 6, true)">Puts ITM+ATM</th>
-        <th class="sortable" onclick="handleSort('vol', 7, true)">Total Calls</th>
-        <th class="sortable" onclick="handleSort('vol', 8, true)">Total Puts</th>
-        <th class="sortable" onclick="handleSort('vol', 9, true)">Total Vol</th>
-        <th class="sortable" onclick="handleSort('vol', 10, true)">Avg Vol</th>
-        <th class="sortable" onclick="handleSort('vol', 11, true)">Total Chg%</th>
-        <th class="sortable" onclick="handleSort('vol', 12, true)">Call Chg%</th>
-        <th class="sortable" onclick="handleSort('vol', 13, true)">Put Chg%</th>
-        <th class="sortable" onclick="handleSort('vol', 14, true)">C/P Ratio</th>
-      </tr>
-      <tr class="filter-row">
-        <th><input type="text" id="v-time" placeholder="time" oninput="debounceFilter()"></th>
-        <th colspan="2"></th>
-        <th colspan="6"></th>
-        <th><input type="text" id="v-vol" placeholder="> 50000" oninput="debounceFilter()"></th>
-        <th></th>
-        <th><select id="v-chg" onchange="debounceFilter()">
-          <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
-        </select></th>
-        <th><select id="v-callchg" onchange="debounceFilter()">
-          <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
-        </select></th>
-        <th><select id="v-putchg" onchange="debounceFilter()">
-          <option value="">All</option><option value="up">Up</option><option value="dn">Down</option>
-        </select></th>
-        <th><select id="v-ratio" onchange="debounceFilter()">
-          <option value="">All</option>
-          <option value="call-heavy">Call heavy (&gt;1.0)</option>
-          <option value="put-heavy">Put heavy (&lt;1.0)</option>
-        </select></th>
-      </tr>
-    </thead>
-    <tbody id="tbody-vol"></tbody>
-  </table>
+  <!-- TAB 2: VOLUME -->
+  <div id="tab-vol" class="tab-content">
+    <div class="table-wrap" id="vol-wrap">
+      <table id="tbl-vol">
+        <thead>
+          <tr>
+            <th class="sortable" onclick="handleSort('vol', 0, false)">Time</th>
+            <th class="sortable" onclick="handleSort('vol', 1, true)">Price</th>
+            <th class="sortable" onclick="handleSort('vol', 2, true)">Strike</th>
+            <th class="sortable" onclick="handleSort('vol', 3, true)">Calls OTM</th>
+            <th class="sortable" onclick="handleSort('vol', 4, true)">Puts OTM</th>
+            <th class="sortable" onclick="handleSort('vol', 5, true)">Calls ITM+ATM</th>
+            <th class="sortable" onclick="handleSort('vol', 6, true)">Puts ITM+ATM</th>
+            <th class="sortable" onclick="handleSort('vol', 7, true)">Total Calls</th>
+            <th class="sortable" onclick="handleSort('vol', 8, true)">Total Puts</th>
+            <th class="sortable" onclick="handleSort('vol', 9, true)">Total Vol</th>
+            <th class="sortable" onclick="handleSort('vol', 10, true)">Avg Vol</th>
+            <th class="sortable" onclick="handleSort('vol', 11, true)">Total Chg%</th>
+            <th class="sortable" onclick="handleSort('vol', 12, true)">Call Chg%</th>
+            <th class="sortable" onclick="handleSort('vol', 13, true)">Put Chg%</th>
+            <th class="sortable" onclick="handleSort('vol', 14, true)">C/P Ratio</th>
+          </tr>
+          <tr class="filter-row">
+            <th><input type="text" id="v-time" placeholder="time" oninput="debounceFilter()"></th>
+            <th colspan="2"></th>
+            <th colspan="6"></th>
+            <th><input type="text" id="v-vol" placeholder="> 50000" oninput="debounceFilter()"></th>
+            <th></th>
+            <th><select id="v-chg" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="up">Up</option>
+                <option value="dn">Down</option>
+              </select></th>
+            <th><select id="v-callchg" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="up">Up</option>
+                <option value="dn">Down</option>
+              </select></th>
+            <th><select id="v-putchg" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="up">Up</option>
+                <option value="dn">Down</option>
+              </select></th>
+            <th><select id="v-ratio" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="call-heavy">Call heavy (&gt;1.0)</option>
+                <option value="put-heavy">Put heavy (&lt;1.0)</option>
+              </select></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-vol"></tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<div id="foot">
-  <span id="foot-status">observe & log - polarity unconfirmed</span>
-  <span id="foot-time">Last update: -</span>
-</div>
+  <div id="foot">
+    <span id="foot-status">observe &amp; log - polarity unconfirmed</span>
+    <span id="foot-time">Last update: -</span>
+  </div>
 
-<script>
-const SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
-const SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
+  <!-- Keyboard Shortcuts Panel (#7) -->
+  <div class="kbd-panel" id="kbd-panel">
+    <h4>Keyboard Shortcuts</h4>
+    <kbd>R</kbd> Refresh &nbsp;
+    <kbd>1</kbd> Flow tab &nbsp;
+    <kbd>2</kbd> Volume tab<br>
+    <kbd>Esc</kbd> Clear filters &nbsp;
+    <kbd>T</kbd> Toggle theme &nbsp;
+    <kbd>S</kbd> Toggle sound<br>
+    <kbd>?</kbd> Show/hide this panel
+  </div>
 
-let soundEnabled = true;
-let pollTimer = null;
-let isFetching = false;
-let activeTab = 'flow';
-let lastAlertTimestamp = null;
+  <script>
+    /* ══════════════════════════════════════════════════════
+       V2 FLOW DASHBOARD — ENHANCED
+       ══════════════════════════════════════════════════════
+       NOTE (#1): The Supabase key below is a publishable/anon key.
+       Ensure Row-Level Security (RLS) is properly configured on
+       all backing tables and RPC functions to prevent unauthorized
+       data access.
+       ══════════════════════════════════════════════════════ */
 
-const sortConfig = {
-  flow: { col: null, asc: true },
-  vol: { col: null, asc: true }
-};
+    const SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
+    const SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
 
-/* ── AUDIO SYSTEM (Synthetic Chime) ── */
-function playChime() {
-  if (!soundEnabled) return;
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    
-    // Play dual-tone pleasant alert: E5 (659Hz) -> A5 (880Hz)
-    const playTone = (freq, start, duration) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-      gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + duration);
+    /* ── STATE ── */
+    let soundEnabled = true;
+    let pollTimer = null;
+    let isFetching = false;
+    let activeTab = 'flow';
+    let lastAlertTimestamp = null;
+    let lastSyncTime = null;
+    let abortController = null;    // #16 AbortController
+    let audioCtx = null;           // #19 Reused AudioContext
+    let priceHistory = [];         // #9 Sparkline data
+    let flowHistory = [];          // #9 Sparkline data
+
+    const sortConfig = {
+      flow: { col: null, asc: true },
+      vol: { col: null, asc: true }
     };
 
-    playTone(659.25, 0.0, 0.25);
-    playTone(880.00, 0.15, 0.40);
-  } catch (e) {
-    console.warn('Audio play failed:', e);
-  }
-}
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  const btn = document.getElementById('sound-btn');
-  btn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
-  btn.classList.toggle('active-toggle', soundEnabled);
-  if (soundEnabled) playChime();
-}
-
-/* ── UTILITIES & ESCAPING ── */
-function escapeHtml(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function fmtTime(ts) {
-  if (!ts) return '-';
-  const m = String(ts).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
-  if (!m) return escapeHtml(ts);
-  let h = +m[4], mi = m[5], ap = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${h}:${mi} ${ap}`;
-}
-
-function fmtNum(n) {
-  if (n == null || isNaN(n)) return '-';
-  return (+n).toLocaleString();
-}
-
-function gate(v) {
-  return v ? '<span class="gate-y">Y</span>' : '<span class="gate-n">-</span>';
-}
-
-function gradePill(g) {
-  const safe = escapeHtml(g || '-');
-  return `<span class="pill p${safe}">${safe}</span>`;
-}
-
-/* ── SMART NUMERIC FILTER EVALUATOR ── */
-function matchNumericOrText(filterStr, cellText) {
-  if (!filterStr) return true;
-  const filter = filterStr.trim();
-  const cleanVal = parseFloat(String(cellText).replace(/,/g, '').replace(/%/g, ''));
-
-  if (!isNaN(cleanVal)) {
-    if (filter.startsWith('>=')) return cleanVal >= parseFloat(filter.slice(2));
-    if (filter.startsWith('<=')) return cleanVal <= parseFloat(filter.slice(2));
-    if (filter.startsWith('>'))  return cleanVal >  parseFloat(filter.slice(1));
-    if (filter.startsWith('<'))  return cleanVal <  parseFloat(filter.slice(1));
-    if (filter.startsWith('='))  return cleanVal === parseFloat(filter.slice(1));
-  }
-  return cellText.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
-}
-
-/* ── TAB SWITCHING ── */
-function switchTab(name) {
-  activeTab = name;
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['flow', 'vol'][i] === name);
-  });
-  document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
-  document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
-  updateRowCounts();
-}
-
-/* ── DEBOUNCED FILTERING ── */
-let debounceTimeout = null;
-function debounceFilter() {
-  clearTimeout(debounceTimeout);
-  debounceTimeout = setTimeout(() => {
-    applyFlowFilters();
-    applyVolFilters();
-    updateRowCounts();
-  }, 120);
-}
-
-function applyFlowFilters() {
-  const ft  = (document.getElementById('f-time').value || '').trim();
-  const fp  = (document.getElementById('f-price').value || '').trim();
-  const fst = (document.getElementById('f-strike').value || '').trim();
-  const ff  = (document.getElementById('f-flow').value || '').trim();
-  const fd  = (document.getElementById('f-dir').value || '').toLowerCase();
-  const fpc = (document.getElementById('f-poc').value || '').trim();
-  const fr  = (document.getElementById('f-room').value || '').trim();
-  const fsc = (document.getElementById('f-score').value || '').trim();
-  const fg  = (document.getElementById('f-grade').value || '').toLowerCase();
-  const frs = (document.getElementById('f-status').value || '').toLowerCase();
-
-  document.querySelectorAll('#tbody-flow tr').forEach(row => {
-    const c = row.querySelectorAll('td');
-    if (!c.length) return;
-    let show = true;
-
-    if (ft && c[0].textContent.toLowerCase().indexOf(ft.toLowerCase()) < 0) show = false;
-    if (fp && !matchNumericOrText(fp, c[1].textContent)) show = false;
-    if (fst && !matchNumericOrText(fst, c[2].textContent)) show = false;
-    if (ff && !matchNumericOrText(ff, c[3].textContent)) show = false;
-
-    if (fd) {
-      const d = c[4].textContent.toLowerCase().trim();
-      if (fd === '-' && d !== '-') show = false;
-      else if (fd !== '-' && d.indexOf(fd) < 0) show = false;
+    /* ══════════════════════════════════════════════════════
+       AUDIO SYSTEM — Reused AudioContext (#19)
+       ══════════════════════════════════════════════════════ */
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      return audioCtx;
     }
 
-    if (fpc && !matchNumericOrText(fpc, c[5].textContent)) show = false;
-    if (fr && !matchNumericOrText(fr, c[6].textContent)) show = false;
-    if (fsc && !matchNumericOrText(fsc, c[12].textContent)) show = false;
-    if (fg && c[13].textContent.toLowerCase().indexOf(fg) < 0) show = false;
-    if (frs && c[14].textContent.toLowerCase().indexOf(frs) < 0) show = false;
+    function playChime() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') ctx.resume();
 
-    row.classList.toggle('hidden', !show);
-  });
-}
+        const playTone = (freq, start, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + duration);
+        };
 
-function applyVolFilters() {
-  const vt  = (document.getElementById('v-time').value || '').trim().toLowerCase();
-  const vv  = (document.getElementById('v-vol').value || '').trim();
-  const vc  = (document.getElementById('v-chg').value || '').toLowerCase();
-  const vcc = (document.getElementById('v-callchg').value || '').toLowerCase();
-  const vpc = (document.getElementById('v-putchg').value || '').toLowerCase();
-  const vr  = (document.getElementById('v-ratio').value || '').toLowerCase();
-
-  document.querySelectorAll('#tbody-vol tr').forEach(row => {
-    const c = row.querySelectorAll('td');
-    if (!c.length) return;
-    let show = true;
-
-    if (vt && c[0].textContent.toLowerCase().indexOf(vt) < 0) show = false;
-    if (vv && !matchNumericOrText(vv, c[9].textContent)) show = false;
-
-    if (vc) {
-      const chgCls = row.dataset.chg || '';
-      if (vc === 'up' && chgCls !== 'up') show = false;
-      if (vc === 'dn' && chgCls !== 'dn') show = false;
-    }
-    if (vcc) {
-      const callChgCls = row.dataset.callchg || '';
-      if (vcc === 'up' && callChgCls !== 'up') show = false;
-      if (vcc === 'dn' && callChgCls !== 'dn') show = false;
-    }
-    if (vpc) {
-      const putChgCls = row.dataset.putchg || '';
-      if (vpc === 'up' && putChgCls !== 'up') show = false;
-      if (vpc === 'dn' && putChgCls !== 'dn') show = false;
-    }
-    if (vr) {
-      const ratio = parseFloat(row.dataset.ratio || '0');
-      if (vr === 'call-heavy' && ratio <= 1.0) show = false;
-      if (vr === 'put-heavy' && ratio >= 1.0) show = false;
+        playTone(659.25, 0.0, 0.25);
+        playTone(880.00, 0.15, 0.40);
+      } catch (e) {
+        console.warn('Audio play failed:', e);
+      }
     }
 
-    row.classList.toggle('hidden', !show);
-  });
-}
-
-function updateRowCounts() {
-  const tbodyId = activeTab === 'flow' ? '#tbody-flow' : '#tbody-vol';
-  const total = document.querySelectorAll(`${tbodyId} tr`).length;
-  const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
-  document.getElementById('row-counts').textContent = `Showing ${visible} of ${total} records`;
-}
-
-function clearFilters() {
-  document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
-  document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
-  applyFlowFilters();
-  applyVolFilters();
-  updateRowCounts();
-}
-
-/* ── COLUMN SORT ENGINE ── */
-function handleSort(tabName, colIndex, isNumeric) {
-  const cfg = sortConfig[tabName];
-  if (cfg.col === colIndex) {
-    cfg.asc = !cfg.asc;
-  } else {
-    cfg.col = colIndex;
-    cfg.asc = true;
-  }
-
-  const table = document.getElementById(tabName === 'flow' ? 'tbl-flow' : 'tbl-vol');
-  table.querySelectorAll('th.sortable').forEach(th => {
-    th.classList.remove('sorted-asc', 'sorted-desc');
-  });
-  const th = table.querySelectorAll('thead tr:first-child th')[colIndex];
-  if (th) th.classList.add(cfg.asc ? 'sorted-asc' : 'sorted-desc');
-
-  const tbody = document.getElementById(tabName === 'flow' ? 'tbody-flow' : 'tbody-vol');
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-
-  rows.sort((a, b) => {
-    const cellA = a.children[colIndex]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
-    const cellB = b.children[colIndex]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
-
-    if (isNumeric) {
-      const numA = parseFloat(cellA) || 0;
-      const numB = parseFloat(cellB) || 0;
-      return cfg.asc ? (numA - numB) : (numB - numA);
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('sound-btn');
+      btn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      btn.classList.toggle('active-toggle', soundEnabled);
+      if (soundEnabled) playChime();
     }
-    return cfg.asc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
-  });
 
-  rows.forEach(r => tbody.appendChild(r));
-}
+    /* ══════════════════════════════════════════════════════
+       THEME TOGGLE (#8)
+       ══════════════════════════════════════════════════════ */
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      const btn = document.getElementById('theme-btn');
+      btn.textContent = next === 'light' ? '☀️ Light' : '🌙 Dark';
+      try { localStorage.setItem('v2-theme', next); } catch (e) { }
+    }
 
-/* ── CSV EXPORT ── */
-function exportCurrentCSV() {
-  const table = document.getElementById(activeTab === 'flow' ? 'tbl-flow' : 'tbl-vol');
-  const rows = Array.from(table.querySelectorAll('tr:not(.hidden):not(.filter-row)'));
-  if (!rows.length) return alert('No data to export.');
+    function initTheme() {
+      try {
+        const saved = localStorage.getItem('v2-theme');
+        if (saved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.getElementById('theme-btn').textContent = '☀️ Light';
+        }
+      } catch (e) { }
+    }
 
-  const csv = rows.map(r => {
-    const cells = Array.from(r.querySelectorAll('th, td')).map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
-    return cells.join(',');
-  }).join('\n');
+    /* ══════════════════════════════════════════════════════
+       UTILITIES & ESCAPING
+       ══════════════════════════════════════════════════════ */
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${activeTab}_export_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+    function fmtTime(ts) {
+      if (!ts) return '-';
+      const m = String(ts).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+      if (!m) return escapeHtml(ts);
+      let h = +m[4], mi = m[5], ap = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return `${h}:${mi} ${ap}`;
+    }
 
-/* ── DATA FETCHING & RENDERING ── */
-async function rpc(fn) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${SUPA_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({})
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+    function fmtNum(n) {
+      if (n == null || isNaN(n)) return '-';
+      return (+n).toLocaleString();
+    }
 
-async function loadAll() {
-  if (isFetching) return;
-  isFetching = true;
-  const refBtn = document.getElementById('refresh-btn');
-  refBtn.textContent = 'Loading...';
-  document.getElementById('err').innerHTML = '';
+    function gate(v) {
+      return v ? '<span class="gate-y">Y</span>' : '<span class="gate-n">-</span>';
+    }
 
-  try {
-    const [flow, vol] = await Promise.all([
-      rpc('v2_dashboard_today'),
-      rpc('v2_volume_today')
-    ]);
+    function gradePill(g) {
+      const safe = escapeHtml(g || '-');
+      return `<span class="pill p${safe}">${safe}</span>`;
+    }
 
-    renderCards(flow);
-    renderFlow(flow);
-    renderVol(vol);
-    updateRowCounts();
+    /* ══════════════════════════════════════════════════════
+       RELATIVE "LAST SYNCED" TIMER (#4)
+       ══════════════════════════════════════════════════════ */
+    function updateSyncAge() {
+      if (!lastSyncTime) return;
+      const el = document.getElementById('foot-time');
+      const ago = Math.round((Date.now() - lastSyncTime) / 1000);
 
-    const now = new Date();
-    document.getElementById('foot-time').textContent = `Last synced: ${now.toLocaleTimeString()}`;
-  } catch (e) {
-    document.getElementById('err').innerHTML = `<div class="err">Could not load data: ${escapeHtml(e.message)}</div>`;
-    document.getElementById('sub').textContent = 'Load failed';
-  } finally {
-    isFetching = false;
-    refBtn.textContent = 'Refresh';
-  }
-}
+      if (ago < 5) {
+        el.textContent = 'Last synced: just now';
+      } else if (ago < 60) {
+        el.textContent = `Last synced: ${ago}s ago`;
+      } else {
+        const mins = Math.floor(ago / 60);
+        el.textContent = `Last synced: ${mins}m ${ago % 60}s ago`;
+      }
 
-function renderCards(rows) {
-  if (!rows || !rows.length) {
-    document.getElementById('cards').innerHTML = '<div class="status quiet">No session data recorded today.</div>';
-    document.getElementById('sub').textContent = 'No data';
-    document.getElementById('live-dot').style.display = 'none';
-    return;
-  }
+      // Highlight stale (>60s)
+      el.classList.toggle('stale', ago > 60);
+    }
 
-  const last = rows[rows.length - 1];
-  const sigs = rows.filter(x => x.has_signal);
-  const open = rows[0].price;
-  const close = last.price;
-  const trend = close > open ? 'UP' : (close < open ? 'DOWN' : 'FLAT');
-  const trendColor = trend === 'UP' ? 'call' : (trend === 'DOWN' ? 'put' : 'muted');
-  const day = (last.candle_time_ny || '').slice(0, 10);
-  document.getElementById('sub').textContent =
-    `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
+    setInterval(updateSyncAge, 1000);
 
-  const liveDot = document.getElementById('live-dot');
-  let statusHtml = '';
-  if (last.has_signal) {
-    liveDot.style.display = 'inline-block';
-    const d = escapeHtml(last.direction);
-    const cls = d === 'PUT' ? 'put' : 'call';
-    statusHtml = `
+    /* ══════════════════════════════════════════════════════
+       SMART NUMERIC FILTER EVALUATOR
+       ══════════════════════════════════════════════════════ */
+    function matchNumericOrText(filterStr, cellText) {
+      if (!filterStr) return true;
+      const filter = filterStr.trim();
+      const cleanVal = parseFloat(String(cellText).replace(/,/g, '').replace(/%/g, ''));
+
+      if (!isNaN(cleanVal)) {
+        if (filter.startsWith('>=')) return cleanVal >= parseFloat(filter.slice(2));
+        if (filter.startsWith('<=')) return cleanVal <= parseFloat(filter.slice(2));
+        if (filter.startsWith('>')) return cleanVal > parseFloat(filter.slice(1));
+        if (filter.startsWith('<')) return cleanVal < parseFloat(filter.slice(1));
+        if (filter.startsWith('=')) return cleanVal === parseFloat(filter.slice(1));
+      }
+      return cellText.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TAB SWITCHING
+       ══════════════════════════════════════════════════════ */
+    function switchTab(name) {
+      activeTab = name;
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['flow', 'vol'][i] === name);
+      });
+      document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
+      document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
+      updateRowCounts();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       DEBOUNCED FILTERING
+       ══════════════════════════════════════════════════════ */
+    let debounceTimeout = null;
+    function debounceFilter() {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        applyFlowFilters();
+        applyVolFilters();
+        updateRowCounts();
+      }, 120);
+    }
+
+    function applyFlowFilters() {
+      const ft = (document.getElementById('f-time').value || '').trim();
+      const fp = (document.getElementById('f-price').value || '').trim();
+      const fst = (document.getElementById('f-strike').value || '').trim();
+      const ff = (document.getElementById('f-flow').value || '').trim();
+      const fd = (document.getElementById('f-dir').value || '').toLowerCase();
+      const fpc = (document.getElementById('f-poc').value || '').trim();
+      const fr = (document.getElementById('f-room').value || '').trim();
+      const fsc = (document.getElementById('f-score').value || '').trim();
+      const fg = (document.getElementById('f-grade').value || '').toLowerCase();
+      const frs = (document.getElementById('f-status').value || '').toLowerCase();
+
+      document.querySelectorAll('#tbody-flow tr').forEach(row => {
+        const c = row.querySelectorAll('td');
+        if (!c.length) return;
+        let show = true;
+
+        if (ft && c[0].textContent.toLowerCase().indexOf(ft.toLowerCase()) < 0) show = false;
+        if (fp && !matchNumericOrText(fp, c[1].textContent)) show = false;
+        if (fst && !matchNumericOrText(fst, c[2].textContent)) show = false;
+        if (ff && !matchNumericOrText(ff, c[3].textContent)) show = false;
+
+        if (fd) {
+          const d = c[4].textContent.toLowerCase().trim();
+          if (fd === '-' && d !== '-') show = false;
+          else if (fd !== '-' && d.indexOf(fd) < 0) show = false;
+        }
+
+        if (fpc && !matchNumericOrText(fpc, c[5].textContent)) show = false;
+        if (fr && !matchNumericOrText(fr, c[6].textContent)) show = false;
+        if (fsc && !matchNumericOrText(fsc, c[12].textContent)) show = false;
+        if (fg && c[13].textContent.toLowerCase().indexOf(fg) < 0) show = false;
+        if (frs && c[14].textContent.toLowerCase().indexOf(frs) < 0) show = false;
+
+        row.classList.toggle('hidden', !show);
+      });
+    }
+
+    function applyVolFilters() {
+      const vt = (document.getElementById('v-time').value || '').trim().toLowerCase();
+      const vv = (document.getElementById('v-vol').value || '').trim();
+      const vc = (document.getElementById('v-chg').value || '').toLowerCase();
+      const vcc = (document.getElementById('v-callchg').value || '').toLowerCase();
+      const vpc = (document.getElementById('v-putchg').value || '').toLowerCase();
+      const vr = (document.getElementById('v-ratio').value || '').toLowerCase();
+
+      document.querySelectorAll('#tbody-vol tr').forEach(row => {
+        const c = row.querySelectorAll('td');
+        if (!c.length) return;
+        let show = true;
+
+        if (vt && c[0].textContent.toLowerCase().indexOf(vt) < 0) show = false;
+        if (vv && !matchNumericOrText(vv, c[9].textContent)) show = false;
+
+        if (vc) {
+          const chgCls = row.dataset.chg || '';
+          if (vc === 'up' && chgCls !== 'up') show = false;
+          if (vc === 'dn' && chgCls !== 'dn') show = false;
+        }
+        if (vcc) {
+          const callChgCls = row.dataset.callchg || '';
+          if (vcc === 'up' && callChgCls !== 'up') show = false;
+          if (vcc === 'dn' && callChgCls !== 'dn') show = false;
+        }
+        if (vpc) {
+          const putChgCls = row.dataset.putchg || '';
+          if (vpc === 'up' && putChgCls !== 'up') show = false;
+          if (vpc === 'dn' && putChgCls !== 'dn') show = false;
+        }
+        if (vr) {
+          const ratio = parseFloat(row.dataset.ratio || '0');
+          if (vr === 'call-heavy' && ratio <= 1.0) show = false;
+          if (vr === 'put-heavy' && ratio >= 1.0) show = false;
+        }
+
+        row.classList.toggle('hidden', !show);
+      });
+    }
+
+    function updateRowCounts() {
+      const tbodyId = activeTab === 'flow' ? '#tbody-flow' : '#tbody-vol';
+      const total = document.querySelectorAll(`${tbodyId} tr`).length;
+      const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
+      document.getElementById('row-counts').textContent = `Showing ${visible} of ${total} records`;
+    }
+
+    function clearFilters() {
+      document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
+      document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
+      applyFlowFilters();
+      applyVolFilters();
+      updateRowCounts();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       COLUMN SORT ENGINE (#17 — re-applies after render)
+       ══════════════════════════════════════════════════════ */
+    function handleSort(tabName, colIndex, isNumeric) {
+      const cfg = sortConfig[tabName];
+      if (cfg.col === colIndex) {
+        cfg.asc = !cfg.asc;
+      } else {
+        cfg.col = colIndex;
+        cfg.asc = true;
+      }
+      applySort(tabName);
+    }
+
+    function applySort(tabName) {
+      const cfg = sortConfig[tabName];
+      if (cfg.col === null) return;
+
+      const table = document.getElementById(tabName === 'flow' ? 'tbl-flow' : 'tbl-vol');
+      table.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+      });
+      const th = table.querySelectorAll('thead tr:first-child th')[cfg.col];
+      if (th) th.classList.add(cfg.asc ? 'sorted-asc' : 'sorted-desc');
+
+      const tbody = document.getElementById(tabName === 'flow' ? 'tbody-flow' : 'tbody-vol');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      // Determine if column is numeric based on content
+      const isNumeric = rows.length > 0 && !isNaN(
+        parseFloat((rows[0].children[cfg.col]?.textContent || '').trim().replace(/,/g, '').replace(/%/g, ''))
+      );
+
+      rows.sort((a, b) => {
+        const cellA = a.children[cfg.col]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
+        const cellB = b.children[cfg.col]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
+
+        if (isNumeric) {
+          const numA = parseFloat(cellA) || 0;
+          const numB = parseFloat(cellB) || 0;
+          return cfg.asc ? (numA - numB) : (numB - numA);
+        }
+        return cfg.asc ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+      });
+
+      rows.forEach(r => tbody.appendChild(r));
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CSV EXPORT
+       ══════════════════════════════════════════════════════ */
+    function exportCurrentCSV() {
+      const table = document.getElementById(activeTab === 'flow' ? 'tbl-flow' : 'tbl-vol');
+      const rows = Array.from(table.querySelectorAll('tr:not(.hidden):not(.filter-row)'));
+      if (!rows.length) return alert('No data to export.');
+
+      const csv = rows.map(r => {
+        const cells = Array.from(r.querySelectorAll('th, td')).map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
+        return cells.join(',');
+      }).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activeTab}_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SPARKLINE RENDERER (#9)
+       ══════════════════════════════════════════════════════ */
+    function drawSparkline(canvasId, data, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || !data.length) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      const vals = data.slice(-30); // last 30 points
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      const range = (max - min) || 1;
+      const pad = 2;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw line
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+
+      vals.forEach((v, i) => {
+        const x = (i / (vals.length - 1)) * w;
+        const y = h - pad - ((v - min) / range) * (h - pad * 2);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Draw fill gradient
+      const last = vals[vals.length - 1];
+      const lastY = h - pad - ((last - min) / range) * (h - pad * 2);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, color.replace(')', ', 0.15)').replace('rgb', 'rgba'));
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Draw endpoint dot
+      ctx.beginPath();
+      ctx.arc(w, lastY, 2, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       DATA FETCHING — with Retry (#2) & AbortController (#16)
+       ══════════════════════════════════════════════════════ */
+    async function rpc(fn, signal) {
+      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPA_KEY,
+          'Authorization': `Bearer ${SUPA_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({}),
+        signal: signal
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function rpcWithRetry(fn, signal, retries = 3) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          return await rpc(fn, signal);
+        } catch (e) {
+          if (e.name === 'AbortError') throw e; // Don't retry aborts
+          if (attempt === retries) throw e;
+          // Exponential backoff: 2s, 4s, 8s
+          const delay = Math.pow(2, attempt) * 1000;
+          document.getElementById('sub').textContent = `Retry ${attempt}/${retries} in ${delay / 1000}s...`;
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+    }
+
+    async function loadAll() {
+      if (isFetching) return;
+      isFetching = true;
+
+      // (#16) Abort any in-flight request
+      if (abortController) {
+        abortController.abort();
+      }
+      abortController = new AbortController();
+      const signal = abortController.signal;
+
+      const refBtn = document.getElementById('refresh-btn');
+      refBtn.textContent = 'Loading...';
+      document.getElementById('err').innerHTML = '';
+
+      // (#6) Save scroll positions before re-render
+      const flowWrap = document.getElementById('flow-wrap');
+      const volWrap = document.getElementById('vol-wrap');
+      const flowScroll = flowWrap ? flowWrap.scrollTop : 0;
+      const volScroll = volWrap ? volWrap.scrollTop : 0;
+
+      try {
+        const [flow, vol] = await Promise.all([
+          rpcWithRetry('v2_dashboard_today', signal),
+          rpcWithRetry('v2_volume_today', signal)
+        ]);
+
+        renderCards(flow);
+        renderFlow(flow);
+        renderVol(vol);
+        updateRowCounts();
+
+        // (#17) Re-apply sort after data refresh
+        applySort('flow');
+        applySort('vol');
+
+        // (#6) Restore scroll positions
+        if (flowWrap) flowWrap.scrollTop = flowScroll;
+        if (volWrap) volWrap.scrollTop = volScroll;
+
+        // (#4) Update sync time
+        lastSyncTime = Date.now();
+        updateSyncAge();
+
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          // Silently ignore aborted requests
+        } else {
+          // (#18) Error boundary — show user-friendly message
+          document.getElementById('err').innerHTML = `<div class="err">Could not load data: ${escapeHtml(e.message)}</div>`;
+          document.getElementById('sub').textContent = 'Load failed';
+        }
+      } finally {
+        isFetching = false;
+        refBtn.textContent = 'Refresh';
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       RENDER: CARDS (with sparklines #9, VA legend #11,
+       signal timestamp #12, error boundary #18)
+       ══════════════════════════════════════════════════════ */
+    function renderCards(rows) {
+      try {
+        _renderCardsInner(rows);
+      } catch (e) {
+        console.error('renderCards error:', e);
+        document.getElementById('err').innerHTML += `<div class="err">Card render error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function _renderCardsInner(rows) {
+      if (!rows || !rows.length) {
+        document.getElementById('cards').innerHTML = '<div class="status quiet">No session data recorded today.</div>';
+        document.getElementById('sub').textContent = 'No data';
+        document.getElementById('live-dot').style.display = 'none';
+        return;
+      }
+
+      const last = rows[rows.length - 1];
+      const sigs = rows.filter(x => x.has_signal);
+      const open = rows[0].price;
+      const close = last.price;
+      const trend = close > open ? 'UP' : (close < open ? 'DOWN' : 'FLAT');
+      const trendColor = trend === 'UP' ? 'call' : (trend === 'DOWN' ? 'put' : 'muted');
+      const day = (last.candle_time_ny || '').slice(0, 10);
+      document.getElementById('sub').textContent =
+        `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
+
+      // (#9) Collect sparkline data
+      priceHistory = rows.map(r => r.price).filter(p => p != null);
+      flowHistory = rows.map(r => r.flow).filter(f => f != null);
+
+      const liveDot = document.getElementById('live-dot');
+      let statusHtml = '';
+      if (last.has_signal) {
+        liveDot.style.display = 'inline-block';
+        const d = escapeHtml(last.direction);
+        const cls = d === 'PUT' ? 'put' : 'call';
+        // (#12) Include timestamp on live signal
+        const sigTime = fmtTime(last.candle_time_ny);
+        statusHtml = `
       <div class="status live">
         <div style="display:flex;align-items:center;gap:6px">
           <span class="dot pulse"></span>
@@ -745,42 +1548,50 @@ function renderCards(rows) {
         <div style="font-size:12px;font-weight:500">
           Strike <b>${escapeHtml(last.atm_strike)}</b> &nbsp;|&nbsp; 
           Flow <b>${escapeHtml(last.flow)}</b> &nbsp;|&nbsp; 
-          Room <b>${escapeHtml(last.room)}</b>
+          Room <b>${escapeHtml(last.room)}</b> &nbsp;|&nbsp;
+          <span class="muted">Fired at ${sigTime}</span>
         </div>
       </div>`;
 
-    if (last.candle_time_ny !== lastAlertTimestamp) {
-      lastAlertTimestamp = last.candle_time_ny;
-      playChime();
-    }
-  } else {
-    liveDot.style.display = 'none';
-    statusHtml = `<div class="status quiet">No active signal on latest candle (${fmtTime(last.candle_time_ny)}).</div>`;
-  }
+        if (last.candle_time_ny !== lastAlertTimestamp) {
+          lastAlertTimestamp = last.candle_time_ny;
+          playChime();
+        }
+      } else {
+        liveDot.style.display = 'none';
+        statusHtml = `<div class="status quiet">No active signal on latest candle (${fmtTime(last.candle_time_ny)}).</div>`;
+      }
 
-  let vaGaugeHtml = '';
-  if (last.poc != null && last.val != null && last.vah != null && last.price != null) {
-    const minVal = Math.min(last.val, last.price) - 1;
-    const maxVal = Math.max(last.vah, last.price) + 1;
-    const span = (maxVal - minVal) || 1;
-    const valPct = Math.max(0, Math.min(100, ((last.val - minVal) / span) * 100));
-    const vahPct = Math.max(0, Math.min(100, ((last.vah - minVal) / span) * 100));
-    const pocPct = Math.max(0, Math.min(100, ((last.poc - minVal) / span) * 100));
-    const prcPct = Math.max(0, Math.min(100, ((last.price - minVal) / span) * 100));
+      // VA Gauge with legend (#11)
+      let vaGaugeHtml = '';
+      if (last.poc != null && last.val != null && last.vah != null && last.price != null) {
+        const minVal = Math.min(last.val, last.price) - 1;
+        const maxVal = Math.max(last.vah, last.price) + 1;
+        const span = (maxVal - minVal) || 1;
+        const valPct = Math.max(0, Math.min(100, ((last.val - minVal) / span) * 100));
+        const vahPct = Math.max(0, Math.min(100, ((last.vah - minVal) / span) * 100));
+        const pocPct = Math.max(0, Math.min(100, ((last.poc - minVal) / span) * 100));
+        const prcPct = Math.max(0, Math.min(100, ((last.price - minVal) / span) * 100));
 
-    vaGaugeHtml = `
+        vaGaugeHtml = `
       <div class="va-track" title="VAL: ${last.val} | POC: ${last.poc} | VAH: ${last.vah}">
         <div class="va-range" style="left:${valPct}%;width:${Math.max(2, vahPct - valPct)}%"></div>
         <div class="va-poc" style="left:${pocPct}%"></div>
         <div class="va-price" style="left:${prcPct}%"></div>
+      </div>
+      <div class="va-legend">
+        <span class="leg-price"><span class="leg-dot"></span>Price</span>
+        <span class="leg-poc"><span class="leg-dot"></span>POC</span>
+        <span class="leg-va"><span class="leg-dot"></span>Value Area</span>
       </div>`;
-  }
+      }
 
-  document.getElementById('cards').innerHTML = `
+      document.getElementById('cards').innerHTML = `
     ${statusHtml}
     <div class="card">
       <div class="label">SPY Last</div>
       <div class="val">${escapeHtml(close)}</div>
+      <div class="sparkline-wrap"><canvas id="spark-price"></canvas></div>
     </div>
     <div class="card">
       <div class="label">Session Trend</div>
@@ -798,30 +1609,50 @@ function renderCards(rows) {
     <div class="card">
       <div class="label">Latest Flow</div>
       <div class="val ${last.flow >= 0 ? 'flowpos' : 'flowneg'}">${escapeHtml(last.flow ?? '-')}</div>
+      <div class="sparkline-wrap"><canvas id="spark-flow"></canvas></div>
     </div>
   `;
-}
 
-function renderFlow(rows) {
-  if (!rows || !rows.length) {
-    document.getElementById('tbody-flow').innerHTML = '';
-    return;
-  }
-  const body = rows.slice().reverse().map(x => {
-    const dirCls = x.direction === 'PUT' ? 'put' : (x.direction === 'CALL' ? 'call' : 'muted');
-    const flowCls = x.flow >= 0 ? 'flowpos' : 'flowneg';
-    let statusCell = '', statusClass = 'reason-col';
-
-    if (x.has_signal) {
-      statusCell = `${gradePill(x.grade)} ALERTED`;
-      statusClass += ' fired';
-    } else if (x.direction === 'none') {
-      statusCell = '<span class="muted">flow below threshold</span>';
-    } else {
-      statusCell = escapeHtml((x.reason || '-').replace(/^no signal - /i, ''));
+      // (#9) Draw sparklines after DOM is updated
+      requestAnimationFrame(() => {
+        drawSparkline('spark-price', priceHistory, '#3fb950');
+        drawSparkline('spark-flow', flowHistory,
+          (flowHistory.length && flowHistory[flowHistory.length - 1] >= 0) ? '#3fb950' : '#f85149');
+      });
     }
 
-    return `
+    /* ══════════════════════════════════════════════════════
+       RENDER: FLOW TABLE (with error boundary #18)
+       ══════════════════════════════════════════════════════ */
+    function renderFlow(rows) {
+      try {
+        _renderFlowInner(rows);
+      } catch (e) {
+        console.error('renderFlow error:', e);
+        document.getElementById('err').innerHTML += `<div class="err">Flow table render error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function _renderFlowInner(rows) {
+      if (!rows || !rows.length) {
+        document.getElementById('tbody-flow').innerHTML = '';
+        return;
+      }
+      const body = rows.slice().reverse().map(x => {
+        const dirCls = x.direction === 'PUT' ? 'put' : (x.direction === 'CALL' ? 'call' : 'muted');
+        const flowCls = x.flow >= 0 ? 'flowpos' : 'flowneg';
+        let statusCell = '', statusClass = 'reason-col';
+
+        if (x.has_signal) {
+          statusCell = `${gradePill(x.grade)} ALERTED`;
+          statusClass += ' fired';
+        } else if (x.direction === 'none') {
+          statusCell = '<span class="muted">flow below threshold</span>';
+        } else {
+          statusCell = escapeHtml((x.reason || '-').replace(/^no signal - /i, ''));
+        }
+
+        return `
       <tr class="${x.has_signal ? 'sig' : ''} ${x.is_flip ? 'flip' : ''}">
         <td>${fmtTime(x.candle_time_ny)}</td>
         <td>${escapeHtml(x.price)}</td>
@@ -839,36 +1670,48 @@ function renderFlow(rows) {
         <td>${x.direction === 'none' ? '' : gradePill(x.grade)}</td>
         <td class="${statusClass}">${statusCell}</td>
       </tr>`;
-  }).join('');
+      }).join('');
 
-  document.getElementById('tbody-flow').innerHTML = body;
-  applyFlowFilters();
-}
+      document.getElementById('tbody-flow').innerHTML = body;
+      applyFlowFilters();
+    }
 
-function renderVol(rows) {
-  if (!rows || !rows.length) {
-    document.getElementById('tbody-vol').innerHTML = '';
-    return;
-  }
-  const body = rows.slice().reverse().map(x => {
-    const pct = x.total_pct_chg;
-    const cpct = x.calls_pct_chg;
-    const ppct = x.puts_pct_chg;
-    const chgCls = pct == null ? 'flat' : (pct > 0 ? 'up' : 'dn');
-    const callChgCls = cpct == null ? 'flat' : (cpct > 0 ? 'up' : 'dn');
-    const putChgCls = ppct == null ? 'flat' : (ppct > 0 ? 'up' : 'dn');
-    const chgTxt = pct == null ? '-' : `${pct > 0 ? '+' : ''}${pct}%`;
-    const cChgTxt = cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`;
-    const pChgTxt = ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`;
-    const ratio = x.call_put_ratio;
-    const ratioCls = ratio == null ? 'flat' : (ratio > 1 ? 'call' : 'put');
+    /* ══════════════════════════════════════════════════════
+       RENDER: VOLUME TABLE (with error boundary #18)
+       ══════════════════════════════════════════════════════ */
+    function renderVol(rows) {
+      try {
+        _renderVolInner(rows);
+      } catch (e) {
+        console.error('renderVol error:', e);
+        document.getElementById('err').innerHTML += `<div class="err">Volume table render error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
 
-    const totCalls = x.total_calls || 0;
-    const totPuts = x.total_puts || 0;
-    const sum = totCalls + totPuts;
-    const callShare = sum > 0 ? Math.round((totCalls / sum) * 100) : 50;
+    function _renderVolInner(rows) {
+      if (!rows || !rows.length) {
+        document.getElementById('tbody-vol').innerHTML = '';
+        return;
+      }
+      const body = rows.slice().reverse().map(x => {
+        const pct = x.total_pct_chg;
+        const cpct = x.calls_pct_chg;
+        const ppct = x.puts_pct_chg;
+        const chgCls = pct == null ? 'flat' : (pct > 0 ? 'up' : 'dn');
+        const callChgCls = cpct == null ? 'flat' : (cpct > 0 ? 'up' : 'dn');
+        const putChgCls = ppct == null ? 'flat' : (ppct > 0 ? 'up' : 'dn');
+        const chgTxt = pct == null ? '-' : `${pct > 0 ? '+' : ''}${pct}%`;
+        const cChgTxt = cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`;
+        const pChgTxt = ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`;
+        const ratio = x.call_put_ratio;
+        const ratioCls = ratio == null ? 'flat' : (ratio > 1 ? 'call' : 'put');
 
-    const ratioBarHtml = `
+        const totCalls = x.total_calls || 0;
+        const totPuts = x.total_puts || 0;
+        const sum = totCalls + totPuts;
+        const callShare = sum > 0 ? Math.round((totCalls / sum) * 100) : 50;
+
+        const ratioBarHtml = `
       <div class="ratio-wrap">
         <span class="${ratioCls}">${ratio ?? '-'}</span>
         <div class="ratio-bar" title="Calls: ${callShare}% | Puts: ${100 - callShare}%">
@@ -876,10 +1719,10 @@ function renderVol(rows) {
         </div>
       </div>`;
 
-    const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
-      ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
+        const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
+          ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
 
-    return `
+        return `
       <tr data-chg="${chgCls}" data-callchg="${callChgCls}" data-putchg="${putChgCls}" data-ratio="${ratio || 0}">
         <td>${fmtTime(x.candle_time_ny)}</td>
         <td>${escapeHtml(x.price)}</td>
@@ -897,22 +1740,70 @@ function renderVol(rows) {
         <td class="${putChgCls}">${pChgTxt}</td>
         <td>${ratioBarHtml}</td>
       </tr>`;
-  }).join('');
+      }).join('');
 
-  document.getElementById('tbody-vol').innerHTML = body;
-  applyVolFilters();
-}
+      document.getElementById('tbody-vol').innerHTML = body;
+      applyVolFilters();
+    }
 
-function changeInterval() {
-  if (pollTimer) clearInterval(pollTimer);
-  const ms = parseInt(document.getElementById('poll-interval').value, 10);
-  if (ms > 0) {
-    pollTimer = setInterval(loadAll, ms);
-  }
-}
+    /* ══════════════════════════════════════════════════════
+       POLLING INTERVAL
+       ══════════════════════════════════════════════════════ */
+    function changeInterval() {
+      if (pollTimer) clearInterval(pollTimer);
+      const ms = parseInt(document.getElementById('poll-interval').value, 10);
+      if (ms > 0) {
+        pollTimer = setInterval(loadAll, ms);
+      }
+    }
 
-loadAll();
-changeInterval();
-</script>
+    /* ══════════════════════════════════════════════════════
+       KEYBOARD SHORTCUTS (#7)
+       ══════════════════════════════════════════════════════ */
+    document.addEventListener('keydown', (e) => {
+      // Don't fire shortcuts when typing in input/select fields
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+      switch (e.key.toLowerCase()) {
+        case 'r':
+          e.preventDefault();
+          loadAll();
+          break;
+        case '1':
+          e.preventDefault();
+          switchTab('flow');
+          break;
+        case '2':
+          e.preventDefault();
+          switchTab('vol');
+          break;
+        case 'escape':
+          e.preventDefault();
+          clearFilters();
+          break;
+        case 't':
+          e.preventDefault();
+          toggleTheme();
+          break;
+        case 's':
+          e.preventDefault();
+          toggleSound();
+          break;
+        case '?':
+          e.preventDefault();
+          document.getElementById('kbd-panel').classList.toggle('visible');
+          break;
+      }
+    });
+
+    /* ══════════════════════════════════════════════════════
+       INIT
+       ══════════════════════════════════════════════════════ */
+    initTheme();
+    loadAll();
+    changeInterval();
+  </script>
 </body>
+
 </html>
