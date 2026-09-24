@@ -980,6 +980,65 @@
       color: var(--amber);
     }
 
+    /* ── ANOMALY DETECTION (VOLUME SURGES) ── */
+    .badge {
+      display: inline-block;
+      background: var(--amber);
+      color: #000;
+      border-radius: 10px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .surge-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .surge-call {
+      background: rgba(255, 165, 0, 0.25);
+      color: var(--amber);
+    }
+
+    .surge-put {
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--red);
+    }
+
+    .surge-mixed {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--blue);
+    }
+
+    tr.anomaly-call {
+      background: rgba(255, 165, 0, 0.08);
+    }
+
+    tr.anomaly-call td:first-child {
+      border-left: 3px solid var(--amber);
+    }
+
+    tr.anomaly-put {
+      background: rgba(248, 81, 73, 0.08);
+    }
+
+    tr.anomaly-put td:first-child {
+      border-left: 3px solid var(--red);
+    }
+
+    tr.anomaly-mixed {
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    tr.anomaly-mixed td:first-child {
+      border-left: 3px solid var(--blue);
+    }
+
     /* ── SIGNAL DETAIL & TRADE JOURNAL MODAL ── */
     .modal-overlay {
       display: none;
@@ -1223,6 +1282,7 @@
     <div class="tabs">
       <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
+      <div class="tab" onclick="switchTab('anomaly')">Anomalies <span id="anomaly-badge" class="badge" style="display:none"></span></div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -1328,6 +1388,7 @@
             <th class="sortable" onclick="handleSort('vol', 13, true)">Call Chg%</th>
             <th class="sortable" onclick="handleSort('vol', 14, true)">Put Chg%</th>
             <th class="sortable" onclick="handleSort('vol', 15, true)">C/P Ratio</th>
+            <th style="text-align:left">Anomaly</th>
           </tr>
           <tr class="filter-row">
             <th></th>
@@ -1356,9 +1417,40 @@
                 <option value="call-heavy">Call heavy (&gt;1.0)</option>
                 <option value="put-heavy">Put heavy (&lt;1.0)</option>
               </select></th>
+            <th><select id="v-anomaly" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="CALL SURGE">Call Surge</option>
+                <option value="PUT SURGE">Put Surge</option>
+                <option value="MIXED">Mixed Surge</option>
+              </select></th>
           </tr>
         </thead>
         <tbody id="tbody-vol"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 3: ANOMALIES -->
+  <div id="tab-anomaly" class="tab-content">
+    <div class="table-wrap" id="anomaly-wrap">
+      <table id="tbl-anomaly">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>SPY Price</th>
+            <th>Vol Multiple</th>
+            <th>Total Vol</th>
+            <th>Avg Vol</th>
+            <th>Total Calls</th>
+            <th>Total Puts</th>
+            <th>C/P Ratio</th>
+            <th>Call Chg%</th>
+            <th>Put Chg%</th>
+            <th style="text-align:left;min-width:240px">Reason</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-anomaly"></tbody>
       </table>
     </div>
   </div>
@@ -1373,7 +1465,8 @@
     <h4>Keyboard Shortcuts</h4>
     <kbd>R</kbd> Refresh &nbsp;
     <kbd>1</kbd> Flow tab &nbsp;
-    <kbd>2</kbd> Volume tab<br>
+    <kbd>2</kbd> Volume tab &nbsp;
+    <kbd>3</kbd> Anomalies tab<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Clear filters<br>
     <kbd>T</kbd> Toggle theme &nbsp;
@@ -1428,6 +1521,7 @@
     let pinnedVol = new Set();     // Pinned Vol rows
     let hiddenCols = new Set();    // Hidden Flow columns
     let currentJournalSignal = null;
+    let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
 
     const sortConfig = {
       flow: { col: null, asc: true },
@@ -1841,6 +1935,12 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       return `<span class="pill p${safe}">${safe}</span>`;
     }
 
+    function surgePill(t) {
+      if (!t || t === 'none') return '';
+      const cls = t === 'CALL SURGE' ? 'surge-call' : (t === 'PUT SURGE' ? 'surge-put' : 'surge-mixed');
+      return `<span class="surge-pill ${cls}">${escapeHtml(t)}</span>`;
+    }
+
     /* ══════════════════════════════════════════════════════
        RELATIVE "LAST SYNCED" TIMER (#4)
        ══════════════════════════════════════════════════════ */
@@ -1888,10 +1988,11 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     function switchTab(name) {
       activeTab = name;
       document.querySelectorAll('.tab').forEach((t, i) => {
-        t.classList.toggle('active', ['flow', 'vol'][i] === name);
+        t.classList.toggle('active', ['flow', 'vol', 'anomaly'][i] === name);
       });
       document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
       document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
+      document.getElementById('tab-anomaly').classList.toggle('active', name === 'anomaly');
       updateRowCounts();
     }
 
@@ -1953,6 +2054,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const vcc = (document.getElementById('v-callchg').value || '').toLowerCase();
       const vpc = (document.getElementById('v-putchg').value || '').toLowerCase();
       const vr = (document.getElementById('v-ratio').value || '').toLowerCase();
+      const va = (document.getElementById('v-anomaly').value || '').toLowerCase();
 
       document.querySelectorAll('#tbody-vol tr').forEach(row => {
         const c = row.querySelectorAll('td');
@@ -1982,13 +2084,14 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           if (vr === 'call-heavy' && ratio <= 1.0) show = false;
           if (vr === 'put-heavy' && ratio >= 1.0) show = false;
         }
+        if (va && (row.dataset.anomaly || '').toLowerCase().indexOf(va) < 0) show = false;
 
         row.classList.toggle('hidden', !show);
       });
     }
 
     function updateRowCounts() {
-      const tbodyId = activeTab === 'flow' ? '#tbody-flow' : '#tbody-vol';
+      const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');
       const total = document.querySelectorAll(`${tbodyId} tr`).length;
       const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
       document.getElementById('row-counts').textContent = `Showing ${visible} of ${total} records`;
@@ -2185,24 +2288,38 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       try {
         // Determine which RPC functions + params to use based on date range
         const dateCtx = getDateContext();
-        let flowPromise, volPromise;
+        let flowPromise, volPromise, anomaliesPromise;
+
+        // Anomalies are a non-critical enhancement — failures (e.g. missing
+        // range RPC on historical dates) shouldn't block the core dashboard.
+        const anomaliesOnFail = (err) => {
+          if (err.name !== 'AbortError') console.warn('Anomalies load failed:', err);
+          return [];
+        };
 
         if (dateCtx.isLive) {
           // Live mode: today's data via original functions
           flowPromise = rpcWithRetry('v2_dashboard_today', signal);
           volPromise  = rpcWithRetry('v2_volume_today', signal);
+          anomaliesPromise = rpcWithRetry('v2_anomalies_today', signal, {}, 1).catch(anomaliesOnFail);
         } else {
           // Historical / range mode: use range functions
           const params = { p_start: dateCtx.start, p_end: dateCtx.end };
           flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
           volPromise  = rpcWithRetry('v2_volume_range', signal, params);
+          anomaliesPromise = rpcWithRetry('v2_anomalies_range', signal, params, 1).catch(anomaliesOnFail);
         }
 
-        const [flow, vol] = await Promise.all([flowPromise, volPromise]);
+        const [flow, vol, anomalies] = await Promise.all([flowPromise, volPromise, anomaliesPromise]);
+
+        anomalyMap = {};
+        (anomalies || []).forEach(a => { anomalyMap[a.candle_time_ny] = a; });
 
         renderCards(flow, vol);
         renderFlow(flow);
         renderVol(vol);
+        renderAnomalies(anomalies);
+        updateAnomalyBadge(anomalies);
         updateRowCounts();
 
         // (#17) Re-apply sort after data refresh
@@ -2405,6 +2522,9 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           statusCell = escapeHtml((x.reason || '-').replace(/^no signal - /i, ''));
         }
 
+        const anom = anomalyMap[x.candle_time_ny];
+        if (anom) statusCell += ' ' + surgePill(anom.anomaly_type);
+
         const jsonStr = escapeHtml(JSON.stringify(x));
 
         return `
@@ -2491,8 +2611,12 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
           ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
 
+        const anom = anomalyMap[x.candle_time_ny];
+        const anomType = anom ? anom.anomaly_type : '';
+        const anomRowCls = anom ? (anomType === 'CALL SURGE' ? 'anomaly-call' : (anomType === 'PUT SURGE' ? 'anomaly-put' : 'anomaly-mixed')) : '';
+
         return `
-      <tr class="${isPinned ? 'pinned' : ''}" data-chg="${chgCls}" data-callchg="${callChgCls}" data-putchg="${putChgCls}" data-ratio="${ratio || 0}">
+      <tr class="${isPinned ? 'pinned' : ''} ${anomRowCls}" data-chg="${chgCls}" data-callchg="${callChgCls}" data-putchg="${putChgCls}" data-ratio="${ratio || 0}" data-anomaly="${anomType}">
         <td><button class="pin-btn" onclick="togglePinVol('${rowKey}', event)">${isPinned ? '📌' : '📍'}</button></td>
         <td>${fmtTime(x.candle_time_ny)}</td>
         <td>${escapeHtml(x.price)}</td>
@@ -2509,11 +2633,67 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         <td class="${callChgCls}">${cChgTxt}</td>
         <td class="${putChgCls}">${pChgTxt}</td>
         <td>${ratioBarHtml}</td>
+        <td class="reason-col">${surgePill(anomType)}</td>
       </tr>`;
       }).join('');
 
       document.getElementById('tbody-vol').innerHTML = body;
       applyVolFilters();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       RENDER: ANOMALIES TABLE (with error boundary #18)
+       ══════════════════════════════════════════════════════ */
+    function renderAnomalies(rows) {
+      try {
+        _renderAnomaliesInner(rows);
+      } catch (e) {
+        console.error('renderAnomalies error:', e);
+        document.getElementById('err').innerHTML += `<div class="err">Anomalies table render error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function _renderAnomaliesInner(rows) {
+      const tbody = document.getElementById('tbody-anomaly');
+      if (!rows || !rows.length) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--dim);padding:24px">No anomalies detected in this range</td></tr>';
+        return;
+      }
+
+      const body = rows.slice().reverse().map(x => {
+        const rowCls = x.anomaly_type === 'CALL SURGE' ? 'anomaly-call' : (x.anomaly_type === 'PUT SURGE' ? 'anomaly-put' : 'anomaly-mixed');
+        const cpct = x.calls_pct_chg, ppct = x.puts_pct_chg;
+        const ratioCls = (x.cp_ratio != null && x.cp_ratio > 1) ? 'call' : 'put';
+
+        return `
+      <tr class="${rowCls}">
+        <td>${fmtTime(x.candle_time_ny)}</td>
+        <td>${surgePill(x.anomaly_type)}</td>
+        <td>${escapeHtml(x.spy_price)}</td>
+        <td><b>${escapeHtml(x.vol_multiple)}x</b></td>
+        <td>${fmtNum(x.total_vol)}</td>
+        <td class="muted">${fmtNum(x.avg_vol)}</td>
+        <td class="call">${fmtNum(x.total_calls)}</td>
+        <td class="put">${fmtNum(x.total_puts)}</td>
+        <td class="${ratioCls}">${x.cp_ratio ?? '-'}</td>
+        <td class="${cpct > 0 ? 'up' : 'dn'}">${cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`}</td>
+        <td class="${ppct > 0 ? 'up' : 'dn'}">${ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`}</td>
+        <td class="reason-col">${escapeHtml(x.reason)}</td>
+      </tr>`;
+      }).join('');
+
+      tbody.innerHTML = body;
+    }
+
+    function updateAnomalyBadge(rows) {
+      const badge = document.getElementById('anomaly-badge');
+      if (!badge) return;
+      if (rows && rows.length) {
+        badge.textContent = rows.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
     }
 
     /* ══════════════════════════════════════════════════════
@@ -2663,6 +2843,10 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         case '2':
           e.preventDefault();
           switchTab('vol');
+          break;
+        case '3':
+          e.preventDefault();
+          switchTab('anomaly');
           break;
         case 'escape':
           e.preventDefault();
