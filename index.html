@@ -746,6 +746,93 @@
       font-weight: 600;
     }
 
+    /* ── DATE RANGE PICKER ── */
+    .date-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .date-bar label {
+      color: var(--dim);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .date-bar input[type="date"] {
+      background: var(--panel2);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .date-bar input[type="date"]:focus {
+      border-color: var(--blue);
+    }
+
+    .date-bar input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.7);
+      cursor: pointer;
+    }
+
+    [data-theme="light"] .date-bar input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: none;
+    }
+
+    .date-presets {
+      display: flex;
+      gap: 4px;
+    }
+
+    .date-presets button {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+    }
+
+    .date-presets button.active-preset {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .date-mode-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .date-mode-badge.live {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .date-mode-badge.historical {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--blue);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+    }
+
+    .date-sep {
+      color: var(--dim);
+      font-size: 12px;
+    }
+
     /* ── KEYBOARD SHORTCUTS PANEL (#7) ── */
     .kbd-panel {
       display: none;
@@ -823,6 +910,21 @@
       </div>
     </div>
     <div id="err"></div>
+    <!-- DATE RANGE PICKER -->
+    <div class="date-bar">
+      <label>📅 Range</label>
+      <input type="date" id="date-start" title="Start date" onchange="onDateChange()">
+      <span class="date-sep">→</span>
+      <input type="date" id="date-end" title="End date" onchange="onDateChange()">
+      <div class="date-presets">
+        <button class="active-preset" onclick="setDatePreset('today')">Today</button>
+        <button onclick="setDatePreset('yesterday')">Yesterday</button>
+        <button onclick="setDatePreset('3d')">Last 3d</button>
+        <button onclick="setDatePreset('5d')">Last 5d</button>
+        <button onclick="setDatePreset('all')">All</button>
+      </div>
+      <span class="date-mode-badge live" id="date-mode-badge">● Live</span>
+    </div>
     <div class="grid" id="cards">
       <!-- Skeleton loading state shown on first load -->
       <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
@@ -976,9 +1078,10 @@
     <kbd>R</kbd> Refresh &nbsp;
     <kbd>1</kbd> Flow tab &nbsp;
     <kbd>2</kbd> Volume tab<br>
-    <kbd>Esc</kbd> Clear filters &nbsp;
+    <kbd>D</kbd> Cycle date range &nbsp;
+    <kbd>Esc</kbd> Clear filters<br>
     <kbd>T</kbd> Toggle theme &nbsp;
-    <kbd>S</kbd> Toggle sound<br>
+    <kbd>S</kbd> Toggle sound &nbsp;
     <kbd>?</kbd> Show/hide this panel
   </div>
 
@@ -1099,7 +1202,14 @@
       if (!m) return escapeHtml(ts);
       let h = +m[4], mi = m[5], ap = h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
-      return `${h}:${mi} ${ap}`;
+      const time = `${h}:${mi} ${ap}`;
+
+      // In multi-day mode, prefix with date
+      const ctx = getDateContext();
+      if (!ctx.isLive && ctx.start !== ctx.end) {
+        return `${+m[2]}/${+m[3]} ${time}`;
+      }
+      return time;
     }
 
     function fmtNum(n) {
@@ -1406,7 +1516,7 @@
     /* ══════════════════════════════════════════════════════
        DATA FETCHING — with Retry (#2) & AbortController (#16)
        ══════════════════════════════════════════════════════ */
-    async function rpc(fn, signal) {
+    async function rpc(fn, signal, params = {}) {
       const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
         method: 'POST',
         headers: {
@@ -1414,17 +1524,17 @@
           'Authorization': `Bearer ${SUPA_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(params),
         signal: signal
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     }
 
-    async function rpcWithRetry(fn, signal, retries = 3) {
+    async function rpcWithRetry(fn, signal, params = {}, retries = 3) {
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-          return await rpc(fn, signal);
+          return await rpc(fn, signal, params);
         } catch (e) {
           if (e.name === 'AbortError') throw e; // Don't retry aborts
           if (attempt === retries) throw e;
@@ -1458,10 +1568,22 @@
       const volScroll = volWrap ? volWrap.scrollTop : 0;
 
       try {
-        const [flow, vol] = await Promise.all([
-          rpcWithRetry('v2_dashboard_today', signal),
-          rpcWithRetry('v2_volume_today', signal)
-        ]);
+        // Determine which RPC functions + params to use based on date range
+        const dateCtx = getDateContext();
+        let flowPromise, volPromise;
+
+        if (dateCtx.isLive) {
+          // Live mode: today's data via original functions
+          flowPromise = rpcWithRetry('v2_dashboard_today', signal);
+          volPromise  = rpcWithRetry('v2_volume_today', signal);
+        } else {
+          // Historical / range mode: use range functions
+          const params = { p_start: dateCtx.start, p_end: dateCtx.end };
+          flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
+          volPromise  = rpcWithRetry('v2_volume_range', signal, params);
+        }
+
+        const [flow, vol] = await Promise.all([flowPromise, volPromise]);
 
         renderCards(flow);
         renderFlow(flow);
@@ -1758,6 +1880,113 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       DATE RANGE LOGIC
+       ══════════════════════════════════════════════════════ */
+    let currentPreset = 'today';
+
+    function todayStr() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function offsetDate(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function setDatePreset(preset) {
+      currentPreset = preset;
+      const startEl = document.getElementById('date-start');
+      const endEl = document.getElementById('date-end');
+      const today = todayStr();
+
+      switch (preset) {
+        case 'today':
+          startEl.value = today;
+          endEl.value = today;
+          break;
+        case 'yesterday':
+          const yd = offsetDate(1);
+          startEl.value = yd;
+          endEl.value = yd;
+          break;
+        case '3d':
+          startEl.value = offsetDate(2);
+          endEl.value = today;
+          break;
+        case '5d':
+          startEl.value = offsetDate(4);
+          endEl.value = today;
+          break;
+        case 'all':
+          startEl.value = '';
+          endEl.value = '';
+          break;
+      }
+
+      // Update preset button highlight
+      document.querySelectorAll('.date-presets button').forEach(b => b.classList.remove('active-preset'));
+      event.target.classList.add('active-preset');
+
+      updateDateMode();
+      loadAll();
+    }
+
+    function onDateChange() {
+      // Clear preset highlights when user manually edits dates
+      currentPreset = 'custom';
+      document.querySelectorAll('.date-presets button').forEach(b => b.classList.remove('active-preset'));
+      updateDateMode();
+      loadAll();
+    }
+
+    function getDateContext() {
+      const startEl = document.getElementById('date-start');
+      const endEl = document.getElementById('date-end');
+      const start = startEl.value;
+      const end = endEl.value;
+      const today = todayStr();
+
+      // "Live" if both dates are today or both empty (defaults to today via RPC)
+      const isToday = (!start && !end) || (start === today && end === today);
+      const isLive = isToday || currentPreset === 'today';
+
+      return {
+        isLive,
+        start: start || null,
+        end: end || null
+      };
+    }
+
+    function updateDateMode() {
+      const ctx = getDateContext();
+      const badge = document.getElementById('date-mode-badge');
+      const pollSelect = document.getElementById('poll-interval');
+
+      if (ctx.isLive) {
+        badge.textContent = '● Live';
+        badge.className = 'date-mode-badge live';
+        // Re-enable auto-poll
+        pollSelect.disabled = false;
+        changeInterval();
+      } else {
+        badge.textContent = '● Historical';
+        badge.className = 'date-mode-badge historical';
+        // Disable auto-poll for historical data
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = null;
+        pollSelect.disabled = true;
+      }
+    }
+
+    function initDatePicker() {
+      const today = todayStr();
+      document.getElementById('date-start').value = today;
+      document.getElementById('date-end').value = today;
+    }
+
+    /* ══════════════════════════════════════════════════════
        KEYBOARD SHORTCUTS (#7)
        ══════════════════════════════════════════════════════ */
     document.addEventListener('keydown', (e) => {
@@ -1790,6 +2019,16 @@
           e.preventDefault();
           toggleSound();
           break;
+        case 'd':
+          e.preventDefault();
+          // Cycle: today → yesterday → 3d → 5d → all → today
+          const cycle = ['today', 'yesterday', '3d', '5d', 'all'];
+          const idx = cycle.indexOf(currentPreset);
+          const next = cycle[(idx + 1) % cycle.length];
+          // Simulate button click for the preset
+          const btns = document.querySelectorAll('.date-presets button');
+          btns[cycle.indexOf(next)]?.click();
+          break;
         case '?':
           e.preventDefault();
           document.getElementById('kbd-panel').classList.toggle('visible');
@@ -1801,6 +2040,7 @@
        INIT
        ══════════════════════════════════════════════════════ */
     initTheme();
+    initDatePicker();
     loadAll();
     changeInterval();
   </script>
