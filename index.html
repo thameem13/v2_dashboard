@@ -2642,6 +2642,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
 
+      // Modal open: only Esc (close it) gets through — everything else is suppressed
+      if (document.getElementById('modal-journal').classList.contains('visible')) {
+        if (e.key.toLowerCase() === 'escape') {
+          e.preventDefault();
+          closeModal();
+        }
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 'r':
           e.preventDefault();
