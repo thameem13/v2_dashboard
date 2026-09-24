@@ -1679,7 +1679,11 @@
       if (label) {
         const isBullish = callPct >= 50;
         const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
-        label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Net Puts: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Net Calls: +$${callFlow.toFixed(3)}k`;
+        const netFlow = callFlow - putFlow;
+        const netSign = netFlow >= 0 ? '+' : '-';
+        const netStr = `${netSign}$${Math.abs(netFlow).toFixed(3)}k`;
+        const netCls = netFlow >= 0 ? 'call' : 'put';
+        label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Flow: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Call Flow: +$${callFlow.toFixed(3)}k &nbsp;|&nbsp; Net Session: <b class="${netCls}">${netStr}</b>`;
       }
     }
 
