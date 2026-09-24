@@ -1653,37 +1653,71 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       SESSION FLOW SENTIMENT BAR
+       SESSION FLOW & VOLUME SENTIMENT BAR
        ══════════════════════════════════════════════════════ */
-    function updateSentimentBar(rows) {
-      if (!rows || !rows.length) return;
-      let callFlow = 0, putFlow = 0;
-      rows.forEach(r => {
-        const f = Math.abs(r.flow || 0);
-        if (r.direction === 'CALL') {
-          callFlow += f;
-        } else if (r.direction === 'PUT') {
-          putFlow += f;
-        } else {
-          if (r.flow > 0) callFlow += f;
-          else if (r.flow < 0) putFlow += f;
-        }
-      });
-      const total = callFlow + putFlow;
-      const callPct = total > 0 ? Math.round((callFlow / total) * 100) : 50;
-      const putPct = 100 - callPct;
+    function updateSentimentBar(flowRows, volRows) {
       const fill = document.getElementById('sentiment-bar-fill');
       const label = document.getElementById('sentiment-bias-label');
+      if (!fill || !label) return;
 
-      if (fill) fill.style.width = `${callPct}%`;
-      if (label) {
-        const isBullish = callPct >= 50;
-        const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
-        const netFlow = callFlow - putFlow;
-        const netSign = netFlow >= 0 ? '+' : '-';
-        const netStr = `${netSign}$${Math.abs(netFlow).toFixed(3)}k`;
-        const netCls = netFlow >= 0 ? 'call' : 'put';
-        label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Flow: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Call Flow: +$${callFlow.toFixed(3)}k &nbsp;|&nbsp; Net Session: <b class="${netCls}">${netStr}</b>`;
+      const fmtVol = (n) => {
+        if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+        return n.toLocaleString();
+      };
+
+      // 1. Primary: Option Volume Sentiment (contracts)
+      if (volRows && volRows.length) {
+        let totCalls = 0, totPuts = 0;
+        volRows.forEach(x => {
+          totCalls += (x.total_calls || 0);
+          totPuts += (x.total_puts || 0);
+        });
+        const totalVol = totCalls + totPuts;
+        if (totalVol > 0) {
+          const callPct = Math.round((totCalls / totalVol) * 100);
+          const putPct = 100 - callPct;
+          const isBullish = callPct >= 50;
+          const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
+          const netVol = totCalls - totPuts;
+          const netSign = netVol >= 0 ? '+' : '-';
+          const netStr = `${netSign}${fmtVol(Math.abs(netVol))}`;
+          const netCls = netVol >= 0 ? 'call' : 'put';
+
+          fill.style.width = `${callPct}%`;
+          label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Vol: <b>${fmtVol(totPuts)}</b> &nbsp;|&nbsp; Call Vol: <b>${fmtVol(totCalls)}</b> &nbsp;|&nbsp; Net Vol: <b class="${netCls}">${netStr}</b>`;
+          return;
+        }
+      }
+
+      // 2. Fallback: Flow Signal Sentiment (flow score sum)
+      if (flowRows && flowRows.length) {
+        let callFlow = 0, putFlow = 0;
+        flowRows.forEach(r => {
+          const f = Math.abs(r.flow || 0);
+          if (r.direction === 'CALL') {
+            callFlow += f;
+          } else if (r.direction === 'PUT') {
+            putFlow += f;
+          } else {
+            if (r.flow > 0) callFlow += f;
+            else if (r.flow < 0) putFlow += f;
+          }
+        });
+        const total = callFlow + putFlow;
+        if (total > 0) {
+          const callPct = Math.round((callFlow / total) * 100);
+          const putPct = 100 - callPct;
+          const isBullish = callPct >= 50;
+          const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
+          const netFlow = callFlow - putFlow;
+          const netSign = netFlow >= 0 ? '+' : '-';
+          const netStr = `${netSign}$${Math.abs(netFlow).toFixed(3)}k`;
+          const netCls = netFlow >= 0 ? 'call' : 'put';
+
+          fill.style.width = `${callPct}%`;
+          label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Flow: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Call Flow: +$${callFlow.toFixed(3)}k &nbsp;|&nbsp; Net Session: <b class="${netCls}">${netStr}</b>`;
+        }
       }
     }
 
@@ -2166,7 +2200,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
 
         const [flow, vol] = await Promise.all([flowPromise, volPromise]);
 
-        renderCards(flow);
+        renderCards(flow, vol);
         renderFlow(flow);
         renderVol(vol);
         updateRowCounts();
@@ -2201,16 +2235,16 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        RENDER: CARDS (with sparklines #9, VA legend #11,
        signal timestamp #12, error boundary #18)
        ══════════════════════════════════════════════════════ */
-    function renderCards(rows) {
+    function renderCards(rows, volRows) {
       try {
-        _renderCardsInner(rows);
+        _renderCardsInner(rows, volRows);
       } catch (e) {
         console.error('renderCards error:', e);
         document.getElementById('err').innerHTML += `<div class="err">Card render error: ${escapeHtml(e.message)}</div>`;
       }
     }
 
-    function _renderCardsInner(rows) {
+    function _renderCardsInner(rows, volRows) {
       if (!rows || !rows.length) {
         document.getElementById('cards').innerHTML = '<div class="status quiet">No session data recorded today.</div>';
         document.getElementById('sub').textContent = 'No data';
@@ -2266,8 +2300,8 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         statusHtml = `<div class="status quiet">No active signal on latest candle (${fmtTime(last.candle_time_ny)}).</div>`;
       }
 
-      // Update Session Flow Sentiment Bar
-      updateSentimentBar(rows);
+      // Update Session Flow & Volume Sentiment Bar
+      updateSentimentBar(rows, volRows);
 
       // VA Gauge with legend (#11)
       let vaGaugeHtml = '';
