@@ -1659,18 +1659,27 @@
       if (!rows || !rows.length) return;
       let callFlow = 0, putFlow = 0;
       rows.forEach(r => {
-        if (r.flow > 0) callFlow += r.flow;
-        else if (r.flow < 0) putFlow += Math.abs(r.flow);
+        const f = Math.abs(r.flow || 0);
+        if (r.direction === 'CALL') {
+          callFlow += f;
+        } else if (r.direction === 'PUT') {
+          putFlow += f;
+        } else {
+          if (r.flow > 0) callFlow += f;
+          else if (r.flow < 0) putFlow += f;
+        }
       });
       const total = callFlow + putFlow;
       const callPct = total > 0 ? Math.round((callFlow / total) * 100) : 50;
+      const putPct = 100 - callPct;
       const fill = document.getElementById('sentiment-bar-fill');
       const label = document.getElementById('sentiment-bias-label');
 
       if (fill) fill.style.width = `${callPct}%`;
       if (label) {
-        const netBias = callPct >= 50 ? `Bullish (${callPct}% Call Bias)` : `Bearish (${100 - callPct}% Put Bias)`;
-        label.innerHTML = `<b class="${callPct >= 50 ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Net Calls: +$${callFlow.toLocaleString()}k &nbsp; Net Puts: -$${putFlow.toLocaleString()}k`;
+        const isBullish = callPct >= 50;
+        const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
+        label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Net Puts: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Net Calls: +$${callFlow.toFixed(3)}k`;
       }
     }
 
@@ -2302,7 +2311,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     </div>
     <div class="card">
       <div class="label">Latest Flow</div>
-      <div class="val ${last.flow >= 0 ? 'flowpos' : 'flowneg'}">${escapeHtml(last.flow ?? '-')}</div>
+      <div class="val ${(last.direction === 'PUT' || (last.flow && last.flow < 0)) ? 'flowneg' : ((last.direction === 'CALL' || (last.flow && last.flow > 0)) ? 'flowpos' : 'muted')}">${escapeHtml(last.flow ?? '-')}</div>
       <div class="sparkline-wrap"><canvas id="spark-flow"></canvas></div>
     </div>
   `;
@@ -2346,7 +2355,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         const rowKey = (x.candle_time_ny || '') + '_' + (x.atm_strike || '');
         const isPinned = pinnedFlow.has(rowKey);
         const dirCls = x.direction === 'PUT' ? 'put' : (x.direction === 'CALL' ? 'call' : 'muted');
-        const flowCls = x.flow >= 0 ? 'flowpos' : 'flowneg';
+        const flowCls = (x.direction === 'PUT' || (x.flow && x.flow < 0)) ? 'flowneg' : ((x.direction === 'CALL' || (x.flow && x.flow > 0)) ? 'flowpos' : 'muted');
         let statusCell = '', statusClass = 'reason-col';
 
         if (x.has_signal) {
