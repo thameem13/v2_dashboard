@@ -1410,7 +1410,7 @@
        ══════════════════════════════════════════════════════ */
 
     const SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
-    const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnc2d5Y2l6aHNzZXhzdGpyc3FpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MjExMTUsImV4cCI6MjA5Mjk5NzExNX0.Lru050B7jibl0hym9jYVa_Ak-KOWn9rwU-LUlTTFjWk";
+    const SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -1552,6 +1552,204 @@
           document.getElementById('theme-btn').textContent = '☀️ Light';
         }
       } catch (e) { }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       ROW PINNING LOGIC
+       ══════════════════════════════════════════════════════ */
+    function initPinnedRows() {
+      try {
+        const f = localStorage.getItem('v2-pinned-flow');
+        const v = localStorage.getItem('v2-pinned-vol');
+        if (f) pinnedFlow = new Set(JSON.parse(f));
+        if (v) pinnedVol = new Set(JSON.parse(v));
+      } catch (e) { }
+    }
+
+    function togglePinFlow(key, e) {
+      if (e) e.stopPropagation();
+      if (pinnedFlow.has(key)) pinnedFlow.delete(key);
+      else pinnedFlow.add(key);
+      try { localStorage.setItem('v2-pinned-flow', JSON.stringify([...pinnedFlow])); } catch (e) { }
+      loadAll();
+    }
+
+    function togglePinVol(key, e) {
+      if (e) e.stopPropagation();
+      if (pinnedVol.has(key)) pinnedVol.delete(key);
+      else pinnedVol.add(key);
+      try { localStorage.setItem('v2-pinned-vol', JSON.stringify([...pinnedVol])); } catch (e) { }
+      loadAll();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       COLUMN VISIBILITY MANAGEMENT
+       ══════════════════════════════════════════════════════ */
+    function toggleColumnMenu() {
+      const menu = document.getElementById('col-menu');
+      if (menu) menu.classList.toggle('visible');
+    }
+
+    function toggleCol(colClass, isVisible) {
+      if (isVisible) hiddenCols.delete(colClass);
+      else hiddenCols.add(colClass);
+
+      document.querySelectorAll(`.${colClass}`).forEach(el => {
+        el.style.display = isVisible ? '' : 'none';
+      });
+      try { localStorage.setItem('v2-hidden-cols', JSON.stringify([...hiddenCols])); } catch (e) { }
+    }
+
+    function applyHiddenCols() {
+      hiddenCols.forEach(colClass => {
+        document.querySelectorAll(`.${colClass}`).forEach(el => el.style.display = 'none');
+        const chk = document.querySelector(`.col-menu input[onchange*="${colClass}"]`);
+        if (chk) chk.checked = false;
+      });
+    }
+
+    function initHiddenCols() {
+      try {
+        const saved = localStorage.getItem('v2-hidden-cols');
+        if (saved) hiddenCols = new Set(JSON.parse(saved));
+      } catch (e) { }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       FILTER PRESETS
+       ══════════════════════════════════════════════════════ */
+    function applyPreset(preset) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      if (window.event && window.event.target) window.event.target.classList.add('active');
+
+      document.getElementById('f-time').value = '';
+      document.getElementById('f-price').value = '';
+      document.getElementById('f-strike').value = '';
+      document.getElementById('f-flow').value = '';
+      document.getElementById('f-dir').value = '';
+      document.getElementById('f-poc').value = '';
+      document.getElementById('f-room').value = '';
+      document.getElementById('f-score').value = '';
+      document.getElementById('f-grade').value = '';
+      document.getElementById('f-status').value = '';
+
+      switch (preset) {
+        case 'grade-a-calls':
+          document.getElementById('f-dir').value = 'CALL';
+          document.getElementById('f-grade').value = 'A';
+          break;
+        case 'grade-a-puts':
+          document.getElementById('f-dir').value = 'PUT';
+          document.getElementById('f-grade').value = 'A';
+          break;
+        case 'alerted':
+          document.getElementById('f-status').value = 'ALERTED';
+          break;
+        case 'high-flow':
+          document.getElementById('f-flow').value = '> 100';
+          break;
+      }
+      applyFlowFilters();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SESSION FLOW SENTIMENT BAR
+       ══════════════════════════════════════════════════════ */
+    function updateSentimentBar(rows) {
+      if (!rows || !rows.length) return;
+      let callFlow = 0, putFlow = 0;
+      rows.forEach(r => {
+        if (r.flow > 0) callFlow += r.flow;
+        else if (r.flow < 0) putFlow += Math.abs(r.flow);
+      });
+      const total = callFlow + putFlow;
+      const callPct = total > 0 ? Math.round((callFlow / total) * 100) : 50;
+      const fill = document.getElementById('sentiment-bar-fill');
+      const label = document.getElementById('sentiment-bias-label');
+
+      if (fill) fill.style.width = `${callPct}%`;
+      if (label) {
+        const netBias = callPct >= 50 ? `Bullish (${callPct}% Call Bias)` : `Bearish (${100 - callPct}% Put Bias)`;
+        label.innerHTML = `<b class="${callPct >= 50 ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Net Calls: +$${callFlow.toLocaleString()}k &nbsp; Net Puts: -$${putFlow.toLocaleString()}k`;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SIGNAL DETAIL & TRADE JOURNAL MODAL
+       ══════════════════════════════════════════════════════ */
+    function openSignalJournal(sig) {
+      currentJournalSignal = sig;
+      const titleEl = document.getElementById('modal-title');
+      const bodyEl = document.getElementById('modal-body');
+
+      const isCall = sig.direction === 'CALL';
+      const dirCls = isCall ? 'call' : (sig.direction === 'PUT' ? 'put' : 'muted');
+
+      titleEl.innerHTML = `📌 SPY $${sig.atm_strike} ${sig.direction || ''} Signal &nbsp; ${gradePill(sig.grade)}`;
+      bodyEl.innerHTML = `
+        <div class="modal-grid">
+          <div><div class="modal-item-label">Timestamp</div><div class="modal-item-val">${fmtTime(sig.candle_time_ny)}</div></div>
+          <div><div class="modal-item-label">SPY Price</div><div class="modal-item-val">$${sig.price ?? '-'}</div></div>
+          <div><div class="modal-item-label">ATM Strike</div><div class="modal-item-val">$${sig.atm_strike ?? '-'}</div></div>
+          <div><div class="modal-item-label">Net Flow</div><div class="modal-item-val ${sig.flow >= 0 ? 'flowpos' : 'flowneg'}">${sig.flow ?? 0}k</div></div>
+          <div><div class="modal-item-label">Direction</div><div class="modal-item-val ${dirCls}">${sig.direction ?? '-'}</div></div>
+          <div><div class="modal-item-label">POC / Room</div><div class="modal-item-val">${sig.poc ?? '-'} / ${sig.room ?? '-'}</div></div>
+          <div><div class="modal-item-label">Total Score</div><div class="modal-item-val">${sig.score ?? '-'} / 5</div></div>
+          <div><div class="modal-item-label">Signal Status</div><div class="modal-item-val">${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}</div></div>
+        </div>
+        <div style="background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:11px;color:var(--dim);margin-bottom:4px;text-transform:uppercase">Rules Check</div>
+          <div style="display:flex;gap:12px;font-size:11px">
+            <span>Flow: <b>${sig.s_flow ?? 0}</b></span>
+            <span>Vol: <b>${sig.s_vol ?? 0}</b></span>
+            <span>Inst: <b>${sig.s_inst ?? 0}</b></span>
+            <span>Room: ${gate(sig.room_ok)}</span>
+            <span>Clean: ${gate(sig.s_clean > 0)}</span>
+          </div>
+        </div>`;
+
+      document.getElementById('modal-journal').classList.add('visible');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-journal').classList.remove('visible');
+    }
+
+    function copyTradeLog() {
+      if (!currentJournalSignal) return;
+      const sig = currentJournalSignal;
+      const text = `🚨 **SPY Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
+- **Direction**: ${sig.direction} ($${sig.atm_strike} Strike @ SPY $${sig.price})
+- **Net Flow**: ${sig.flow}k | **Score**: ${sig.score}/5 (Grade ${sig.grade || 'N/A'})
+- **POC / Room**: ${sig.poc ?? '-'} / ${sig.room ?? '-'}
+- **Status**: ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Trade Log copied to clipboard!');
+      });
+    }
+
+    function exportSignalSnapshot() {
+      if (!currentJournalSignal) return;
+      const sig = currentJournalSignal;
+      const text = `SPY SIGNAL SNAPSHOT — ${fmtTime(sig.candle_time_ny)}
+==========================================
+Direction: ${sig.direction}
+Strike:    $${sig.atm_strike}
+SPY Price: $${sig.price}
+Net Flow:  ${sig.flow}k
+Score:     ${sig.score}/5
+Grade:     ${sig.grade || 'N/A'}
+Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
+==========================================`;
+
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SPY_Signal_${(sig.candle_time_ny || 'date').slice(0, 10)}_${sig.atm_strike}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     /* ══════════════════════════════════════════════════════
