@@ -882,6 +882,132 @@
       accent-color: var(--blue);
     }
 
+    /* ── MARKET NEWS PANEL ── */
+    .news-panel {
+      display: none;
+      position: fixed;
+      top: 42px;
+      right: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 300;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+      width: 340px;
+      max-width: calc(100vw - 24px);
+    }
+
+    .news-panel.visible {
+      display: block;
+    }
+
+    .news-panel h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--dim);
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .news-panel h4 button {
+      padding: 2px 7px;
+      font-size: 10px;
+    }
+
+    .news-key-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .news-key-form input {
+      background: var(--bg);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .news-key-form input:focus {
+      border-color: var(--blue);
+    }
+
+    .news-key-hint {
+      font-size: 10px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .news-key-hint a {
+      color: var(--blue);
+    }
+
+    .news-list {
+      max-height: 340px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .news-item {
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .news-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .news-item-time {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .news-item a {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--txt);
+      text-decoration: none;
+      margin: 2px 0;
+    }
+
+    .news-item a:hover {
+      color: var(--blue);
+      text-decoration: underline;
+    }
+
+    .news-item-source {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .news-error {
+      font-size: 11px;
+      color: var(--red);
+      line-height: 1.5;
+    }
+
+    .news-change-key {
+      font-size: 10px;
+      color: var(--dim);
+      cursor: pointer;
+      text-decoration: underline;
+      margin-bottom: 8px;
+      display: inline-block;
+    }
+
     /* ── FILTER PRESETS BAR ── */
     .preset-bar {
       display: flex;
@@ -1196,6 +1322,7 @@
         <button id="push-btn" onclick="togglePushNotifications()">🔔 Push: OFF</button>
         <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
         <button id="cols-btn" onclick="toggleColumnMenu()">👁️ Columns</button>
+        <button id="news-btn" onclick="toggleNewsPanel()">📰 News</button>
         <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
           <option value="10000" selected>Auto: 10s</option>
           <option value="30000">Auto: 30s</option>
@@ -1226,6 +1353,12 @@
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-score', this.checked)"> Score</label>
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-grade', this.checked)"> Grade</label>
           </div>
+        </div>
+
+        <!-- MARKET NEWS PANEL -->
+        <div class="news-panel" id="news-panel">
+          <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
+          <div id="news-body">Loading...</div>
         </div>
       </div>
     </div>
@@ -1723,6 +1856,101 @@
         const saved = localStorage.getItem('v2-hidden-cols');
         if (saved) hiddenCols = new Set(JSON.parse(saved));
       } catch (e) { }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       MARKET NEWS PANEL
+       ══════════════════════════════════════════════════════ */
+    let newsLoaded = false;
+
+    function toggleNewsPanel() {
+      const panel = document.getElementById('news-panel');
+      if (!panel) return;
+      panel.classList.toggle('visible');
+      if (panel.classList.contains('visible') && !newsLoaded) {
+        loadNews();
+      }
+    }
+
+    function getNewsKey() {
+      try { return localStorage.getItem('v2-finnhub-key') || ''; } catch (e) { return ''; }
+    }
+
+    function renderNewsKeyForm(errorMsg) {
+      const body = document.getElementById('news-body');
+      body.innerHTML = `
+        <div class="news-key-form">
+          ${errorMsg ? `<div class="news-error">${escapeHtml(errorMsg)}</div>` : ''}
+          <div class="news-key-hint">
+            Paste a free Finnhub API key to show market headlines.
+            Get one at <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io/register</a>.
+          </div>
+          <input type="text" id="news-key-input" placeholder="Finnhub API key">
+          <button onclick="saveNewsKey()">Save &amp; Load News</button>
+        </div>`;
+    }
+
+    function saveNewsKey() {
+      const input = document.getElementById('news-key-input');
+      const key = (input && input.value || '').trim();
+      if (!key) return;
+      try { localStorage.setItem('v2-finnhub-key', key); } catch (e) { }
+      loadNews(true);
+    }
+
+    function changeNewsKey() {
+      renderNewsKeyForm();
+    }
+
+    async function loadNews(forceRefresh) {
+      const key = getNewsKey();
+      if (!key) {
+        renderNewsKeyForm();
+        return;
+      }
+
+      const body = document.getElementById('news-body');
+      if (forceRefresh) body.innerHTML = 'Loading...';
+
+      try {
+        const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(key)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const articles = await res.json();
+        newsLoaded = true;
+        renderNews(articles);
+      } catch (e) {
+        console.warn('News load failed:', e);
+        renderNewsKeyForm('Couldn\'t load news — check your API key or connection.');
+      }
+    }
+
+    function renderNews(articles) {
+      const body = document.getElementById('news-body');
+      if (!articles || !articles.length) {
+        body.innerHTML = '<div class="news-error">No news available right now.</div>';
+        return;
+      }
+
+      const top = articles
+        .slice()
+        .sort((a, b) => (b.datetime || 0) - (a.datetime || 0))
+        .slice(0, 15);
+
+      const itemsHtml = top.map(a => {
+        const time = a.datetime
+          ? new Date(a.datetime * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : '-';
+        return `
+          <div class="news-item">
+            <div class="news-item-time">${escapeHtml(time)}</div>
+            <a href="${escapeHtml(a.url || '#')}" target="_blank" rel="noopener">${escapeHtml(a.headline || 'Untitled')}</a>
+            <div class="news-item-source">${escapeHtml(a.source || '')}</div>
+          </div>`;
+      }).join('');
+
+      body.innerHTML = `
+        <span class="news-change-key" onclick="changeNewsKey()">change API key</span>
+        <div class="news-list">${itemsHtml}</div>`;
     }
 
     /* ══════════════════════════════════════════════════════
@@ -2891,6 +3119,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     initHiddenCols();
     loadAll();
     changeInterval();
+    setInterval(() => loadNews(), 5 * 60 * 1000);
   </script>
 </body>
 
