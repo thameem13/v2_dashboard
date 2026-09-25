@@ -981,17 +981,6 @@
     }
 
     /* ── ANOMALY DETECTION (VOLUME SURGES) ── */
-    .badge {
-      display: inline-block;
-      background: var(--amber);
-      color: #000;
-      border-radius: 10px;
-      padding: 0 6px;
-      font-size: 10px;
-      font-weight: 700;
-      line-height: 1.6;
-    }
-
     .surge-pill {
       display: inline-block;
       padding: 2px 8px;
@@ -1282,7 +1271,7 @@
     <div class="tabs">
       <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
-      <div class="tab" onclick="switchTab('anomaly')">Anomalies <span id="anomaly-badge" class="badge" style="display:none"></span></div>
+      <div class="tab" onclick="switchTab('anomaly')">Anomalies</div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -1522,6 +1511,7 @@
     let hiddenCols = new Set();    // Hidden Flow columns
     let currentJournalSignal = null;
     let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
+    let lastAnomalyTimestamp = null;
 
     const sortConfig = {
       flow: { col: null, asc: true },
@@ -1569,6 +1559,32 @@
       } catch (e) {
         console.warn('Push notification failed:', e);
       }
+    }
+
+    function sendAnomalyPushNotification(anom) {
+      if (!pushEnabled || Notification.permission !== 'granted') return;
+      const title = `⚠️ SPY ${anom.anomaly_type} Detected`;
+      const body = `${anom.vol_multiple}x avg vol | Calls: ${anom.total_calls} | Puts: ${anom.total_puts} | C/P ${anom.cp_ratio}`;
+      try {
+        new Notification(title, { body });
+      } catch (e) {
+        console.warn('Push notification failed:', e);
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       NEW ANOMALY ALERT — fires popup + chime once per new
+       anomaly (dedup'd by candle_time_ny + anomaly_type)
+       ══════════════════════════════════════════════════════ */
+    function checkNewAnomaly(anomalies) {
+      if (!anomalies || !anomalies.length) return;
+      const latest = anomalies[anomalies.length - 1];
+      const key = latest.candle_time_ny + '_' + latest.anomaly_type;
+      if (key === lastAnomalyTimestamp) return;
+      lastAnomalyTimestamp = key;
+      const dir = latest.anomaly_type === 'PUT SURGE' ? 'PUT' : 'CALL';
+      playChime(dir);
+      sendAnomalyPushNotification(latest);
     }
 
     /* ══════════════════════════════════════════════════════
@@ -2319,7 +2335,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         renderFlow(flow);
         renderVol(vol);
         renderAnomalies(anomalies);
-        updateAnomalyBadge(anomalies);
+        checkNewAnomaly(anomalies);
         updateRowCounts();
 
         // (#17) Re-apply sort after data refresh
@@ -2683,17 +2699,6 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       }).join('');
 
       tbody.innerHTML = body;
-    }
-
-    function updateAnomalyBadge(rows) {
-      const badge = document.getElementById('anomaly-badge');
-      if (!badge) return;
-      if (rows && rows.length) {
-        badge.textContent = rows.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
     }
 
     /* ══════════════════════════════════════════════════════
