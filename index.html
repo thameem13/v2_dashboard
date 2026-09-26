@@ -884,22 +884,20 @@
 
     /* ── MARKET NEWS PANEL (inline, next to cards) ── */
     .top-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      align-items: start;
       gap: 8px;
-      align-items: flex-start;
       margin-bottom: 8px;
     }
 
     .top-row .grid {
-      flex: 1;
       min-width: 0;
       margin-bottom: 0;
     }
 
     .news-inline {
-      width: 320px;
       height: 190px;
-      flex-shrink: 0;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 7px;
