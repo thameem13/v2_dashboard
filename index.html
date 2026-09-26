@@ -2609,6 +2609,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         document.getElementById('cards').innerHTML = '<div class="status quiet">No session data recorded today.</div>';
         document.getElementById('sub').textContent = 'No data';
         document.getElementById('live-dot').style.display = 'none';
+        requestAnimationFrame(syncNewsPanelHeight);
         return;
       }
 
@@ -2719,7 +2720,14 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         drawSparkline('spark-price', priceHistory, '#3fb950');
         drawSparkline('spark-flow', flowHistory,
           (flowHistory.length && flowHistory[flowHistory.length - 1] >= 0) ? '#3fb950' : '#f85149');
+        syncNewsPanelHeight();
       });
+    }
+
+    function syncNewsPanelHeight() {
+      const cards = document.getElementById('cards');
+      const panel = document.getElementById('news-panel');
+      if (cards && panel) panel.style.height = cards.offsetHeight + 'px';
     }
 
     /* ══════════════════════════════════════════════════════
@@ -3120,6 +3128,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     changeInterval();
     loadNews();
     setInterval(() => loadNews(), 5 * 60 * 1000);
+    window.addEventListener('resize', () => syncNewsPanelHeight());
   </script>
 </body>
 
