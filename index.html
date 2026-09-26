@@ -882,42 +882,55 @@
       accent-color: var(--blue);
     }
 
-    /* ── MARKET NEWS PANEL ── */
-    .news-panel {
-      display: none;
-      position: fixed;
-      top: 42px;
-      right: 12px;
+    /* ── MARKET NEWS PANEL (inline, next to cards) ── */
+    .top-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 8px;
+    }
+
+    .top-row .grid {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
+
+    .news-inline {
+      width: 320px;
+      flex-shrink: 0;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px 14px;
-      z-index: 300;
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-      width: 340px;
-      max-width: calc(100vw - 24px);
+      border-radius: 7px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    .news-panel.visible {
-      display: block;
-    }
-
-    .news-panel h4 {
+    .news-inline h4 {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--dim);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       padding-bottom: 4px;
       border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
-    .news-panel h4 button {
+    .news-inline h4 button {
       padding: 2px 7px;
       font-size: 10px;
+    }
+
+    .news-inline #news-body {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     .news-key-form {
@@ -952,8 +965,6 @@
     }
 
     .news-list {
-      max-height: 340px;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -1322,7 +1333,6 @@
         <button id="push-btn" onclick="togglePushNotifications()">🔔 Push: OFF</button>
         <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
         <button id="cols-btn" onclick="toggleColumnMenu()">👁️ Columns</button>
-        <button id="news-btn" onclick="toggleNewsPanel()">📰 News</button>
         <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
           <option value="10000" selected>Auto: 10s</option>
           <option value="30000">Auto: 30s</option>
@@ -1354,12 +1364,6 @@
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-grade', this.checked)"> Grade</label>
           </div>
         </div>
-
-        <!-- MARKET NEWS PANEL -->
-        <div class="news-panel" id="news-panel">
-          <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
-          <div id="news-body">Loading...</div>
-        </div>
       </div>
     </div>
     <div id="err"></div>
@@ -1378,13 +1382,21 @@
       </div>
       <span class="date-mode-badge live" id="date-mode-badge">● Live</span>
     </div>
-    <div class="grid" id="cards">
-      <!-- Skeleton loading state shown on first load -->
-      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
-      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
-      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
-      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
-      <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+    <div class="top-row">
+      <div class="grid" id="cards">
+        <!-- Skeleton loading state shown on first load -->
+        <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+        <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+        <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+        <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+        <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
+      </div>
+
+      <!-- MARKET NEWS PANEL (inline) -->
+      <div class="news-inline" id="news-panel">
+        <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
+        <div id="news-body">Loading...</div>
+      </div>
     </div>
 
     <!-- SESSION SENTIMENT BAR -->
@@ -1861,17 +1873,6 @@
     /* ══════════════════════════════════════════════════════
        MARKET NEWS PANEL
        ══════════════════════════════════════════════════════ */
-    let newsLoaded = false;
-
-    function toggleNewsPanel() {
-      const panel = document.getElementById('news-panel');
-      if (!panel) return;
-      panel.classList.toggle('visible');
-      if (panel.classList.contains('visible') && !newsLoaded) {
-        loadNews();
-      }
-    }
-
     function getNewsKey() {
       try { return localStorage.getItem('v2-finnhub-key') || ''; } catch (e) { return ''; }
     }
@@ -1916,7 +1917,6 @@
         const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(key)}&_=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const articles = await res.json();
-        newsLoaded = true;
         renderNews(articles);
       } catch (e) {
         console.warn('News load failed:', e);
@@ -3119,6 +3119,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     initHiddenCols();
     loadAll();
     changeInterval();
+    loadNews();
     setInterval(() => loadNews(), 5 * 60 * 1000);
   </script>
 </body>
