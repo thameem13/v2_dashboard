@@ -1913,7 +1913,7 @@
       if (forceRefresh) body.innerHTML = 'Loading...';
 
       try {
-        const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(key)}`);
+        const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${encodeURIComponent(key)}&_=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const articles = await res.json();
         newsLoaded = true;
