@@ -883,10 +883,13 @@
     }
 
     /* ── MARKET NEWS PANEL (inline, next to cards) ── */
+    /* Header is a 3-column band: KPI cards | regime + sentiment | news.
+       Previously regime and sentiment each took their own full-width row,
+       which pushed the table down while the right half sat empty. */
     .top-row {
       display: grid;
-      grid-template-columns: 1fr 320px;
-      align-items: start;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 320px;
+      align-items: stretch;
       gap: 8px;
       margin-bottom: 8px;
     }
@@ -894,10 +897,108 @@
     .top-row .grid {
       min-width: 0;
       margin-bottom: 0;
+      align-content: start;
+    }
+
+    /* The card grid has a FIXED set of 5 cards. auto-fit used to spawn as many
+       130px columns as the viewport allowed (~14 on a wide monitor), so the 5
+       cards bunched up on the left and the rest of the row was dead space. */
+    .top-row .grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .top-mid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .top-mid .regime-strip {
+      margin-bottom: 0;
+      flex: 1;
+      align-items: center;
+    }
+
+    .top-mid .sentiment-card {
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+
+    /* Collapse the whole header for maximum table room. */
+    #top.collapsed .top-row,
+    #top.collapsed .date-bar {
+      display: none;
+    }
+
+    #collapse-btn.active-toggle {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* Mid widths: cards and news stay side by side on row 1, regime+sentiment
+       move to a full-width row 2. Placement must be explicit — letting
+       .top-mid span 1/-1 with auto-flow would push news onto a third row and
+       make the header TALLER than the original layout. */
+    @media (max-width: 1500px) {
+      .top-row {
+        grid-template-columns: minmax(0, 1fr) 300px;
+      }
+
+      .top-row .grid {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .top-row .news-inline {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .top-mid {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        flex-direction: row;
+        align-items: stretch;
+      }
+
+      .top-mid .regime-strip {
+        flex: 1 1 auto;
+      }
+
+      .top-mid .sentiment-card {
+        flex: 1 1 340px;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 1000px) {
+      .top-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .top-row .grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .top-row .news-inline {
+        grid-column: 1;
+        grid-row: 3;
+        min-height: 130px;
+      }
+
+      .top-mid {
+        grid-column: 1;
+        grid-row: 2;
+        flex-direction: column;
+      }
     }
 
     .news-inline {
-      height: 190px;
+      height: 100%;
+      min-height: 150px;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 7px;
@@ -1075,6 +1176,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 10px;
       font-size: 11px;
     }
 
@@ -1563,14 +1666,30 @@
        OPTION VOLUME TAB — TIER 1 + 2
        ══════════════════════════════════════════════════════ */
 
-    /* ── SESSION CUMULATIVE STRIP ── */
+    /* ── SESSION CUMULATIVE STRIP + PRESETS ON ONE ROW ── */
+    .vol-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 8px 12px 6px;
+    }
+
+    .vol-toolbar .vol-preset-bar {
+      margin: 0;
+      padding: 0;
+      flex: 1;
+      min-width: 260px;
+      background: transparent;
+      border-bottom: none;
+    }
+
     .vol-session-strip {
       display: flex;
       align-items: stretch;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 7px;
-      margin: 8px 12px 6px;
       overflow: hidden;
       flex-wrap: wrap;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -1718,6 +1837,7 @@
         </select>
         <button onclick="exportCurrentCSV()">Export CSV</button>
         <button onclick="clearFilters()">Clear filters</button>
+        <button id="collapse-btn" onclick="toggleHeader()" title="Collapse the header band for maximum table height (H)">⬆️ Compact</button>
         <button id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
         <button id="refresh-btn" onclick="loadAll()">Refresh</button>
 
@@ -1794,28 +1914,32 @@
         <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
       </div>
 
+      <!-- MIDDLE COLUMN: regime + sentiment, stacked beside the cards so they
+           no longer consume their own full-width rows -->
+      <div class="top-mid">
+        <!-- REGIME CONTEXT STRIP -->
+        <div class="regime-strip" id="regime-strip" style="display:none">
+          <div class="rg-title">🌡️ Regime</div>
+          <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
+        </div>
+
+        <!-- SESSION SENTIMENT BAR -->
+        <div class="sentiment-card" id="sentiment-card">
+          <div class="sentiment-header">
+            <span style="font-weight:600;white-space:nowrap">📊 Session Flow Sentiment</span>
+            <span id="sentiment-bias-label">Calculating sentiment...</span>
+          </div>
+          <div class="sentiment-bar-track" title="Call (Green) vs Put (Red) Flow Ratio">
+            <div class="sentiment-bar-fill" id="sentiment-bar-fill" style="width:50%"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- MARKET NEWS PANEL (inline) -->
       <div class="news-inline" id="news-panel">
         <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
         <div id="news-body">Loading...</div>
       </div>
-    </div>
-
-    <!-- SESSION SENTIMENT BAR -->
-    <div class="sentiment-card" id="sentiment-card">
-      <div class="sentiment-header">
-        <span style="font-weight:600">📊 Session Flow Sentiment</span>
-        <span id="sentiment-bias-label">Calculating sentiment...</span>
-      </div>
-      <div class="sentiment-bar-track" title="Call (Green) vs Put (Red) Flow Ratio">
-        <div class="sentiment-bar-fill" id="sentiment-bar-fill" style="width:50%"></div>
-      </div>
-    </div>
-
-    <!-- REGIME CONTEXT STRIP -->
-    <div class="regime-strip" id="regime-strip" style="display:none">
-      <div class="rg-title">🌡️ Regime</div>
-      <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -1911,20 +2035,22 @@
 
   <!-- TAB 2: VOLUME -->
   <div id="tab-vol" class="tab-content">
-    <!-- SESSION CUMULATIVE STRIP -->
-    <div class="vol-session-strip" id="vol-session-strip" style="display:none">
-      <div class="vs-title">Σ Session</div>
-      <div id="vol-session-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
-    </div>
+    <!-- SESSION CUMULATIVE STRIP + PRESETS share one row -->
+    <div class="vol-toolbar">
+      <div class="vol-session-strip" id="vol-session-strip" style="display:none">
+        <div class="vs-title">Σ Session</div>
+        <div id="vol-session-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
+      </div>
 
-    <!-- PRESET FILTER BAR -->
-    <div class="preset-bar">
-      <span class="preset-title">⚡ Quick Filters:</span>
+      <!-- PRESET FILTER BAR -->
+      <div class="preset-bar vol-preset-bar">
+        <span class="preset-title">⚡ Quick Filters:</span>
       <button class="preset-btn vpreset active" onclick="applyVolPreset('all')">All</button>
       <button class="preset-btn vpreset" onclick="applyVolPreset('surge')">Surge Only</button>
       <button class="preset-btn vpreset" onclick="applyVolPreset('rvol2')">rVOL &ge; 2</button>
       <button class="preset-btn vpreset" onclick="applyVolPreset('divergence')">$ vs Count Divergence</button>
-      <button class="preset-btn vpreset" onclick="applyVolPreset('gridedge')">Near Grid Edge</button>
+        <button class="preset-btn vpreset" onclick="applyVolPreset('gridedge')">Near Grid Edge</button>
+      </div>
     </div>
 
     <div class="table-wrap" id="vol-wrap">
@@ -2071,6 +2197,7 @@
     <kbd>4</kbd> Performance tab<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Clear filters<br>
+    <kbd>H</kbd> Compact header &nbsp;
     <kbd>T</kbd> Toggle theme &nbsp;
     <kbd>S</kbd> Toggle sound &nbsp;
     <kbd>?</kbd> Show/hide this panel
@@ -2271,6 +2398,30 @@
       const btn = document.getElementById('theme-btn');
       btn.textContent = next === 'light' ? '☀️ Light' : '🌙 Dark';
       try { localStorage.setItem('v2-theme', next); } catch (e) { }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       HEADER COLLAPSE
+       The header band is fixed while only the table scrolls, so on a short
+       screen it eats the rows. This hides the cards/regime/news/date band and
+       hands that space to the table; the title row and tabs stay put.
+       ══════════════════════════════════════════════════════ */
+    function toggleHeader() {
+      const top = document.getElementById('top');
+      if (!top) return;
+      const collapsed = top.classList.toggle('collapsed');
+      const btn = document.getElementById('collapse-btn');
+      if (btn) {
+        btn.textContent = collapsed ? '⬇️ Expand' : '⬆️ Compact';
+        btn.classList.toggle('active-toggle', collapsed);
+      }
+      try { localStorage.setItem('v2-header-collapsed', collapsed ? '1' : '0'); } catch (e) { }
+    }
+
+    function initHeaderCollapse() {
+      let saved = null;
+      try { saved = localStorage.getItem('v2-header-collapsed'); } catch (e) { }
+      if (saved === '1') toggleHeader();
     }
 
     function initTheme() {
@@ -3836,10 +3987,13 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       });
     }
 
+    /* The news panel now stretches to the header row via CSS grid
+       (align-items: stretch), so the old JS height-matching is not only
+       unnecessary, its inline style would override the stylesheet. Clear any
+       stale inline height and let CSS own the sizing. */
     function syncNewsPanelHeight() {
-      const cards = document.getElementById('cards');
       const panel = document.getElementById('news-panel');
-      if (cards && panel) panel.style.height = cards.offsetHeight + 'px';
+      if (panel && panel.style.height) panel.style.height = '';
     }
 
     /* ══════════════════════════════════════════════════════
@@ -4274,6 +4428,10 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           e.preventDefault();
           toggleTheme();
           break;
+        case 'h':
+          e.preventDefault();
+          toggleHeader();
+          break;
         case 's':
           e.preventDefault();
           toggleSound();
@@ -4299,6 +4457,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        INIT
        ══════════════════════════════════════════════════════ */
     initTheme();
+    initHeaderCollapse();
     initDatePicker();
     initPinnedRows();
     initHiddenCols();
