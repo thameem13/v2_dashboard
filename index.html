@@ -16,7 +16,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta name="build" content="1.3.7.9">
 
-  <title>V2 Flow Dashboard Pro</title>
+  <title>Trade Flow Dashboard Pro</title>
   <style>
     :root {
       box-sizing: border-box;
@@ -1867,7 +1867,7 @@
   <div id="top">
     <div class="row">
       <div>
-        <h1>V2 Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
+        <h1>Trade Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
         <div class="sub" id="sub">Connecting to Supabase...</div>
       </div>
       <div class="controls">
@@ -2273,7 +2273,7 @@
 
   <script>
     /* ══════════════════════════════════════════════════════
-       V2 FLOW DASHBOARD — ENHANCED
+       TRADE FLOW DASHBOARD — ENHANCED
        ══════════════════════════════════════════════════════
        NOTE (#1): The Supabase key below is a publishable/anon key.
        Ensure Row-Level Security (RLS) is properly configured on
@@ -2337,7 +2337,7 @@
           if (permission === 'granted') {
             pushEnabled = true;
             updatePushBtn();
-            new Notification('V2 Flow Dashboard Pro', { body: 'Desktop push alerts enabled!' });
+            new Notification('Trade Flow Dashboard Pro', { body: 'Desktop push alerts enabled!' });
           }
         });
       } else {
@@ -4518,7 +4518,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       if (el) el.textContent = `build ${BUILD}`;
       // Also surface it in the console on load, so a screenshot of DevTools
       // is enough to confirm which build is running.
-      console.log(`V2 Flow Dashboard build ${BUILD} (${BUILD_TS})`);
+      console.log(`Trade Flow Dashboard build ${BUILD} (${BUILD_TS})`);
     }
 
     initBuildStamp();
