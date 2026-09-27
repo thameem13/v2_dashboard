@@ -4,6 +4,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- GitHub Pages serves this file with Cache-Control: max-age=600 and that
+       header is not configurable there, so a plain F5 can show a build up to
+       ~10 minutes stale. These are advisory only (the CDN header wins) — the
+       real safeguard is the build stamp in the footer, readable without a
+       browser via:
+         curl -s <pages-url> | grep -o 'name="build" content="[^"]*"'
+       After pushing, always hard-reload with Ctrl+Shift+R. -->
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="build" content="1.3.7.9">
+
   <title>V2 Flow Dashboard Pro</title>
   <style>
     :root {
@@ -94,6 +106,18 @@
       flex-shrink: 0;
       padding: 10px 12px 0;
       background: var(--bg);
+      /* Safety net only. The natural header is ~356px (measured at 1505px wide
+         with the news list loaded), so the floor of 380px guarantees this never
+         clips real content; the ceiling of 560px stops a runaway band — a long
+         news list once inflated it to ~900px and pushed the table off-screen.
+         A plain vh cap was wrong: at 42vh it engaged on an 850px-tall window
+         and cut off the news panel. */
+      max-height: clamp(380px, 60vh, 560px);
+      /* Scroll rather than clip: if the cap ever does engage (e.g. a narrow
+         window where the band stacks to one column), the content stays
+         reachable instead of being silently cut off. */
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     .row {
@@ -892,6 +916,11 @@
       align-items: stretch;
       gap: 8px;
       margin-bottom: 8px;
+    }
+
+    /* No header column may be sized by its own overflowing content. */
+    .top-row > * {
+      min-height: 0;
     }
 
     .top-row .grid {
@@ -2204,6 +2233,7 @@
 
   <div id="foot">
     <span id="foot-status">observe &amp; log - polarity unconfirmed</span>
+    <span id="foot-build" title="Deployed build. If this does not match the version you just pushed, you are on a cached copy - hard reload with Ctrl+Shift+R.">build -</span>
     <span id="foot-time">Last update: -</span>
   </div>
 
@@ -2250,6 +2280,13 @@
        all backing tables and RPC functions to prevent unauthorized
        data access.
        ══════════════════════════════════════════════════════ */
+
+    /* Bump BUILD on every push. It is rendered in the footer and mirrored in
+       a <meta name="build"> tag so the deployed version can be confirmed from
+       the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
+       "is my change live?" is otherwise unanswerable. */
+    const BUILD = '1.3.7.9';
+    const BUILD_TS = '2026-09-27T15:00Z';
 
     const SUPA_URL = "https://egsgycizhssexstjrsqi.supabase.co";
     const SUPA_KEY = "sb_publishable_7WgNoi8_4iTbmu6fuzGRvw_yi2Hb9aC";
@@ -4476,6 +4513,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     /* ══════════════════════════════════════════════════════
        INIT
        ══════════════════════════════════════════════════════ */
+    function initBuildStamp() {
+      const el = document.getElementById('foot-build');
+      if (el) el.textContent = `build ${BUILD}`;
+      // Also surface it in the console on load, so a screenshot of DevTools
+      // is enough to confirm which build is running.
+      console.log(`V2 Flow Dashboard build ${BUILD} (${BUILD_TS})`);
+    }
+
+    initBuildStamp();
     initTheme();
     initHeaderCollapse();
     initDatePicker();
