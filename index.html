@@ -950,7 +950,7 @@
         grid-row: 1;
       }
 
-      .top-row .news-inline {
+      .top-row .news-col {
         grid-column: 2;
         grid-row: 1;
       }
@@ -983,7 +983,7 @@
         grid-row: 1;
       }
 
-      .top-row .news-inline {
+      .top-row .news-col {
         grid-column: 1;
         grid-row: 3;
         min-height: 130px;
@@ -994,11 +994,27 @@
         grid-row: 2;
         flex-direction: column;
       }
+
+      /* Reset the row-layout flex from the 1500px block: once the direction is
+         column, a flex-basis of 340px becomes a HEIGHT and balloons the card. */
+      .top-mid .regime-strip,
+      .top-mid .sentiment-card {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+      }
+    }
+
+    /* The column reserves the space and is what the grid measures; it only ever
+       contributes its own min-height, never the headline list's height. */
+    .news-col {
+      position: relative;
+      min-height: 150px;
+      min-width: 0;
     }
 
     .news-inline {
-      height: 100%;
-      min-height: 150px;
+      position: absolute;
+      inset: 0;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 7px;
@@ -1935,10 +1951,14 @@
         </div>
       </div>
 
-      <!-- MARKET NEWS PANEL (inline) -->
-      <div class="news-inline" id="news-panel">
-        <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
-        <div id="news-body">Loading...</div>
+      <!-- MARKET NEWS PANEL (inline) — the wrapper is what the grid sizes;
+           the panel is absolutely positioned inside it so a long headline list
+           can never stretch the header row. -->
+      <div class="news-col">
+        <div class="news-inline" id="news-panel">
+          <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
+          <div id="news-body">Loading...</div>
+        </div>
       </div>
     </div>
   </div>
