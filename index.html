@@ -2277,6 +2277,16 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       document.getElementById('sub').textContent =
         `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
 
+      // ── STALE SESSION WARNING ──────────────────────────────────────────
+      const errEl = document.getElementById('err');
+      const todayNY = todayStr();
+      if (day && day !== todayNY) {
+        errEl.innerHTML = `<div class="err">⚠️ No data for today (${todayNY}). Showing last session: ${escapeHtml(day)} — market may be closed.</div>`;
+      } else {
+        // Clear any previous stale warning on a successful today-load
+        if (errEl.innerHTML.includes('last session')) errEl.innerHTML = '';
+      }
+
       // (#9) Collect sparkline data
       priceHistory = rows.map(r => r.price).filter(p => p != null);
       flowHistory = rows.map(r => r.flow).filter(f => f != null);
