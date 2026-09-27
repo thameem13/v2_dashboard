@@ -1317,6 +1317,247 @@
       justify-content: space-between;
       align-items: center;
     }
+
+    /* ══════════════════════════════════════════════════════
+       TIER 1 ADDITIONS
+       ══════════════════════════════════════════════════════ */
+
+    /* ── CALL / PUT WALL MARKERS ON THE VA GAUGE ── */
+    .va-wall {
+      position: absolute;
+      width: 2px;
+      height: 14px;
+      top: -4px;
+      transform: translateX(-50%);
+    }
+
+    .va-wall-c {
+      background: var(--blue);
+    }
+
+    .va-wall-p {
+      background: var(--red);
+    }
+
+    .va-legend .leg-cw .leg-dot {
+      background: var(--blue);
+    }
+
+    .va-legend .leg-pw .leg-dot {
+      background: var(--red);
+    }
+
+    /* ── REGIME CONTEXT STRIP ── */
+    .regime-strip {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      flex-wrap: wrap;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .regime-strip .rg-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--panel2);
+      border-right: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .rg-item {
+      padding: 7px 11px;
+      border-right: 1px solid var(--line);
+      min-width: 78px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .rg-item:last-child {
+      border-right: none;
+    }
+
+    .rg-label {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .rg-val {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: nowrap;
+    }
+
+    .rg-sub {
+      font-size: 9px;
+      color: var(--dim);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .rg-pill {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .rg-calm {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    .rg-elevated {
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .rg-high {
+      color: var(--red);
+      border-color: var(--red);
+    }
+
+    .rg-stale {
+      margin-left: auto;
+      align-self: center;
+      padding: 0 11px;
+      font-size: 10px;
+      color: var(--amber);
+      white-space: nowrap;
+    }
+
+    /* ── SIGNAL PERFORMANCE TAB ── */
+    .perf-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 0 12px 10px;
+    }
+
+    .perf-note {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 11px;
+      color: var(--dim);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--blue);
+      border-radius: 6px;
+      padding: 7px 10px;
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    .perf-section-title {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      margin: 12px 0 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .perf-section-title .hint {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--dim);
+    }
+
+    table.perf-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.perf-tbl th {
+      background: var(--panel2);
+      border-bottom: 1px solid var(--line);
+      padding: 5px 8px;
+      text-align: right;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--dim);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    table.perf-tbl th:first-child,
+    table.perf-tbl td:first-child {
+      text-align: left;
+    }
+
+    table.perf-tbl td {
+      border-bottom: 1px solid var(--line);
+      padding: 5px 8px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    table.perf-tbl tbody tr:hover {
+      background: var(--panel2);
+    }
+
+    table.perf-tbl tr.perf-total td {
+      font-weight: 700;
+      background: var(--panel2);
+      border-top: 2px solid var(--line);
+    }
+
+    .hitbar {
+      position: relative;
+      display: inline-block;
+      width: 58px;
+      height: 5px;
+      background: #222b37;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-left: 6px;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .hitbar {
+      background: #d0d7de;
+    }
+
+    .hitbar i {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .hitbar-50 {
+      position: absolute;
+      left: 50%;
+      top: -1px;
+      width: 1px;
+      height: 7px;
+      background: var(--dim);
+    }
+
+    .perf-empty {
+      color: var(--dim);
+      font-size: 12px;
+      padding: 14px 2px;
+    }
   </style>
 </head>
 
@@ -1408,6 +1649,12 @@
         <div class="sentiment-bar-fill" id="sentiment-bar-fill" style="width:50%"></div>
       </div>
     </div>
+
+    <!-- REGIME CONTEXT STRIP -->
+    <div class="regime-strip" id="regime-strip" style="display:none">
+      <div class="rg-title">🌡️ Regime</div>
+      <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
+    </div>
   </div>
 
   <!-- TABS & META -->
@@ -1416,6 +1663,7 @@
       <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
       <div class="tab" onclick="switchTab('anomaly')">Anomalies</div>
+      <div class="tab" onclick="switchTab('perf')">Signal Performance</div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -1429,7 +1677,7 @@
       <button class="preset-btn" onclick="applyPreset('grade-a-calls')">Grade A Calls</button>
       <button class="preset-btn" onclick="applyPreset('grade-a-puts')">Grade A Puts</button>
       <button class="preset-btn" onclick="applyPreset('alerted')">Alerted Only</button>
-      <button class="preset-btn" onclick="applyPreset('high-flow')">High Flow (>100k)</button>
+      <button class="preset-btn" onclick="applyPreset('high-flow')">Strong Flow (|flow| &ge; 0.9)</button>
     </div>
     <div class="table-wrap" id="flow-wrap">
       <table id="tbl-flow">
@@ -1439,7 +1687,7 @@
             <th class="col-time sortable" onclick="handleSort('flow', 1, false)">Time</th>
             <th class="col-price sortable" onclick="handleSort('flow', 2, true)">Price</th>
             <th class="col-strike sortable" onclick="handleSort('flow', 3, true)">Strike</th>
-            <th class="col-flow sortable" onclick="handleSort('flow', 4, true)">Flow</th>
+            <th class="col-flow sortable" title="divergence_flow — signed ITM/ATM call-vs-put divergence, roughly -1.8..+1.9. Not a dollar amount. Positive leans PUT, negative leans CALL." onclick="handleSort('flow', 4, true)">Flow</th>
             <th class="col-dir sortable" onclick="handleSort('flow', 5, false)">Dir</th>
             <th class="col-poc sortable" onclick="handleSort('flow', 6, true)">POC</th>
             <th class="col-room sortable" onclick="handleSort('flow', 7, true)">Room</th>
@@ -1457,7 +1705,7 @@
             <th class="col-time"><input type="text" id="f-time" placeholder="e.g. 10:05" oninput="debounceFilter()"></th>
             <th class="col-price"><input type="text" id="f-price" placeholder="> 500" oninput="debounceFilter()"></th>
             <th class="col-strike"><input type="text" id="f-strike" placeholder="strike" oninput="debounceFilter()"></th>
-            <th class="col-flow"><input type="text" id="f-flow" placeholder="> 100 / < -50" oninput="debounceFilter()"></th>
+            <th class="col-flow"><input type="text" id="f-flow" placeholder="abs>=0.9 / >0.5" oninput="debounceFilter()"></th>
             <th class="col-dir"><select id="f-dir" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="PUT">PUT</option>
@@ -1588,6 +1836,20 @@
     </div>
   </div>
 
+  <!-- TAB 4: SIGNAL PERFORMANCE -->
+  <div id="tab-perf" class="tab-content">
+    <div class="perf-wrap" id="perf-wrap">
+      <div class="perf-note">
+        Forward SPY move after every <b>ALERTED</b> signal in the selected date range, measured from the
+        signal candle's price. <b>Move</b> is direction-adjusted — positive means price went the way the
+        signal called. <b>MFE</b> / <b>MAE</b> are the best and worst excursions reached within 60 minutes;
+        for 0DTE premium, MFE is your realistic exit and MAE is the heat you must survive to get there.
+        Underlying points only — this does not model option premium, spread or theta.
+      </div>
+      <div id="perf-body"></div>
+    </div>
+  </div>
+
   <div id="foot">
     <span id="foot-status">observe &amp; log - polarity unconfirmed</span>
     <span id="foot-time">Last update: -</span>
@@ -1599,7 +1861,8 @@
     <kbd>R</kbd> Refresh &nbsp;
     <kbd>1</kbd> Flow tab &nbsp;
     <kbd>2</kbd> Volume tab &nbsp;
-    <kbd>3</kbd> Anomalies tab<br>
+    <kbd>3</kbd> Anomalies tab &nbsp;
+    <kbd>4</kbd> Performance tab<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Clear filters<br>
     <kbd>T</kbd> Toggle theme &nbsp;
@@ -1656,6 +1919,10 @@
     let currentJournalSignal = null;
     let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
     let lastAnomalyTimestamp = null;
+    let regimeCtx = null;          // Latest row from v2_regime_context
+    let perfRows = null;           // Rows from v2_signal_performance
+    let perfKey = null;            // Date-range key the perfRows were loaded for
+    let perfLoading = false;
 
     const sortConfig = {
       flow: { col: null, asc: true },
@@ -1697,7 +1964,7 @@
     function sendPushNotification(sig) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
       const title = `≡ƒÜ¿ SPY ${sig.direction} Alert (Score ${sig.score})`;
-      const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: $${sig.flow}k | Grade: ${sig.grade}`;
+      const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: ${sig.flow} | Grade: ${sig.grade}`;
       try {
         new Notification(title, { body });
       } catch (e) {
@@ -1983,7 +2250,9 @@
           document.getElementById('f-status').value = 'ALERTED';
           break;
         case 'high-flow':
-          document.getElementById('f-flow').value = '> 100';
+          // Flow (divergence_flow) spans roughly -1.8..+1.9; 0.9 is the top
+          // scoring tier in v2_dashboard_today (s_flow = 3).
+          document.getElementById('f-flow').value = 'abs>=0.9';
           break;
       }
       applyFlowFilters();
@@ -2049,11 +2318,11 @@
           const netBias = isBullish ? `Bullish (${callPct}% Call Bias)` : `Bearish (${putPct}% Put Bias)`;
           const netFlow = callFlow - putFlow;
           const netSign = netFlow >= 0 ? '+' : '-';
-          const netStr = `${netSign}$${Math.abs(netFlow).toFixed(3)}k`;
+          const netStr = `${netSign}${Math.abs(netFlow).toFixed(3)}`;
           const netCls = netFlow >= 0 ? 'call' : 'put';
 
           fill.style.width = `${callPct}%`;
-          label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Flow: -$${putFlow.toFixed(3)}k &nbsp;|&nbsp; Call Flow: +$${callFlow.toFixed(3)}k &nbsp;|&nbsp; Net Session: <b class="${netCls}">${netStr}</b>`;
+          label.innerHTML = `<b class="${isBullish ? 'call' : 'put'}">${netBias}</b> &nbsp;|&nbsp; Put Flow: -${putFlow.toFixed(3)} &nbsp;|&nbsp; Call Flow: +${callFlow.toFixed(3)} &nbsp;|&nbsp; Net Session: <b class="${netCls}">${netStr}</b>`;
         }
       }
     }
@@ -2075,10 +2344,10 @@
           <div><div class="modal-item-label">Timestamp</div><div class="modal-item-val">${fmtTime(sig.candle_time_ny)}</div></div>
           <div><div class="modal-item-label">SPY Price</div><div class="modal-item-val">$${sig.price ?? '-'}</div></div>
           <div><div class="modal-item-label">ATM Strike</div><div class="modal-item-val">$${sig.atm_strike ?? '-'}</div></div>
-          <div><div class="modal-item-label">Net Flow</div><div class="modal-item-val ${sig.flow >= 0 ? 'flowpos' : 'flowneg'}">${sig.flow ?? 0}k</div></div>
+          <div><div class="modal-item-label">Divergence Flow</div><div class="modal-item-val ${sig.flow >= 0 ? 'flowpos' : 'flowneg'}">${sig.flow ?? 0}</div></div>
           <div><div class="modal-item-label">Direction</div><div class="modal-item-val ${dirCls}">${sig.direction ?? '-'}</div></div>
           <div><div class="modal-item-label">POC / Room</div><div class="modal-item-val">${sig.poc ?? '-'} / ${sig.room ?? '-'}</div></div>
-          <div><div class="modal-item-label">Total Score</div><div class="modal-item-val">${sig.score ?? '-'} / 5</div></div>
+          <div><div class="modal-item-label">Total Score</div><div class="modal-item-val">${sig.score ?? '-'} / 10</div></div>
           <div><div class="modal-item-label">Signal Status</div><div class="modal-item-val">${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}</div></div>
         </div>
         <div style="background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--line);">
@@ -2104,7 +2373,7 @@
       const sig = currentJournalSignal;
       const text = `≡ƒÜ¿ **SPY Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
 - **Direction**: ${sig.direction} ($${sig.atm_strike} Strike @ SPY $${sig.price})
-- **Net Flow**: ${sig.flow}k | **Score**: ${sig.score}/5 (Grade ${sig.grade || 'N/A'})
+- **Net Flow**: ${sig.flow} | **Score**: ${sig.score}/10 (Grade ${sig.grade || 'N/A'})
 - **POC / Room**: ${sig.poc ?? '-'} / ${sig.room ?? '-'}
 - **Status**: ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}`;
 
@@ -2121,8 +2390,8 @@
 Direction: ${sig.direction}
 Strike:    $${sig.atm_strike}
 SPY Price: $${sig.price}
-Net Flow:  ${sig.flow}k
-Score:     ${sig.score}/5
+Net Flow:  ${sig.flow}
+Score:     ${sig.score}/10
 Grade:     ${sig.grade || 'N/A'}
 Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
 ==========================================`;
@@ -2178,6 +2447,28 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       return `<span class="pill p${safe}">${safe}</span>`;
     }
 
+    /* ══════════════════════════════════════════════════════
+       TIMESTAMP KEY NORMALISER
+       ──────────────────────────────────────────────────────
+       The v2_* RPCs are inconsistent about their candle_time_ny type:
+         v2_dashboard_today  → timestamptz  ("...T14:50:00+00:00")
+         v2_anomalies_today  → timestamp    ("...T14:50:00")
+         v2_dashboard_range  → timestamp    ("...T14:50:00")
+         v2_anomalies_range  → timestamptz  ("...T14:50:00+00:00")
+       So the raw strings never matched in EITHER mode and the surge pills
+       never rendered. All these timestamps are NY wall-clock regardless of
+       the declared type, so we key on the bare "YYYY-MM-DDTHH:MM" and drop
+       any zone suffix.
+       ══════════════════════════════════════════════════════ */
+    function tsKey(v) {
+      if (v == null) return '';
+      // Strip a trailing "Z" or "+HH:MM" / "-HH:MM" offset, then seconds.
+      const s = String(v).trim().replace(' ', 'T')
+        .replace(/(?:Z|[+-]\d{2}:?\d{2})$/, '');
+      const m = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+      return m ? `${m[1]}T${m[2]}:${m[3]}` : s;
+    }
+
     function surgePill(t) {
       if (!t || t === 'none') return '';
       const cls = t === 'CALL SURGE' ? 'surge-call' : (t === 'PUT SURGE' ? 'surge-put' : 'surge-mixed');
@@ -2216,6 +2507,14 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const cleanVal = parseFloat(String(cellText).replace(/,/g, '').replace(/%/g, ''));
 
       if (!isNaN(cleanVal)) {
+        // Magnitude comparisons — for signed columns like Flow, where "strong"
+        // means far from zero in either direction (e.g. "abs>=0.9").
+        const lower = filter.toLowerCase();
+        if (lower.startsWith('abs>=')) return Math.abs(cleanVal) >= parseFloat(lower.slice(5));
+        if (lower.startsWith('abs<=')) return Math.abs(cleanVal) <= parseFloat(lower.slice(5));
+        if (lower.startsWith('abs>')) return Math.abs(cleanVal) > parseFloat(lower.slice(4));
+        if (lower.startsWith('abs<')) return Math.abs(cleanVal) < parseFloat(lower.slice(4));
+
         if (filter.startsWith('>=')) return cleanVal >= parseFloat(filter.slice(2));
         if (filter.startsWith('<=')) return cleanVal <= parseFloat(filter.slice(2));
         if (filter.startsWith('>')) return cleanVal > parseFloat(filter.slice(1));
@@ -2230,12 +2529,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        ══════════════════════════════════════════════════════ */
     function switchTab(name) {
       activeTab = name;
+      const order = ['flow', 'vol', 'anomaly', 'perf'];
       document.querySelectorAll('.tab').forEach((t, i) => {
-        t.classList.toggle('active', ['flow', 'vol', 'anomaly'][i] === name);
+        t.classList.toggle('active', order[i] === name);
       });
       document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
       document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
       document.getElementById('tab-anomaly').classList.toggle('active', name === 'anomaly');
+      document.getElementById('tab-perf').classList.toggle('active', name === 'perf');
+      if (name === 'perf') loadPerf();
       updateRowCounts();
     }
 
@@ -2334,6 +2636,13 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     }
 
     function updateRowCounts() {
+      if (activeTab === 'perf') {
+        const n = perfRows ? perfRows.length : 0;
+        const days = perfRows ? new Set(perfRows.map(r => r.trade_date)).size : 0;
+        document.getElementById('row-counts').textContent =
+          `${n} alerted signal${n === 1 ? '' : 's'} over ${days} session${days === 1 ? '' : 's'}`;
+        return;
+      }
       const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');
       const total = document.querySelectorAll(`${tbodyId} tr`).length;
       const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
@@ -2400,7 +2709,30 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        CSV EXPORT
        ══════════════════════════════════════════════════════ */
     function exportCurrentCSV() {
-      const table = document.getElementById(activeTab === 'flow' ? 'tbl-flow' : 'tbl-vol');
+      // On the performance tab, export the per-signal detail rather than the
+      // rendered summary tables — that's what's useful in a spreadsheet.
+      if (activeTab === 'perf') {
+        if (!perfRows || !perfRows.length) return alert('No signal history to export.');
+        const cols = ['trade_date', 'candle_time_ny', 'direction', 'grade', 'score',
+          'entry_price', 'atm_strike', 'flow', 'room',
+          'price_30m', 'price_60m', 'price_eod',
+          'move_30m', 'move_60m', 'move_eod', 'mfe_60m', 'mae_60m',
+          'win_30m', 'win_60m', 'win_eod'];
+        const lines = [cols.join(',')].concat(perfRows.map(r =>
+          cols.map(c => `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',')));
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `signal_performance_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      const tableId = activeTab === 'flow' ? 'tbl-flow'
+        : (activeTab === 'vol' ? 'tbl-vol' : 'tbl-anomaly');
+      const table = document.getElementById(tableId);
       const rows = Array.from(table.querySelectorAll('tr:not(.hidden):not(.filter-row)'));
       if (!rows.length) return alert('No data to export.');
 
@@ -2475,6 +2807,277 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     }
 
     /* ══════════════════════════════════════════════════════
+       REGIME CONTEXT STRIP
+       ──────────────────────────────────────────────────────
+       Surfaces spy_intraday_log columns the dashboard never showed:
+       VIX1D (0DTE vol regime), TICK (breadth), vw_dim zone, implied move
+       and distance to the call/put walls.
+       ══════════════════════════════════════════════════════ */
+    function vixClass(v) {
+      if (v == null) return '';
+      if (v < 10) return 'rg-calm';
+      if (v < 15) return 'rg-elevated';
+      return 'rg-high';
+    }
+
+    function vixLabel(v) {
+      if (v == null) return '-';
+      if (v < 10) return 'CALM';
+      if (v < 15) return 'ELEVATED';
+      return 'HIGH';
+    }
+
+    function signedCls(v) {
+      if (v == null) return 'muted';
+      return v > 0 ? 'call' : (v < 0 ? 'put' : 'muted');
+    }
+
+    function num(v, dp) {
+      if (v == null || v === '' || isNaN(+v)) return '-';
+      return (+v).toFixed(dp == null ? 2 : dp);
+    }
+
+    function renderRegime(r) {
+      const strip = document.getElementById('regime-strip');
+      const body = document.getElementById('regime-body');
+      if (!strip || !body) return;
+
+      if (!r) {
+        strip.style.display = 'none';
+        return;
+      }
+      strip.style.display = 'flex';
+
+      const vix = r.vix1d == null ? null : +r.vix1d;
+      const chg = r.vix1d_chg == null ? null : +r.vix1d_chg;
+      const tick = r.tick == null ? null : +r.tick;
+      const tick20 = r.tick_avg_20 == null ? null : +r.tick_avg_20;
+      const vwd = r.vw_dim == null ? null : +r.vw_dim;
+
+      // vw_dim_zone is the pipeline's own label; colour it by its text.
+      const zone = r.vw_dim_zone || '-';
+      const zoneCls = /bull/i.test(zone) ? 'call' : (/bear/i.test(zone) ? 'put' : 'muted');
+
+      const items = [
+        `<div class="rg-item" title="VIX1D — 1-day implied vol. The 0DTE regime gate: under 10 is calm, 15+ means position smaller.">
+           <div class="rg-label">VIX1D</div>
+           <div class="rg-val ${vixClass(vix)}">${num(vix, 2)}
+             <span class="rg-pill ${vixClass(vix)}">${vixLabel(vix)}</span></div>
+           <div class="rg-sub">open ${num(r.vix1d_open, 2)} &nbsp;<span class="${chg > 0 ? 'put' : (chg < 0 ? 'call' : 'muted')}">${chg == null ? '-' : (chg > 0 ? '+' : '') + num(chg, 2)}</span></div>
+         </div>`,
+
+        `<div class="rg-item" title="NYSE TICK — advancing minus declining issues. Confirms or vetoes a directional flow signal.">
+           <div class="rg-label">TICK</div>
+           <div class="rg-val ${signedCls(tick)}">${tick == null ? '-' : (tick > 0 ? '+' : '') + tick}</div>
+           <div class="rg-sub">20-avg ${tick20 == null ? '-' : (tick20 > 0 ? '+' : '') + num(tick20, 0)}</div>
+         </div>`,
+
+        `<div class="rg-item" title="Volume-weighted dealer imbalance and the pipeline's own zone label.">
+           <div class="rg-label">VW-Dim</div>
+           <div class="rg-val ${signedCls(vwd)}">${num(vwd, 3)}</div>
+           <div class="rg-sub ${zoneCls}">${escapeHtml(zone)}</div>
+         </div>`,
+
+        `<div class="rg-item" title="Retail bias vs dealer hedge %. Wide opposing values are the divergence the side-signal detectors hunt.">
+           <div class="rg-label">Retail / Hdg</div>
+           <div class="rg-val"><span class="${signedCls(r.retail_bias)}">${num(r.retail_bias, 1)}</span>
+             <span class="muted">/</span>
+             <span class="${signedCls(r.hdg_percent)}">${num(r.hdg_percent, 1)}</span></div>
+           <div class="rg-sub">delta ${num(r.delta_net, 1)}</div>
+         </div>`,
+
+        `<div class="rg-item" title="Implied move for the session, and IV skew.">
+           <div class="rg-label">Impl Move</div>
+           <div class="rg-val">&plusmn;${num(r.impl_move, 2)}</div>
+           <div class="rg-sub">iv skew ${num(r.iv_skew, 1)}</div>
+         </div>`,
+
+        `<div class="rg-item" title="Call wall above / put wall below — the gamma levels that tend to pin or repel price. Distance in SPY points.">
+           <div class="rg-label">Walls</div>
+           <div class="rg-val"><span class="call">${num(r.call_wall, 0)}</span>
+             <span class="muted">/</span>
+             <span class="put">${num(r.put_wall, 0)}</span></div>
+           <div class="rg-sub">+${num(r.dist_call_wall, 2)} / -${num(r.dist_put_wall, 2)}</div>
+         </div>`
+      ];
+
+      let staleHtml = '';
+      const lag = r.regime_lag_min == null ? null : +r.regime_lag_min;
+      if (lag != null && lag >= 10) {
+        staleHtml = `<div class="rg-stale">⚠️ regime feed ${num(lag, 0)}m behind flow</div>`;
+      }
+
+      body.innerHTML = items.join('') + staleHtml;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SIGNAL PERFORMANCE TAB
+       ══════════════════════════════════════════════════════ */
+    async function loadPerf(force) {
+      const ctx = getDateContext();
+      const key = `${ctx.start || ''}|${ctx.end || ''}`;
+      if (!force && perfRows && perfKey === key) {
+        renderPerf(perfRows);
+        return;
+      }
+      if (perfLoading) return;
+      perfLoading = true;
+
+      const bodyEl = document.getElementById('perf-body');
+      if (bodyEl && !perfRows) bodyEl.innerHTML = '<div class="perf-empty">Loading signal history...</div>';
+
+      try {
+        // Null start/end makes the RPC span all available history.
+        const rows = await rpcWithRetry('v2_signal_performance', null,
+          { p_start: ctx.start, p_end: ctx.end }, 2);
+        perfRows = rows || [];
+        perfKey = key;
+        renderPerf(perfRows);
+      } catch (e) {
+        if (bodyEl) {
+          bodyEl.innerHTML = `<div class="err">Could not load signal performance: ${escapeHtml(e.message)}</div>`;
+        }
+      } finally {
+        perfLoading = false;
+      }
+    }
+
+    function hitBar(pct) {
+      if (pct == null) return '';
+      const col = pct >= 55 ? 'var(--green)' : (pct >= 45 ? 'var(--amber)' : 'var(--red)');
+      return `<span class="hitbar"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${col}"></i><span class="hitbar-50"></span></span>`;
+    }
+
+    function pctCell(wins, n) {
+      if (!n) return '<span class="muted">-</span>';
+      const pct = (wins / n) * 100;
+      const cls = pct >= 55 ? 'call' : (pct >= 45 ? '' : 'put');
+      return `<span class="${cls}">${pct.toFixed(0)}%</span> <span class="muted">(${wins}/${n})</span>${hitBar(pct)}`;
+    }
+
+    function signedCell(v, dp) {
+      if (v == null) return '<span class="muted">-</span>';
+      const n = +v;
+      const cls = n > 0 ? 'call' : (n < 0 ? 'put' : 'muted');
+      return `<span class="${cls}">${n > 0 ? '+' : ''}${n.toFixed(dp == null ? 2 : dp)}</span>`;
+    }
+
+    // Aggregate a set of signal rows into one summary record.
+    function aggPerf(rows) {
+      const a = {
+        n: rows.length,
+        w30: 0, n30: 0, w60: 0, n60: 0, weod: 0, neod: 0,
+        sum30: 0, c30: 0, sum60: 0, c60: 0, sumEod: 0, cEod: 0,
+        sumMfe: 0, cMfe: 0, sumMae: 0, cMae: 0
+      };
+      rows.forEach(r => {
+        if (r.win_30m !== null && r.win_30m !== undefined) { a.n30++; if (r.win_30m) a.w30++; }
+        if (r.win_60m !== null && r.win_60m !== undefined) { a.n60++; if (r.win_60m) a.w60++; }
+        if (r.win_eod !== null && r.win_eod !== undefined) { a.neod++; if (r.win_eod) a.weod++; }
+        if (r.move_30m != null) { a.sum30 += +r.move_30m; a.c30++; }
+        if (r.move_60m != null) { a.sum60 += +r.move_60m; a.c60++; }
+        if (r.move_eod != null) { a.sumEod += +r.move_eod; a.cEod++; }
+        if (r.mfe_60m != null) { a.sumMfe += +r.mfe_60m; a.cMfe++; }
+        if (r.mae_60m != null) { a.sumMae += +r.mae_60m; a.cMae++; }
+      });
+      a.avg30 = a.c30 ? a.sum30 / a.c30 : null;
+      a.avg60 = a.c60 ? a.sum60 / a.c60 : null;
+      a.avgEod = a.cEod ? a.sumEod / a.cEod : null;
+      a.avgMfe = a.cMfe ? a.sumMfe / a.cMfe : null;
+      a.avgMae = a.cMae ? a.sumMae / a.cMae : null;
+      // Expectancy proxy: average best-case reach per unit of heat taken.
+      a.edge = (a.avgMae && a.avgMae > 0 && a.avgMfe != null) ? a.avgMfe / a.avgMae : null;
+      return a;
+    }
+
+    function perfRowHtml(label, rows, isTotal) {
+      const a = aggPerf(rows);
+      const edgeCls = a.edge == null ? 'muted' : (a.edge >= 1.5 ? 'call' : (a.edge >= 1 ? '' : 'put'));
+      return `<tr class="${isTotal ? 'perf-total' : ''}">
+        <td>${label}</td>
+        <td>${a.n}</td>
+        <td>${pctCell(a.w30, a.n30)}</td>
+        <td>${pctCell(a.w60, a.n60)}</td>
+        <td>${pctCell(a.weod, a.neod)}</td>
+        <td>${signedCell(a.avg30)}</td>
+        <td>${signedCell(a.avg60)}</td>
+        <td>${signedCell(a.avgEod)}</td>
+        <td><span class="call">${a.avgMfe == null ? '-' : a.avgMfe.toFixed(2)}</span></td>
+        <td><span class="put">${a.avgMae == null ? '-' : a.avgMae.toFixed(2)}</span></td>
+        <td><span class="${edgeCls}">${a.edge == null ? '-' : a.edge.toFixed(2)}</span></td>
+      </tr>`;
+    }
+
+    function renderPerf(rows) {
+      const el = document.getElementById('perf-body');
+      if (!el) return;
+
+      if (!rows || !rows.length) {
+        el.innerHTML = '<div class="perf-empty">No ALERTED signals in the selected date range. Widen the range with the 📅 presets above — signal history begins 2026-09-08.</div>';
+        return;
+      }
+
+      const head = `
+        <thead>
+          <tr>
+            <th>Bucket</th><th>Signals</th>
+            <th title="Share of signals where price was on the signal's side 30 minutes later">Hit 30m</th>
+            <th title="Share of signals where price was on the signal's side 60 minutes later">Hit 60m</th>
+            <th title="Share of signals where price closed on the signal's side">Hit EOD</th>
+            <th title="Average direction-adjusted move in SPY points at +30m">Avg 30m</th>
+            <th title="Average direction-adjusted move in SPY points at +60m">Avg 60m</th>
+            <th title="Average direction-adjusted move in SPY points at the close">Avg EOD</th>
+            <th title="Max favourable excursion within 60m — your realistic best exit, in points">MFE</th>
+            <th title="Max adverse excursion within 60m — the heat you had to survive, in points">MAE</th>
+            <th title="MFE / MAE. Above 1.5 means the move paid for the drawdown; under 1 means it did not.">MFE:MAE</th>
+          </tr>
+        </thead>`;
+
+      // ── By grade × direction ──
+      const buckets = [];
+      ['A', 'B', 'C', 'D'].forEach(g => {
+        ['CALL', 'PUT'].forEach(d => {
+          const set = rows.filter(r => r.grade === g && r.direction === d);
+          if (set.length) buckets.push([`Grade ${g} · ${d}`, set]);
+        });
+      });
+      const byGrade = buckets.map(b => perfRowHtml(b[0], b[1], false)).join('')
+        + perfRowHtml('All signals', rows, true);
+
+      // ── By grade only ──
+      const gradeOnly = ['A', 'B', 'C', 'D'].map(g => {
+        const set = rows.filter(r => r.grade === g);
+        return set.length ? perfRowHtml(`Grade ${g}`, set, false) : '';
+      }).join('');
+
+      // ── By hour of day (NY) ──
+      const hours = {};
+      rows.forEach(r => {
+        const h = tsKey(r.candle_time_ny).slice(11, 13);
+        (hours[h] = hours[h] || []).push(r);
+      });
+      const byHour = Object.keys(hours).sort().map(h =>
+        perfRowHtml(`${h}:00 – ${h}:59`, hours[h], false)).join('');
+
+      const days = new Set(rows.map(r => r.trade_date)).size;
+
+      el.innerHTML = `
+        <div class="perf-section-title">By Grade &amp; Direction
+          <span class="hint">${rows.length} signals over ${days} session${days === 1 ? '' : 's'}</span></div>
+        <table class="perf-tbl">${head}<tbody>${byGrade}</tbody></table>
+
+        <div class="perf-section-title">By Grade
+          <span class="hint">is the score actually ranking your signals?</span></div>
+        <table class="perf-tbl">${head}<tbody>${gradeOnly}</tbody></table>
+
+        <div class="perf-section-title">By Hour of Day (NY)
+          <span class="hint">which part of the session is worth trading</span></div>
+        <table class="perf-tbl">${head}<tbody>${byHour}</tbody></table>
+      `;
+      updateRowCounts();
+    }
+
+    /* ══════════════════════════════════════════════════════
        DATA FETCHING — with Retry (#2) & AbortController (#16)
        ══════════════════════════════════════════════════════ */
     async function rpc(fn, signal, params = {}) {
@@ -2540,6 +3143,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           return [];
         };
 
+        // Regime context is also non-critical enhancement data.
+        const regimeOnFail = (err) => {
+          if (err.name !== 'AbortError') console.warn('Regime context load failed:', err);
+          return null;
+        };
+        const regimePromise = rpcWithRetry('v2_regime_context', signal,
+          dateCtx.isLive ? {} : { p_date: dateCtx.end || dateCtx.start }, 1)
+          .catch(regimeOnFail);
+
         if (dateCtx.isLive) {
           // Live mode: today's data via original functions
           flowPromise = rpcWithRetry('v2_dashboard_today', signal);
@@ -2553,10 +3165,16 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           anomaliesPromise = rpcWithRetry('v2_anomalies_range', signal, params, 1).catch(anomaliesOnFail);
         }
 
-        const [flow, vol, anomalies] = await Promise.all([flowPromise, volPromise, anomaliesPromise]);
+        const [flow, vol, anomalies, regime] = await Promise.all([
+          flowPromise, volPromise, anomaliesPromise, regimePromise
+        ]);
+
+        // v2_regime_context returns at most one row.
+        regimeCtx = (regime && regime.length) ? regime[0] : null;
+        renderRegime(regimeCtx);
 
         anomalyMap = {};
-        (anomalies || []).forEach(a => { anomalyMap[a.candle_time_ny] = a; });
+        (anomalies || []).forEach(a => { anomalyMap[tsKey(a.candle_time_ny)] = a; });
 
         renderCards(flow, vol);
         renderFlow(flow);
@@ -2576,6 +3194,16 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         // (#4) Update sync time
         lastSyncTime = Date.now();
         updateSyncAge();
+
+        // Signal performance is loaded lazily — refresh it only if the range
+        // changed or the user is looking at that tab, so the 10s live poll
+        // doesn't re-run the history scan on every tick.
+        const pk = `${dateCtx.start || ''}|${dateCtx.end || ''}`;
+        if (perfKey !== null && perfKey !== pk) {
+          perfRows = null;
+          perfKey = null;
+        }
+        if (activeTab === 'perf') loadPerf();
 
       } catch (e) {
         if (e.name === 'AbortError') {
@@ -2685,17 +3313,41 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       // VA Gauge with legend (#11)
       let vaGaugeHtml = '';
       if (last.poc != null && last.val != null && last.vah != null && last.price != null) {
-        const minVal = Math.min(last.val, last.price) - 1;
-        const maxVal = Math.max(last.vah, last.price) + 1;
+        // Include the gamma walls in the gauge scale when we have them, so the
+        // markers can't land outside the track.
+        const cw = regimeCtx && regimeCtx.call_wall != null ? +regimeCtx.call_wall : null;
+        const pw = regimeCtx && regimeCtx.put_wall != null ? +regimeCtx.put_wall : null;
+        const lows = [last.val, last.price].concat(pw != null ? [pw] : []).concat(cw != null ? [cw] : []);
+        const highs = [last.vah, last.price].concat(cw != null ? [cw] : []).concat(pw != null ? [pw] : []);
+        const minVal = Math.min.apply(null, lows) - 1;
+        const maxVal = Math.max.apply(null, highs) + 1;
         const span = (maxVal - minVal) || 1;
-        const valPct = Math.max(0, Math.min(100, ((last.val - minVal) / span) * 100));
-        const vahPct = Math.max(0, Math.min(100, ((last.vah - minVal) / span) * 100));
-        const pocPct = Math.max(0, Math.min(100, ((last.poc - minVal) / span) * 100));
-        const prcPct = Math.max(0, Math.min(100, ((last.price - minVal) / span) * 100));
+        const pos = (v) => Math.max(0, Math.min(100, ((v - minVal) / span) * 100));
+        const valPct = pos(last.val);
+        const vahPct = pos(last.vah);
+        const pocPct = pos(last.poc);
+        const prcPct = pos(last.price);
+
+        let wallsHtml = '', wallsLegend = '';
+        if (cw != null) {
+          wallsHtml += `<div class="va-wall va-wall-c" style="left:${pos(cw)}%" title="Call wall ${cw}"></div>`;
+        }
+        if (pw != null) {
+          wallsHtml += `<div class="va-wall va-wall-p" style="left:${pos(pw)}%" title="Put wall ${pw}"></div>`;
+        }
+        if (cw != null || pw != null) {
+          wallsLegend =
+            (cw != null ? '<span class="leg-cw"><span class="leg-dot"></span>Call Wall</span>' : '') +
+            (pw != null ? '<span class="leg-pw"><span class="leg-dot"></span>Put Wall</span>' : '');
+        }
+
+        const wallTitle = (cw != null || pw != null)
+          ? ` | Call Wall: ${cw ?? '-'} | Put Wall: ${pw ?? '-'}` : '';
 
         vaGaugeHtml = `
-      <div class="va-track" title="VAL: ${last.val} | POC: ${last.poc} | VAH: ${last.vah}">
+      <div class="va-track" title="VAL: ${last.val} | POC: ${last.poc} | VAH: ${last.vah}${wallTitle}">
         <div class="va-range" style="left:${valPct}%;width:${Math.max(2, vahPct - valPct)}%"></div>
+        ${wallsHtml}
         <div class="va-poc" style="left:${pocPct}%"></div>
         <div class="va-price" style="left:${prcPct}%"></div>
       </div>
@@ -2703,6 +3355,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         <span class="leg-price"><span class="leg-dot"></span>Price</span>
         <span class="leg-poc"><span class="leg-dot"></span>POC</span>
         <span class="leg-va"><span class="leg-dot"></span>Value Area</span>
+        ${wallsLegend}
       </div>`;
       }
 
@@ -2791,7 +3444,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           statusCell = escapeHtml((x.reason || '-').replace(/^no signal - /i, ''));
         }
 
-        const anom = anomalyMap[x.candle_time_ny];
+        const anom = anomalyMap[tsKey(x.candle_time_ny)];
         if (anom) statusCell += ' ' + surgePill(anom.anomaly_type);
 
         const jsonStr = escapeHtml(JSON.stringify(x));
@@ -2880,7 +3533,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
           ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
 
-        const anom = anomalyMap[x.candle_time_ny];
+        const anom = anomalyMap[tsKey(x.candle_time_ny)];
         const anomType = anom ? anom.anomaly_type : '';
         const anomRowCls = anom ? (anomType === 'CALL SURGE' ? 'anomaly-call' : (anomType === 'PUT SURGE' ? 'anomaly-put' : 'anomaly-mixed')) : '';
 
@@ -3105,6 +3758,10 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         case '3':
           e.preventDefault();
           switchTab('anomaly');
+          break;
+        case '4':
+          e.preventDefault();
+          switchTab('perf');
           break;
         case 'escape':
           e.preventDefault();
