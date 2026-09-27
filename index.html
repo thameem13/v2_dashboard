@@ -1558,6 +1558,143 @@
       font-size: 12px;
       padding: 14px 2px;
     }
+
+    /* ══════════════════════════════════════════════════════
+       OPTION VOLUME TAB — TIER 1 + 2
+       ══════════════════════════════════════════════════════ */
+
+    /* ── SESSION CUMULATIVE STRIP ── */
+    .vol-session-strip {
+      display: flex;
+      align-items: stretch;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      margin: 8px 12px 6px;
+      overflow: hidden;
+      flex-wrap: wrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .vol-session-strip .vs-title {
+      display: flex;
+      align-items: center;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--panel2);
+      border-right: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    /* reuse the regime strip's item styling */
+    .vol-session-strip .rg-item {
+      min-width: 92px;
+    }
+
+    /* ── STICKY TIME COLUMN (vol table only) ── */
+    #tbl-vol th:nth-child(2),
+    #tbl-vol td:nth-child(2) {
+      position: sticky;
+      left: 26px;
+      z-index: 3;
+      background: var(--panel);
+    }
+
+    #tbl-vol thead th:nth-child(2) {
+      z-index: 5;
+      background: var(--panel2);
+    }
+
+    [data-theme="light"] #tbl-vol tbody td:nth-child(2) {
+      background: #ffffff;
+    }
+
+    [data-theme="light"] #tbl-vol thead th:nth-child(2) {
+      background: var(--panel2);
+    }
+
+    #tbl-vol tr.pinned td:nth-child(2) {
+      background: var(--panel2);
+    }
+
+    /* ── rVOL CELL ── */
+    .rvol-cell {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .rvol-z {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .rvol-hot {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .rvol-warm {
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    .rvol-cool {
+      color: var(--dim);
+    }
+
+    .rvol-thin {
+      opacity: .55;
+    }
+
+    /* ── DOLLAR / DIVERGENCE ── */
+    .dcp-diverge {
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    .diverge-mark {
+      display: inline-block;
+      margin-left: 3px;
+      font-size: 10px;
+      color: var(--amber);
+      cursor: help;
+    }
+
+    .prem-pair {
+      white-space: nowrap;
+      font-size: 11px;
+    }
+
+    /* ── GRID COVERAGE ── */
+    .grid-pill {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 8px;
+      font-size: 9px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .grid-ok {
+      color: var(--dim);
+      border-color: var(--line);
+    }
+
+    .grid-warn {
+      color: var(--amber);
+      border-color: var(--amber);
+    }
+
+    /* ── VOL COLUMN MENU ── */
+    .col-menu.vol-menu h4::after {
+      content: ' (Volume)';
+      color: var(--dim);
+      font-weight: 400;
+    }
   </style>
 </head>
 
@@ -1602,6 +1739,31 @@
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-cln', this.checked)"> Cln</label>
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-score', this.checked)"> Score</label>
             <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('col-grade', this.checked)"> Grade</label>
+          </div>
+        </div>
+
+        <!-- COLUMN VISIBILITY MENU — VOLUME TAB -->
+        <div class="col-menu vol-menu" id="col-menu-vol">
+          <h4>Toggle Columns</h4>
+          <div class="col-menu-grid">
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-price', this.checked)"> Price</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-strike', this.checked)"> Strike</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-cotm', this.checked)"> Calls OTM</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-potm', this.checked)"> Puts OTM</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-citm', this.checked)"> Calls ITM+ATM</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-pitm', this.checked)"> Puts ITM+ATM</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-tcalls', this.checked)"> Total Calls</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-tputs', this.checked)"> Total Puts</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-tvol', this.checked)"> Total Vol</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-rvol', this.checked)"> rVOL</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-trend', this.checked)"> Vol Trend</label>
+            <label class="col-menu-item"><input type="checkbox" onchange="toggleCol('vcol-cchg', this.checked)"> Call Chg%</label>
+            <label class="col-menu-item"><input type="checkbox" onchange="toggleCol('vcol-pchg', this.checked)"> Put Chg%</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-notional', this.checked)"> $ Vol</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-cp', this.checked)"> C/P Ratio</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-dcp', this.checked)"> $ C/P</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-prem', this.checked)"> Avg Prem</label>
+            <label class="col-menu-item"><input type="checkbox" checked onchange="toggleCol('vcol-grid', this.checked)"> Grid</label>
           </div>
         </div>
       </div>
@@ -1749,56 +1911,100 @@
 
   <!-- TAB 2: VOLUME -->
   <div id="tab-vol" class="tab-content">
+    <!-- SESSION CUMULATIVE STRIP -->
+    <div class="vol-session-strip" id="vol-session-strip" style="display:none">
+      <div class="vs-title">Σ Session</div>
+      <div id="vol-session-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- PRESET FILTER BAR -->
+    <div class="preset-bar">
+      <span class="preset-title">⚡ Quick Filters:</span>
+      <button class="preset-btn vpreset active" onclick="applyVolPreset('all')">All</button>
+      <button class="preset-btn vpreset" onclick="applyVolPreset('surge')">Surge Only</button>
+      <button class="preset-btn vpreset" onclick="applyVolPreset('rvol2')">rVOL &ge; 2</button>
+      <button class="preset-btn vpreset" onclick="applyVolPreset('divergence')">$ vs Count Divergence</button>
+      <button class="preset-btn vpreset" onclick="applyVolPreset('gridedge')">Near Grid Edge</button>
+    </div>
+
     <div class="table-wrap" id="vol-wrap">
       <table id="tbl-vol">
         <thead>
           <tr>
             <th style="width:26px" title="Pin row to top">📌</th>
-            <th class="sortable" onclick="handleSort('vol', 1, false)">Time</th>
-            <th class="sortable" onclick="handleSort('vol', 2, true)">Price</th>
-            <th class="sortable" onclick="handleSort('vol', 3, true)">Strike</th>
-            <th class="sortable" onclick="handleSort('vol', 4, true)">Calls OTM</th>
-            <th class="sortable" onclick="handleSort('vol', 5, true)">Puts OTM</th>
-            <th class="sortable" onclick="handleSort('vol', 6, true)">Calls ITM+ATM</th>
-            <th class="sortable" onclick="handleSort('vol', 7, true)">Puts ITM+ATM</th>
-            <th class="sortable" onclick="handleSort('vol', 8, true)">Total Calls</th>
-            <th class="sortable" onclick="handleSort('vol', 9, true)">Total Puts</th>
-            <th class="sortable" onclick="handleSort('vol', 10, true)">Total Vol</th>
-            <th class="sortable" onclick="handleSort('vol', 11, true)">Avg Vol</th>
-            <th class="sortable" onclick="handleSort('vol', 12, true)">Total Chg%</th>
-            <th class="sortable" onclick="handleSort('vol', 13, true)">Call Chg%</th>
-            <th class="sortable" onclick="handleSort('vol', 14, true)">Put Chg%</th>
-            <th class="sortable" onclick="handleSort('vol', 15, true)">C/P Ratio</th>
-            <th style="text-align:left">Anomaly</th>
+            <th class="vcol-time sortable" onclick="handleSort('vol', 1, false)">Time</th>
+            <th class="vcol-price sortable" onclick="handleSort('vol', 2, true)">Price</th>
+            <th class="vcol-strike sortable" onclick="handleSort('vol', 3, true)">Strike</th>
+            <th class="vcol-cotm sortable" onclick="handleSort('vol', 4, true)">Calls OTM</th>
+            <th class="vcol-potm sortable" onclick="handleSort('vol', 5, true)">Puts OTM</th>
+            <th class="vcol-citm sortable" onclick="handleSort('vol', 6, true)">Calls ITM+ATM</th>
+            <th class="vcol-pitm sortable" onclick="handleSort('vol', 7, true)">Puts ITM+ATM</th>
+            <th class="vcol-tcalls sortable" onclick="handleSort('vol', 8, true)">Total Calls</th>
+            <th class="vcol-tputs sortable" onclick="handleSort('vol', 9, true)">Total Puts</th>
+            <th class="vcol-tvol sortable" onclick="handleSort('vol', 10, true)">Total Vol</th>
+            <th class="vcol-rvol sortable" onclick="handleSort('vol', 11, true)"
+                title="Relative volume vs the SAME time of day across earlier sessions (z-score in brackets). Unbiased by the volume-heavy open, unlike a session running average.">rVOL</th>
+            <th class="vcol-trend sortable" onclick="handleSort('vol', 12, true)"
+                title="Smoothed volume trend: 3-candle average vs the preceding 3-candle average. Less noisy than candle-over-candle.">Vol Trend</th>
+            <th class="vcol-cchg sortable" onclick="handleSort('vol', 13, true)">Call Chg%</th>
+            <th class="vcol-pchg sortable" onclick="handleSort('vol', 14, true)">Put Chg%</th>
+            <th class="vcol-notional sortable" onclick="handleSort('vol', 15, true)"
+                title="Premium traded this candle in dollars (OTM+ITM; ATM has no notional column in the source data).">$ Vol</th>
+            <th class="vcol-cp sortable" onclick="handleSort('vol', 16, true)">C/P Ratio</th>
+            <th class="vcol-dcp sortable" onclick="handleSort('vol', 17, true)"
+                title="Dollar-weighted call/put ratio, ex-ATM. When this disagrees with the contract ratio the money is leaning the other way -- happens on ~21% of candles.">$ C/P</th>
+            <th class="vcol-prem sortable" onclick="handleSort('vol', 18, true)"
+                title="Average premium per contract, calls / puts (OTM+ITM, includes intrinsic on ITM). Separates cheap far-OTM lottery tickets from near-money size.">Avg Prem</th>
+            <th class="vcol-grid" title="Price position inside the captured strike grid. A warning means the OTM buckets are being truncated and the totals understate.">Grid</th>
+            <th class="vcol-anom" style="text-align:left">Anomaly</th>
           </tr>
           <tr class="filter-row">
             <th></th>
-            <th><input type="text" id="v-time" placeholder="time" oninput="debounceFilter()"></th>
-            <th colspan="2"></th>
-            <th colspan="6"></th>
-            <th><input type="text" id="v-vol" placeholder="> 50000" oninput="debounceFilter()"></th>
-            <th></th>
-            <th><select id="v-chg" onchange="debounceFilter()">
+            <th class="vcol-time"><input type="text" id="v-time" placeholder="time" oninput="debounceFilter()"></th>
+            <th class="vcol-price"></th>
+            <th class="vcol-strike"></th>
+            <th class="vcol-cotm"></th>
+            <th class="vcol-potm"></th>
+            <th class="vcol-citm"></th>
+            <th class="vcol-pitm"></th>
+            <th class="vcol-tcalls"></th>
+            <th class="vcol-tputs"></th>
+            <th class="vcol-tvol"><input type="text" id="v-vol" placeholder="> 150000" oninput="debounceFilter()"></th>
+            <th class="vcol-rvol"><input type="text" id="v-rvol" placeholder="&gt;= 2" oninput="debounceFilter()"></th>
+            <th class="vcol-trend"><select id="v-trend" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="up">Rising</option>
+                <option value="dn">Falling</option>
+              </select></th>
+            <th class="vcol-cchg"><select id="v-callchg" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="up">Up</option>
                 <option value="dn">Down</option>
               </select></th>
-            <th><select id="v-callchg" onchange="debounceFilter()">
+            <th class="vcol-pchg"><select id="v-putchg" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="up">Up</option>
                 <option value="dn">Down</option>
               </select></th>
-            <th><select id="v-putchg" onchange="debounceFilter()">
-                <option value="">All</option>
-                <option value="up">Up</option>
-                <option value="dn">Down</option>
-              </select></th>
-            <th><select id="v-ratio" onchange="debounceFilter()">
+            <th class="vcol-notional"><input type="text" id="v-notional" placeholder="&gt; 5000000" oninput="debounceFilter()"></th>
+            <th class="vcol-cp"><select id="v-ratio" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="call-heavy">Call heavy (&gt;1.0)</option>
                 <option value="put-heavy">Put heavy (&lt;1.0)</option>
               </select></th>
-            <th><select id="v-anomaly" onchange="debounceFilter()">
+            <th class="vcol-dcp"><select id="v-dcp" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="call-heavy">$ Call heavy</option>
+                <option value="put-heavy">$ Put heavy</option>
+                <option value="divergent">Diverges from count</option>
+              </select></th>
+            <th class="vcol-prem"></th>
+            <th class="vcol-grid"><select id="v-grid" onchange="debounceFilter()">
+                <option value="">All</option>
+                <option value="edge">Near edge only</option>
+                <option value="ok">Inside grid only</option>
+              </select></th>
+            <th class="vcol-anom"><select id="v-anomaly" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="CALL SURGE">Call Surge</option>
                 <option value="PUT SURGE">Put Surge</option>
@@ -1919,6 +2125,8 @@
     let currentJournalSignal = null;
     let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
     let lastAnomalyTimestamp = null;
+    let volSurgeOnly = false;      // "Surge Only" preset on the volume tab
+    let volRowsCache = null;       // Raw enriched volume rows, for CSV export
     let regimeCtx = null;          // Latest row from v2_regime_context
     let perfRows = null;           // Rows from v2_signal_performance
     let perfKey = null;            // Date-range key the perfRows were loaded for
@@ -1963,7 +2171,7 @@
 
     function sendPushNotification(sig) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
-      const title = `≡ƒÜ¿ SPY ${sig.direction} Alert (Score ${sig.score})`;
+      const title = `🚨 SPY ${sig.direction} Alert (Score ${sig.score})`;
       const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: ${sig.flow} | Grade: ${sig.grade}`;
       try {
         new Notification(title, { body });
@@ -2106,9 +2314,22 @@
     /* ══════════════════════════════════════════════════════
        COLUMN VISIBILITY MANAGEMENT
        ══════════════════════════════════════════════════════ */
+    // The Columns button opens whichever menu belongs to the active tab.
     function toggleColumnMenu() {
-      const menu = document.getElementById('col-menu');
-      if (menu) menu.classList.toggle('visible');
+      const flowMenu = document.getElementById('col-menu');
+      const volMenu = document.getElementById('col-menu-vol');
+      const wantVol = activeTab === 'vol';
+      const target = wantVol ? volMenu : flowMenu;
+      const other = wantVol ? flowMenu : volMenu;
+      if (other) other.classList.remove('visible');
+      if (target) target.classList.toggle('visible');
+    }
+
+    function closeColumnMenus() {
+      ['col-menu', 'col-menu-vol'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m) m.classList.remove('visible');
+      });
     }
 
     function toggleCol(colClass, isVisible) {
@@ -2129,11 +2350,20 @@
       });
     }
 
+    // Call Chg% / Put Chg% are candle-over-candle and extremely noisy (median
+    // absolute change ~26%, range -68%..+621%), so they start hidden. The
+    // smoothed Vol Trend column replaces them for everyday reading.
+    const DEFAULT_HIDDEN_COLS = ['vcol-cchg', 'vcol-pchg'];
+
     function initHiddenCols() {
       try {
         const saved = localStorage.getItem('v2-hidden-cols');
-        if (saved) hiddenCols = new Set(JSON.parse(saved));
+        if (saved) {
+          hiddenCols = new Set(JSON.parse(saved));
+          return;
+        }
       } catch (e) { }
+      hiddenCols = new Set(DEFAULT_HIDDEN_COLS);
     }
 
     /* ══════════════════════════════════════════════════════
@@ -2371,7 +2601,7 @@
     function copyTradeLog() {
       if (!currentJournalSignal) return;
       const sig = currentJournalSignal;
-      const text = `≡ƒÜ¿ **SPY Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
+      const text = `🚨 **SPY Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
 - **Direction**: ${sig.direction} ($${sig.atm_strike} Strike @ SPY $${sig.price})
 - **Net Flow**: ${sig.flow} | **Score**: ${sig.score}/10 (Grade ${sig.grade || 'N/A'})
 - **POC / Room**: ${sig.poc ?? '-'} / ${sig.room ?? '-'}
@@ -2436,6 +2666,28 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     function fmtNum(n) {
       if (n == null || isNaN(n)) return '-';
       return (+n).toLocaleString();
+    }
+
+    // Compact contract counts: 1.2M / 345.6k / 812
+    function fmtCompact(n) {
+      if (n == null || n === '' || isNaN(+n)) return '-';
+      const v = +n;
+      const a = Math.abs(v);
+      if (a >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return (v / 1e3).toFixed(1) + 'k';
+      return v.toLocaleString();
+    }
+
+    // Compact dollars: $4.5M / $812k / $95
+    function fmtDollar(n) {
+      if (n == null || n === '' || isNaN(+n)) return '-';
+      const v = +n;
+      const a = Math.abs(v);
+      const sign = v < 0 ? '-' : '';
+      if (a >= 1e9) return sign + '$' + (a / 1e9).toFixed(2) + 'B';
+      if (a >= 1e6) return sign + '$' + (a / 1e6).toFixed(2) + 'M';
+      if (a >= 1e3) return sign + '$' + (a / 1e3).toFixed(0) + 'k';
+      return sign + '$' + a.toFixed(0);
     }
 
     function gate(v) {
@@ -2537,6 +2789,8 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
       document.getElementById('tab-anomaly').classList.toggle('active', name === 'anomaly');
       document.getElementById('tab-perf').classList.toggle('active', name === 'perf');
+      // The Columns menu is per-tab, so close whichever one is open.
+      closeColumnMenus();
       if (name === 'perf') loadPerf();
       updateRowCounts();
     }
@@ -2593,46 +2847,165 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     }
 
     function applyVolFilters() {
-      const vt = (document.getElementById('v-time').value || '').trim().toLowerCase();
-      const vv = (document.getElementById('v-vol').value || '').trim();
-      const vc = (document.getElementById('v-chg').value || '').toLowerCase();
-      const vcc = (document.getElementById('v-callchg').value || '').toLowerCase();
-      const vpc = (document.getElementById('v-putchg').value || '').toLowerCase();
-      const vr = (document.getElementById('v-ratio').value || '').toLowerCase();
-      const va = (document.getElementById('v-anomaly').value || '').toLowerCase();
+      const gv = (id) => { const el = document.getElementById(id); return el ? (el.value || '') : ''; };
+      const vt  = gv('v-time').trim().toLowerCase();
+      const vv  = gv('v-vol').trim();
+      const vrv = gv('v-rvol').trim();
+      const vtr = gv('v-trend').toLowerCase();
+      const vcc = gv('v-callchg').toLowerCase();
+      const vpc = gv('v-putchg').toLowerCase();
+      const vn  = gv('v-notional').trim();
+      const vr  = gv('v-ratio').toLowerCase();
+      const vd  = gv('v-dcp').toLowerCase();
+      const vg  = gv('v-grid').toLowerCase();
+      const va  = gv('v-anomaly').toLowerCase();
 
       document.querySelectorAll('#tbody-vol tr').forEach(row => {
         const c = row.querySelectorAll('td');
         if (!c.length) return;
+        const d = row.dataset;
         let show = true;
 
         if (vt && c[1].textContent.toLowerCase().indexOf(vt) < 0) show = false;
-        if (vv && !matchNumericOrText(vv, c[10].textContent)) show = false;
+        // Numeric filters read the dataset rather than cell text, so they keep
+        // working when a column is hidden or abbreviated (e.g. "4.5M").
+        if (vv  && !matchNumericOrText(vv,  d.tvol || '')) show = false;
+        if (vrv && !matchNumericOrText(vrv, d.rvol || '')) show = false;
+        if (vn  && !matchNumericOrText(vn,  d.notional || '')) show = false;
 
-        if (vc) {
-          const chgCls = row.dataset.chg || '';
-          if (vc === 'up' && chgCls !== 'up') show = false;
-          if (vc === 'dn' && chgCls !== 'dn') show = false;
+        if (vtr) {
+          if (vtr === 'up' && d.trend !== 'up') show = false;
+          if (vtr === 'dn' && d.trend !== 'dn') show = false;
         }
         if (vcc) {
-          const callChgCls = row.dataset.callchg || '';
-          if (vcc === 'up' && callChgCls !== 'up') show = false;
-          if (vcc === 'dn' && callChgCls !== 'dn') show = false;
+          if (vcc === 'up' && d.callchg !== 'up') show = false;
+          if (vcc === 'dn' && d.callchg !== 'dn') show = false;
         }
         if (vpc) {
-          const putChgCls = row.dataset.putchg || '';
-          if (vpc === 'up' && putChgCls !== 'up') show = false;
-          if (vpc === 'dn' && putChgCls !== 'dn') show = false;
+          if (vpc === 'up' && d.putchg !== 'up') show = false;
+          if (vpc === 'dn' && d.putchg !== 'dn') show = false;
         }
         if (vr) {
-          const ratio = parseFloat(row.dataset.ratio || '0');
-          if (vr === 'call-heavy' && ratio <= 1.0) show = false;
-          if (vr === 'put-heavy' && ratio >= 1.0) show = false;
+          const ratio = parseFloat(d.ratio || '');
+          if (isNaN(ratio)) show = false;
+          else {
+            if (vr === 'call-heavy' && ratio <= 1.0) show = false;
+            if (vr === 'put-heavy'  && ratio >= 1.0) show = false;
+          }
         }
-        if (va && (row.dataset.anomaly || '').toLowerCase().indexOf(va) < 0) show = false;
+        if (vd) {
+          const dr = parseFloat(d.dratio || '');
+          if (vd === 'divergent') {
+            if (d.diverge !== '1') show = false;
+          } else if (isNaN(dr)) {
+            show = false;
+          } else {
+            if (vd === 'call-heavy' && dr <= 1.0) show = false;
+            if (vd === 'put-heavy'  && dr >= 1.0) show = false;
+          }
+        }
+        if (vg) {
+          if (vg === 'edge' && d.gridedge !== '1') show = false;
+          if (vg === 'ok'   && d.gridedge !== '0') show = false;
+        }
+        if (va && (d.anomaly || '').toLowerCase().indexOf(va) < 0) show = false;
+        if (volSurgeOnly && !(d.anomaly || '')) show = false;
 
         row.classList.toggle('hidden', !show);
       });
+    }
+
+    /* Quick-filter presets for the volume tab. */
+    function applyVolPreset(preset) {
+      document.querySelectorAll('.preset-btn.vpreset').forEach(b => b.classList.remove('active'));
+      if (window.event && window.event.target) window.event.target.classList.add('active');
+
+      ['v-time', 'v-vol', 'v-rvol', 'v-notional'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      ['v-trend', 'v-callchg', 'v-putchg', 'v-ratio', 'v-dcp', 'v-grid', 'v-anomaly'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      // "Surge Only" spans three anomaly types, so it is a flag rather than a
+      // value in the anomaly dropdown.
+      volSurgeOnly = (preset === 'surge');
+
+      switch (preset) {
+        case 'rvol2':
+          document.getElementById('v-rvol').value = '>=2';
+          break;
+        case 'divergence':
+          document.getElementById('v-dcp').value = 'divergent';
+          break;
+        case 'gridedge':
+          document.getElementById('v-grid').value = 'edge';
+          break;
+      }
+      applyVolFilters();
+      updateRowCounts();
+    }
+
+    /* Session cumulative strip, driven by the candles of the visible session. */
+    function renderVolSession(rows) {
+      const strip = document.getElementById('vol-session-strip');
+      const body = document.getElementById('vol-session-body');
+      if (!strip || !body) return;
+      if (!rows || !rows.length) { strip.style.display = 'none'; return; }
+
+      const last = rows[rows.length - 1];
+      const cpc = last.session_cp_ratio == null ? null : +last.session_cp_ratio;
+
+      // Per-side session dollars are summed client-side; the RPC exposes
+      // per-candle notional plus a combined cumulative.
+      let cumCall = 0, cumPut = 0, edgeCandles = 0, divergent = 0;
+      rows.forEach(r => {
+        cumCall += +(r.call_notional || 0);
+        cumPut += +(r.put_notional || 0);
+        if (r.near_grid_edge) edgeCandles++;
+        if (r.cp_divergence) divergent++;
+      });
+      const dcp = cumPut > 0 ? cumCall / cumPut : null;
+      const disagrees = (dcp != null && cpc != null && ((dcp > 1) !== (cpc > 1)));
+
+      const items = [
+        '<div class="rg-item" title="Session contracts traded, calls / puts">' +
+          '<div class="rg-label">Contracts</div>' +
+          '<div class="rg-val"><span class="call">' + fmtCompact(last.cum_calls) + '</span>' +
+          '<span class="muted"> / </span><span class="put">' + fmtCompact(last.cum_puts) + '</span></div>' +
+          '<div class="rg-sub">total ' + fmtCompact(last.cum_vol) + '</div></div>',
+
+        '<div class="rg-item" title="Session call/put ratio by contract count">' +
+          '<div class="rg-label">Session C/P</div>' +
+          '<div class="rg-val ' + (cpc == null ? 'muted' : (cpc > 1 ? 'call' : 'put')) + '">' +
+          (cpc == null ? '-' : cpc.toFixed(2)) + '</div>' +
+          '<div class="rg-sub">' + (cpc == null ? '' : (cpc > 1 ? 'call heavy' : 'put heavy')) + '</div></div>',
+
+        '<div class="rg-item" title="Session premium traded in dollars (OTM+ITM; ATM has no notional in the source data)">' +
+          '<div class="rg-label">$ Traded</div>' +
+          '<div class="rg-val">' + fmtDollar(cumCall + cumPut) + '</div>' +
+          '<div class="rg-sub"><span class="call">' + fmtDollar(cumCall) + '</span> / <span class="put">' +
+          fmtDollar(cumPut) + '</span></div></div>',
+
+        '<div class="rg-item" title="Session dollar-weighted call/put ratio. Compare with Session C/P: a gap means contract count and money disagree.">' +
+          '<div class="rg-label">Session $ C/P</div>' +
+          '<div class="rg-val ' + (dcp == null ? 'muted' : (dcp > 1 ? 'call' : 'put')) + '">' +
+          (dcp == null ? '-' : dcp.toFixed(2)) + '</div>' +
+          '<div class="rg-sub">' + (disagrees ? '<span class="dcp-diverge">disagrees with count</span>' : 'agrees with count') +
+          '</div></div>',
+
+        '<div class="rg-item" title="Candles where the dollar ratio and the contract ratio pointed to opposite sides of parity">' +
+          '<div class="rg-label">Divergent</div>' +
+          '<div class="rg-val ' + (divergent ? 'dcp-diverge' : 'muted') + '">' + divergent + '</div>' +
+          '<div class="rg-sub">of ' + rows.length + ' candles</div></div>',
+
+        '<div class="rg-item" title="Candles where price sat within 2 strikes of the captured grid edge, so the OTM buckets were truncated and totals understate">' +
+          '<div class="rg-label">Grid Edge</div>' +
+          '<div class="rg-val ' + (edgeCandles ? 'rvol-warm' : 'muted') + '">' + edgeCandles + '</div>' +
+          '<div class="rg-sub">' + (edgeCandles ? 'totals understated' : 'fully inside') + '</div></div>'
+      ];
+
+      strip.style.display = 'flex';
+      body.innerHTML = items.join('');
     }
 
     function updateRowCounts() {
@@ -2652,6 +3025,13 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     function clearFilters() {
       document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
       document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
+      // Reset both preset bars back to "All" so the highlight matches reality.
+      volSurgeOnly = false;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.preset-bar').forEach(bar => {
+        const first = bar.querySelector('.preset-btn');
+        if (first) first.classList.add('active');
+      });
       applyFlowFilters();
       applyVolFilters();
       updateRowCounts();
@@ -2685,14 +3065,23 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const tbody = document.getElementById(tabName === 'flow' ? 'tbody-flow' : 'tbody-vol');
       const rows = Array.from(tbody.querySelectorAll('tr'));
 
+      // Abbreviated cells ("$4.5M", "1.2k", "2.10x") cannot be sorted from
+      // their text, so those cells carry a raw numeric data-sortval which wins
+      // when present.
+      const cellVal = (row) => {
+        const td = row.children[cfg.col];
+        if (!td) return '';
+        const sv = td.dataset ? td.dataset.sortval : undefined;
+        if (sv !== undefined && sv !== '') return sv;
+        return (td.textContent || '').trim().replace(/,/g, '').replace(/%/g, '');
+      };
+
       // Determine if column is numeric based on content
-      const isNumeric = rows.length > 0 && !isNaN(
-        parseFloat((rows[0].children[cfg.col]?.textContent || '').trim().replace(/,/g, '').replace(/%/g, ''))
-      );
+      const isNumeric = rows.length > 0 && !isNaN(parseFloat(cellVal(rows[0])));
 
       rows.sort((a, b) => {
-        const cellA = a.children[cfg.col]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
-        const cellB = b.children[cfg.col]?.textContent.trim().replace(/,/g, '').replace(/%/g, '') || '';
+        const cellA = cellVal(a);
+        const cellB = cellVal(b);
 
         if (isNumeric) {
           const numA = parseFloat(cellA) || 0;
@@ -2725,6 +3114,31 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         const a = document.createElement('a');
         a.href = url;
         a.download = `signal_performance_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Volume cells are abbreviated ($4.5M, 1.2k), so export the raw rows.
+      if (activeTab === 'vol') {
+        if (!volRowsCache || !volRowsCache.length) return alert('No data to export.');
+        const cols = ['trade_date', 'candle_time_ny', 'price', 'atm_strike',
+          'calls_otm', 'puts_otm', 'calls_itm_atm', 'puts_itm_atm', 'calls_atm', 'puts_atm',
+          'total_calls', 'total_puts', 'total_vol',
+          'rvol_tod', 'rvol_tod_z', 'tod_samples', 'vol_trend_3',
+          'calls_pct_chg', 'puts_pct_chg', 'total_pct_chg',
+          'call_notional', 'put_notional', 'total_notional',
+          'call_put_ratio', 'call_put_ratio_ex_atm', 'dollar_cp_ratio', 'cp_divergence',
+          'avg_call_premium', 'avg_put_premium',
+          'cum_calls', 'cum_puts', 'cum_vol', 'cum_notional', 'session_cp_ratio',
+          'lowest_strike', 'highest_strike', 'grid_room_low', 'grid_room_high', 'near_grid_edge'];
+        const lines = [cols.join(',')].concat(volRowsCache.map(r =>
+          cols.map(c => `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',')));
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `option_volume_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         return;
@@ -3080,8 +3494,17 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     /* ══════════════════════════════════════════════════════
        DATA FETCHING — with Retry (#2) & AbortController (#16)
        ══════════════════════════════════════════════════════ */
-    async function rpc(fn, signal, params = {}) {
-      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
+    /* PostgREST caps every response at 1000 rows (db-max-rows) and silently
+       drops the rest — there is no error and no warning. Because these RPCs
+       order by candle_time_ny ASC, the rows lost were the NEWEST ones: on the
+       "All" preset the dashboard was discarding the most recent candles of the
+       latest session. The Range header is ignored on RPC POSTs, so we page with
+       ?limit/&offset until a short page comes back. */
+    const PAGE_SIZE = 1000;
+
+    async function rpcPage(fn, signal, params, offset) {
+      const qs = offset > 0 ? `?limit=${PAGE_SIZE}&offset=${offset}` : '';
+      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}${qs}`, {
         method: 'POST',
         headers: {
           'apikey': SUPA_KEY,
@@ -3093,6 +3516,24 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
+    }
+
+    async function rpc(fn, signal, params = {}) {
+      let out = await rpcPage(fn, signal, params, 0);
+      // Scalar/row-returning RPCs give an object, not an array — nothing to page.
+      if (!Array.isArray(out)) return out;
+
+      let offset = out.length;
+      // Guard against a runaway loop if the server ever stops honouring offset.
+      let guard = 0;
+      while (out.length % PAGE_SIZE === 0 && out.length > 0 && guard++ < 50) {
+        const next = await rpcPage(fn, signal, params, offset);
+        if (!Array.isArray(next) || next.length === 0) break;
+        out = out.concat(next);
+        offset += next.length;
+        if (next.length < PAGE_SIZE) break;
+      }
+      return out;
     }
 
     async function rpcWithRetry(fn, signal, params = {}, retries = 3) {
@@ -3155,13 +3596,13 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         if (dateCtx.isLive) {
           // Live mode: today's data via original functions
           flowPromise = rpcWithRetry('v2_dashboard_today', signal);
-          volPromise  = rpcWithRetry('v2_volume_today', signal);
+          volPromise  = rpcWithRetry('v2_volume_enriched_today', signal);
           anomaliesPromise = rpcWithRetry('v2_anomalies_today', signal, {}, 1).catch(anomaliesOnFail);
         } else {
           // Historical / range mode: use range functions
           const params = { p_start: dateCtx.start, p_end: dateCtx.end };
           flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
-          volPromise  = rpcWithRetry('v2_volume_range', signal, params);
+          volPromise  = rpcWithRetry('v2_volume_enriched_range', signal, params);
           anomaliesPromise = rpcWithRetry('v2_anomalies_range', signal, params, 1).catch(anomaliesOnFail);
         }
 
@@ -3488,6 +3929,9 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     }
 
     function _renderVolInner(rows) {
+      volRowsCache = rows || null;
+      renderVolSession(rows);
+
       if (!rows || !rows.length) {
         document.getElementById('tbody-vol').innerHTML = '';
         return;
@@ -3505,62 +3949,121 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const body = sortedRows.map(x => {
         const rowKey = (x.candle_time_ny || '') + '_' + (x.atm_strike || '');
         const isPinned = pinnedVol.has(rowKey);
-        const pct = x.total_pct_chg;
+
         const cpct = x.calls_pct_chg;
         const ppct = x.puts_pct_chg;
-        const chgCls = pct == null ? 'flat' : (pct > 0 ? 'up' : 'dn');
         const callChgCls = cpct == null ? 'flat' : (cpct > 0 ? 'up' : 'dn');
         const putChgCls = ppct == null ? 'flat' : (ppct > 0 ? 'up' : 'dn');
-        const chgTxt = pct == null ? '-' : `${pct > 0 ? '+' : ''}${pct}%`;
         const cChgTxt = cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`;
         const pChgTxt = ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`;
-        const ratio = x.call_put_ratio;
-        const ratioCls = ratio == null ? 'flat' : (ratio > 1 ? 'call' : 'put');
 
-        const totCalls = x.total_calls || 0;
-        const totPuts = x.total_puts || 0;
+        // ── rVOL vs same time of day across earlier sessions ──
+        const rv = x.rvol_tod == null ? null : +x.rvol_tod;
+        const rz = x.rvol_tod_z == null ? null : +x.rvol_tod_z;
+        const samples = x.tod_samples == null ? 0 : +x.tod_samples;
+        let rvolCls = 'rvol-cool';
+        if (rv != null) {
+          if (rv >= 2) rvolCls = 'rvol-hot';
+          else if (rv >= 1.3) rvolCls = 'rvol-warm';
+        }
+        // Fewer than 5 prior sessions at this time slot is not a usable baseline.
+        const thin = samples > 0 && samples < 5;
+        const rvolHtml = rv == null
+          ? `<span class="muted" title="No earlier session has data for this time slot yet">-</span>`
+          : `<span class="rvol-cell ${thin ? 'rvol-thin' : ''}" title="${x.total_vol} vs ${samples}-session average at this time of day${thin ? ' — only ' + samples + ' sessions, treat as provisional' : ''}">
+               <b class="${rvolCls}">${rv.toFixed(2)}x</b>
+               <span class="rvol-z">${rz == null ? '' : (rz > 0 ? '+' : '') + rz.toFixed(1) + 'σ'}</span>
+             </span>`;
+
+        // ── smoothed volume trend ──
+        const tr = x.vol_trend_3 == null ? null : +x.vol_trend_3;
+        const trendCls = tr == null ? 'flat' : (tr > 0 ? 'up' : 'dn');
+        const trendTxt = tr == null ? '-' : `${tr > 0 ? '+' : ''}${tr.toFixed(0)}%`;
+
+        // ── dollars ──
+        const notional = x.total_notional == null ? null : +x.total_notional;
+        const dcp = x.dollar_cp_ratio == null ? null : +x.dollar_cp_ratio;
+        const ratio = x.call_put_ratio == null ? null : +x.call_put_ratio;
+        const diverges = x.cp_divergence === true;
+
+        const ratioCls = ratio == null ? 'flat' : (ratio > 1 ? 'call' : 'put');
+        const totCalls = +(x.total_calls || 0);
+        const totPuts = +(x.total_puts || 0);
         const sum = totCalls + totPuts;
         const callShare = sum > 0 ? Math.round((totCalls / sum) * 100) : 50;
 
         const ratioBarHtml = `
       <div class="ratio-wrap">
-        <span class="${ratioCls}">${ratio ?? '-'}</span>
-        <div class="ratio-bar" title="Calls: ${callShare}% | Puts: ${100 - callShare}%">
+        <span class="${ratioCls}">${ratio == null ? '-' : ratio.toFixed(2)}</span>
+        <div class="ratio-bar" title="Calls: ${callShare}% | Puts: ${100 - callShare}% (by contract count)">
           <div class="ratio-bar-call" style="width:${callShare}%"></div>
         </div>
       </div>`;
 
-        const rvolBadge = (x.total_vol && x.avg_vol && x.total_vol > x.avg_vol * 1.3)
-          ? '<span class="rvol-high" title="Volume > 1.3x Avg">HIGH</span> ' : '';
+        const dcpCls = dcp == null ? 'flat' : (diverges ? 'dcp-diverge' : (dcp > 1 ? 'call' : 'put'));
+        const dcpHtml = dcp == null
+          ? '<span class="muted">-</span>'
+          : `<span class="${dcpCls}" title="${fmtDollar(x.call_notional)} calls vs ${fmtDollar(x.put_notional)} puts${diverges ? ' — OPPOSITE side to the contract ratio (' + (ratio == null ? '?' : ratio.toFixed(2)) + ')' : ''}">${dcp.toFixed(2)}</span>`
+            + (diverges ? '<span class="diverge-mark" title="Dollar ratio and contract ratio disagree on side">⚠</span>' : '');
+
+        const acp = x.avg_call_premium == null ? null : +x.avg_call_premium;
+        const app = x.avg_put_premium == null ? null : +x.avg_put_premium;
+        const premHtml = (acp == null && app == null)
+          ? '<span class="muted">-</span>'
+          : `<span class="prem-pair" title="Average premium per contract paid this candle (OTM+ITM; ITM includes intrinsic)">
+               <span class="call">${acp == null ? '-' : acp.toFixed(2)}</span><span class="muted">/</span><span class="put">${app == null ? '-' : app.toFixed(2)}</span>
+             </span>`;
+
+        // ── grid coverage ──
+        const edge = x.near_grid_edge === true;
+        const gridHtml = x.lowest_strike == null
+          ? '<span class="muted">-</span>'
+          : `<span class="grid-pill ${edge ? 'grid-warn' : 'grid-ok'}" title="Captured grid ${x.lowest_strike}–${x.highest_strike}; price is ${x.grid_room_low} above the low edge and ${x.grid_room_high} below the high edge${edge ? '. Within 2 strikes of an edge, so the OTM buckets are truncated and these totals understate.' : ''}">${edge ? '⚠ EDGE' : 'OK'}</span>`;
 
         const anom = anomalyMap[tsKey(x.candle_time_ny)];
         const anomType = anom ? anom.anomaly_type : '';
         const anomRowCls = anom ? (anomType === 'CALL SURGE' ? 'anomaly-call' : (anomType === 'PUT SURGE' ? 'anomaly-put' : 'anomaly-mixed')) : '';
 
         return `
-      <tr class="${isPinned ? 'pinned' : ''} ${anomRowCls}" data-chg="${chgCls}" data-callchg="${callChgCls}" data-putchg="${putChgCls}" data-ratio="${ratio || 0}" data-anomaly="${anomType}">
+      <tr class="${isPinned ? 'pinned' : ''} ${anomRowCls}"
+          data-tvol="${x.total_vol == null ? '' : x.total_vol}"
+          data-rvol="${rv == null ? '' : rv}"
+          data-trend="${trendCls}"
+          data-callchg="${callChgCls}"
+          data-putchg="${putChgCls}"
+          data-notional="${notional == null ? '' : notional}"
+          data-ratio="${ratio == null ? '' : ratio}"
+          data-dratio="${dcp == null ? '' : dcp}"
+          data-diverge="${diverges ? '1' : '0'}"
+          data-gridedge="${x.lowest_strike == null ? '' : (edge ? '1' : '0')}"
+          data-anomaly="${anomType}">
         <td><button class="pin-btn" onclick="togglePinVol('${rowKey}', event)">${isPinned ? '📌' : '📍'}</button></td>
-        <td>${fmtTime(x.candle_time_ny)}</td>
-        <td>${escapeHtml(x.price)}</td>
-        <td>${escapeHtml(x.atm_strike)}</td>
-        <td class="call">${fmtNum(x.calls_otm)}</td>
-        <td class="put">${fmtNum(x.puts_otm)}</td>
-        <td class="call">${fmtNum(x.calls_itm_atm)}</td>
-        <td class="put">${fmtNum(x.puts_itm_atm)}</td>
-        <td class="call"><b>${fmtNum(x.total_calls)}</b></td>
-        <td class="put"><b>${fmtNum(x.total_puts)}</b></td>
-        <td>${rvolBadge}<b>${fmtNum(x.total_vol)}</b></td>
-        <td class="muted">${fmtNum(x.avg_vol)}</td>
-        <td class="${chgCls}">${chgTxt}</td>
-        <td class="${callChgCls}">${cChgTxt}</td>
-        <td class="${putChgCls}">${pChgTxt}</td>
-        <td>${ratioBarHtml}</td>
-        <td class="reason-col">${surgePill(anomType)}</td>
+        <td class="vcol-time">${fmtTime(x.candle_time_ny)}</td>
+        <td class="vcol-price">${escapeHtml(x.price)}</td>
+        <td class="vcol-strike">${escapeHtml(x.atm_strike)}</td>
+        <td class="vcol-cotm call">${fmtNum(x.calls_otm)}</td>
+        <td class="vcol-potm put">${fmtNum(x.puts_otm)}</td>
+        <td class="vcol-citm call">${fmtNum(x.calls_itm_atm)}</td>
+        <td class="vcol-pitm put">${fmtNum(x.puts_itm_atm)}</td>
+        <td class="vcol-tcalls call"><b>${fmtNum(x.total_calls)}</b></td>
+        <td class="vcol-tputs put"><b>${fmtNum(x.total_puts)}</b></td>
+        <td class="vcol-tvol"><b>${fmtNum(x.total_vol)}</b></td>
+        <td class="vcol-rvol" data-sortval="${rv == null ? '' : rv}">${rvolHtml}</td>
+        <td class="vcol-trend ${trendCls}" data-sortval="${tr == null ? '' : tr}">${trendTxt}</td>
+        <td class="vcol-cchg ${callChgCls}">${cChgTxt}</td>
+        <td class="vcol-pchg ${putChgCls}">${pChgTxt}</td>
+        <td class="vcol-notional" data-sortval="${notional == null ? '' : notional}">${notional == null ? '<span class="muted">-</span>' : fmtDollar(notional)}</td>
+        <td class="vcol-cp" data-sortval="${ratio == null ? '' : ratio}">${ratioBarHtml}</td>
+        <td class="vcol-dcp" data-sortval="${dcp == null ? '' : dcp}">${dcpHtml}</td>
+        <td class="vcol-prem" data-sortval="${acp == null ? '' : acp}">${premHtml}</td>
+        <td class="vcol-grid">${gridHtml}</td>
+        <td class="vcol-anom reason-col">${surgePill(anomType)}</td>
       </tr>`;
       }).join('');
 
       document.getElementById('tbody-vol').innerHTML = body;
       applyVolFilters();
+      applyHiddenCols();
     }
 
     /* ══════════════════════════════════════════════════════
