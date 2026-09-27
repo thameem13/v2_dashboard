@@ -2203,16 +2203,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         const dateCtx = getDateContext();
         let flowPromise, volPromise;
 
-        if (dateCtx.isLive) {
-          // Live mode: today's data via original functions
-          flowPromise = rpcWithRetry('v2_dashboard_today', signal);
-          volPromise  = rpcWithRetry('v2_volume_today', signal);
-        } else {
-          // Historical / range mode: use range functions
-          const params = { p_start: dateCtx.start, p_end: dateCtx.end };
-          flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
-          volPromise  = rpcWithRetry('v2_volume_range', signal, params);
-        }
+        // Always pass explicit NY-timezone dates to avoid Supabase server CURRENT_DATE
+        // (server runs UTC which can differ from NY market time, causing stale/wrong-day data)
+        const today = todayStr();
+        const params = {
+          p_start: dateCtx.isLive ? today : (dateCtx.start || today),
+          p_end:   dateCtx.isLive ? today : (dateCtx.end   || today)
+        };
+        flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
+        volPromise  = rpcWithRetry('v2_volume_range',    signal, params);
 
         const [flow, vol] = await Promise.all([flowPromise, volPromise]);
 
@@ -2549,14 +2548,15 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     let currentPreset = 'today';
 
     function todayStr() {
-      const d = new Date();
-      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      // Always use NY timezone to match candle_time_ny market data
+      return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     }
 
     function offsetDate(days) {
       const d = new Date();
       d.setDate(d.getDate() - days);
-      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      // Use NY timezone to match market data
+      return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     }
 
     function setDatePreset(preset, event) {
