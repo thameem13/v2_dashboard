@@ -1,6 +1,7 @@
 {
-  // Cloudflare reads this on each Git deploy. "main" is what turns the project
-  // from static-assets-only into a Worker that can run the /api/rpc proxy.
+  // Cloudflare reads this on each Git deploy. "main" is what makes this a real
+  // Worker rather than a static-assets-only project, which is what lets the
+  // /api/rpc proxy run at all.
   "name": "v2-dashboard",
   "main": "worker.js",
   "compatibility_date": "2026-09-01",
@@ -11,9 +12,15 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS"
+  },
+
+  // Plaintext vars belong here because Git-deployed Workers treat this file as
+  // the source of truth - the dashboard greys out binding edits to avoid the
+  // two disagreeing. This URL is not a secret; it is already in index.html.
+  "vars": {
+    "SUPABASE_URL": "https://egsgycizhssexstjrsqi.supabase.co"
   }
 
-  // SUPABASE_URL and SUPABASE_SECRET_KEY are NOT declared here on purpose -
-  // they are set in the dashboard under Settings -> Bindings so the secret
-  // never lands in the repo.
+  // SUPABASE_SECRET_KEY is deliberately NOT here - secrets never go in the
+  // repo. Add it as a Secret in the dashboard (or `wrangler secret put`).
 }
