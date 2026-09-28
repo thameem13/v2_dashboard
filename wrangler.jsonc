@@ -1,0 +1,19 @@
+{
+  // Cloudflare reads this on each Git deploy. "main" is what turns the project
+  // from static-assets-only into a Worker that can run the /api/rpc proxy.
+  "name": "v2-dashboard",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+
+  // Serve the repo root as the static site. Requests matching a real file
+  // (index.html, etc.) are served directly; anything else falls through to
+  // worker.js, which is how /api/rpc/* reaches the proxy.
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS"
+  }
+
+  // SUPABASE_URL and SUPABASE_SECRET_KEY are NOT declared here on purpose -
+  // they are set in the dashboard under Settings -> Bindings so the secret
+  // never lands in the repo.
+}
