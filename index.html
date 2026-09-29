@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.3.9">
+  <meta name="build" content="1.4.1">
 
   <title>Trade Flow Dashboard Pro</title>
   <style>
@@ -71,8 +71,17 @@
 
     html,
     body {
-      height: 100%;
+      /* 100% of a mobile viewport is measured against the URL-bar-expanded
+         height, so the footer sits below the fold until you scroll -- and the
+         body cannot scroll. dvh tracks the bar collapsing; vh is the fallback. */
+      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
+    }
+
+    html {
+      /* Stop iOS inflating text when the phone is rotated to landscape. */
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -167,15 +176,19 @@
       outline: none;
     }
 
-    button:hover,
-    select.ctrl-select:hover {
-      background: #222b37;
-      border-color: var(--dim);
-    }
+    /* Touch browsers latch :hover onto the last-tapped element and never
+       release it, so every hover rule in this file is gated on a real pointer. */
+    @media (hover: hover) {
+      button:hover,
+      select.ctrl-select:hover {
+        background: #222b37;
+        border-color: var(--dim);
+      }
 
-    [data-theme="light"] button:hover,
-    [data-theme="light"] select.ctrl-select:hover {
-      background: #d8dce2;
+      [data-theme="light"] button:hover,
+      [data-theme="light"] select.ctrl-select:hover {
+        background: #d8dce2;
+      }
     }
 
     button:active {
@@ -401,8 +414,10 @@
       gap: 6px;
     }
 
-    .tab:hover {
-      color: var(--txt);
+    @media (hover: hover) {
+      .tab:hover {
+        color: var(--txt);
+      }
     }
 
     .tab.active {
@@ -480,9 +495,11 @@
       user-select: none;
     }
 
-    th.sortable:hover {
-      color: var(--txt);
-      background: rgba(255, 255, 255, 0.03);
+    @media (hover: hover) {
+      th.sortable:hover {
+        color: var(--txt);
+        background: rgba(255, 255, 255, 0.03);
+      }
     }
 
     th.sorted-asc::after {
@@ -589,20 +606,22 @@
     }
 
     /* ── ROW HOVER HIGHLIGHT (#10) ── */
-    tbody tr:hover td {
-      background: rgba(255, 255, 255, 0.04);
-    }
+    @media (hover: hover) {
+      tbody tr:hover td {
+        background: rgba(255, 255, 255, 0.04);
+      }
 
-    tbody tr.sig:hover td {
-      background: rgba(63, 185, 80, 0.14);
-    }
+      tbody tr.sig:hover td {
+        background: rgba(63, 185, 80, 0.14);
+      }
 
-    [data-theme="light"] tbody tr:hover td {
-      background: rgba(0, 0, 0, 0.03);
-    }
+      [data-theme="light"] tbody tr:hover td {
+        background: rgba(0, 0, 0, 0.03);
+      }
 
-    [data-theme="light"] tbody tr.sig:hover td {
-      background: rgba(63, 185, 80, 0.1);
+      [data-theme="light"] tbody tr.sig:hover td {
+        background: rgba(63, 185, 80, 0.1);
+      }
     }
 
     /* Indicators & Visual Bars */
@@ -1035,6 +1054,290 @@
       }
     }
 
+    /* ══════════════════════════════════════════════════════
+       PHONE LAYOUT
+       Cascades on top of the 1000px block above. Two rules govern everything
+       here: the table is the point, so it gets the screen; and column trimming
+       is CSS-only -- calling toggleCol() would write to the localStorage
+       column prefs that a narrowed desktop window shares with the phone.
+       ══════════════════════════════════════════════════════ */
+    @media (max-width: 700px) {
+
+      /* ── Safe-area insets. viewport-fit=cover is set, so in landscape on a
+         notched phone these edges would otherwise sit under the cutout. ── */
+      #top,
+      .tab-header-row,
+      .preset-bar,
+      .perf-wrap {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+      }
+
+      .vol-toolbar {
+        margin-left: max(12px, env(safe-area-inset-left));
+        margin-right: max(12px, env(safe-area-inset-right));
+      }
+
+      .table-wrap {
+        margin-left: max(8px, env(safe-area-inset-left));
+        margin-right: max(8px, env(safe-area-inset-right));
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #foot {
+        padding-bottom: max(5px, env(safe-area-inset-bottom));
+      }
+
+      /* ── Header band ── */
+      #top {
+        max-height: 55dvh;
+        padding-top: 8px;
+      }
+
+      /* The 1000px block hands this back to auto-fit, which yields one
+         full-width column on a phone. Five KPI cards read better 2-up. */
+      .top-row .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .news-col {
+        min-height: 160px;
+      }
+
+      /* ── Controls: one horizontally scrollable strip on its own line,
+         instead of 3-4 wrapped rows stacked under the title. ── */
+      .controls {
+        flex: 1 1 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .controls::-webkit-scrollbar {
+        display: none;
+      }
+
+      .controls > button,
+      .controls > select.ctrl-select {
+        flex: 0 0 auto;
+      }
+
+      /* ── Tap targets. Anything under 16px in an input makes iOS Safari zoom
+         the viewport on focus and never zoom back out. ── */
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+
+      button,
+      select.ctrl-select {
+        min-height: 36px;
+        padding: 8px 12px;
+      }
+
+      /* The select above is pinned to 16px by the anti-zoom rule; 12px buttons
+         next to it looked mismatched in the controls strip. */
+      button {
+        font-size: 14px;
+      }
+
+      .preset-btn {
+        min-height: 32px;
+        padding: 6px 12px;
+      }
+
+      .date-presets button {
+        min-height: 32px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .news-inline h4 button {
+        min-height: 28px;
+        padding: 4px 10px;
+      }
+
+      /* Grow the tap target vertically only: #tbl-vol's second column is
+         sticky at left:26px, so a wider pin column would desync that offset
+         and leave a seam under the sticky Time cell. */
+      .pin-btn {
+        padding: 8px 2px;
+        font-size: 13px;
+      }
+
+      #tbl-flow th:first-child,
+      #tbl-flow td:first-child,
+      #tbl-vol th:first-child,
+      #tbl-vol td:first-child {
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+
+      /* tr.sig re-adds a 3px accent border and 7px padding; keep it in budget. */
+      #tbl-flow tr.sig td:first-child {
+        padding-left: 0;
+      }
+
+      .tab {
+        padding: 10px 14px;
+      }
+
+      /* ── Tables: trim to what is readable on a phone; the rest still scrolls
+         horizontally, and tapping a flow row opens the full detail modal. ── */
+
+      /* The flow filter row carries a th with colspan="5" over fl/vol/inst/rm/cln,
+         so hiding those five columns individually would leave that th spanning
+         nothing and skew the row. Hiding the whole row sidesteps it -- and 10px
+         filter inputs are unusable by thumb anyway. The .preset-bar quick
+         filters cover the same ground with real tap targets, and clearFilters()
+         still works against the hidden inputs. */
+      thead tr.filter-row {
+        display: none;
+      }
+
+      #tbl-flow .col-poc,
+      #tbl-flow .col-room,
+      #tbl-flow .col-fl,
+      #tbl-flow .col-vol,
+      #tbl-flow .col-inst,
+      #tbl-flow .col-rm,
+      #tbl-flow .col-cln,
+      #tbl-flow .col-score {
+        display: none;
+      }
+
+      /* The 26px pin column stays, so #tbl-vol's sticky left:26px holds. */
+      #tbl-vol .vcol-strike,
+      #tbl-vol .vcol-cotm,
+      #tbl-vol .vcol-potm,
+      #tbl-vol .vcol-citm,
+      #tbl-vol .vcol-pitm,
+      #tbl-vol .vcol-tcalls,
+      #tbl-vol .vcol-tputs,
+      #tbl-vol .vcol-trend,
+      #tbl-vol .vcol-cchg,
+      #tbl-vol .vcol-pchg,
+      #tbl-vol .vcol-notional,
+      #tbl-vol .vcol-dcp,
+      #tbl-vol .vcol-prem,
+      #tbl-vol .vcol-grid {
+        display: none;
+      }
+
+      #tbl-anomaly .an-avgvol,
+      #tbl-anomaly .an-tcalls,
+      #tbl-anomaly .an-tputs,
+      #tbl-anomaly .an-cchg,
+      #tbl-anomaly .an-pchg {
+        display: none;
+      }
+
+      td.reason-col {
+        max-width: 160px;
+      }
+
+      /* ── Tabs, toolbars, footer ── */
+      .tab-header-row {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .tabs {
+        flex: 1 1 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .tabs::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tabs .tab {
+        flex: 0 0 auto;
+      }
+
+      .row-count-badge {
+        flex: 1 1 100%;
+        padding-bottom: 6px;
+      }
+
+      .preset-bar,
+      .vol-toolbar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .preset-bar > * {
+        flex: 0 0 auto;
+      }
+
+      .vol-toolbar .vol-preset-bar {
+        flex: 0 0 auto;
+        min-width: 0;
+      }
+
+      #foot {
+        flex-wrap: wrap;
+        gap: 2px 10px;
+        justify-content: center;
+      }
+
+      /* ── Overlays ── */
+      /* No physical keyboard to shortcut with. */
+      .kbd-panel {
+        display: none !important;
+      }
+
+      /* Fixed rather than absolute: it is a DOM child of .controls, which is
+         now an overflow-x scroller that would otherwise clip it. */
+      .col-menu {
+        position: fixed;
+        top: auto;
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        min-width: 0;
+        max-height: 60dvh;
+        overflow-y: auto;
+        z-index: 1200;
+      }
+
+      .modal-overlay {
+        padding: 10px;
+      }
+
+      /* .modal-card is overflow:hidden with no height cap, so a long signal
+         journal was clipped with the footer buttons off-screen and no scroll. */
+      .modal-card {
+        max-height: 88dvh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .modal-body {
+        overflow-y: auto;
+        min-height: 0;
+      }
+
+      .modal-foot {
+        flex-wrap: wrap;
+      }
+
+      .modal-foot button {
+        flex: 1 1 auto;
+      }
+
+      .alert-stack {
+        bottom: 8px;
+        max-height: 45dvh;
+      }
+    }
+
     /* The column reserves the space and is what the grid measures; it only ever
        contributes its own min-height, never the headline list's height. */
     .news-col {
@@ -1141,9 +1444,11 @@
       margin: 2px 0;
     }
 
-    .news-item a:hover {
-      color: var(--blue);
-      text-decoration: underline;
+    @media (hover: hover) {
+      .news-item a:hover {
+        color: var(--blue);
+        text-decoration: underline;
+      }
     }
 
     .news-item-source {
@@ -1195,9 +1500,11 @@
       transition: all 0.15s;
     }
 
-    .preset-btn:hover {
-      border-color: var(--blue);
-      color: var(--blue);
+    @media (hover: hover) {
+      .preset-btn:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
     }
 
     .preset-btn.active {
@@ -1261,9 +1568,16 @@
       transition: opacity 0.15s, color 0.15s;
     }
 
-    .pin-btn:hover, tr.pinned .pin-btn {
+    tr.pinned .pin-btn {
       opacity: 1;
       color: var(--amber);
+    }
+
+    @media (hover: hover) {
+      .pin-btn:hover {
+        opacity: 1;
+        color: var(--amber);
+      }
     }
 
     /* ── ANOMALY DETECTION (VOLUME SURGES) ── */
@@ -1374,9 +1688,11 @@
       padding: 0 6px;
     }
 
-    .modal-close:hover,
-    .alert-close:hover {
-      color: var(--txt);
+    @media (hover: hover) {
+      .modal-close:hover,
+      .alert-close:hover {
+        color: var(--txt);
+      }
     }
 
     .modal-body {
@@ -1759,8 +2075,10 @@
       white-space: nowrap;
     }
 
-    table.perf-tbl tbody tr:hover {
-      background: var(--panel2);
+    @media (hover: hover) {
+      table.perf-tbl tbody tr:hover {
+        background: var(--panel2);
+      }
     }
 
     table.perf-tbl tr.perf-total td {
@@ -2300,18 +2618,18 @@
       <table id="tbl-anomaly">
         <thead>
           <tr>
-            <th>Time</th>
-            <th>Type</th>
-            <th>SPY Price</th>
-            <th>Vol Multiple</th>
-            <th>Total Vol</th>
-            <th>Avg Vol</th>
-            <th>Total Calls</th>
-            <th>Total Puts</th>
-            <th>C/P Ratio</th>
-            <th>Call Chg%</th>
-            <th>Put Chg%</th>
-            <th style="text-align:left;min-width:240px">Reason</th>
+            <th class="an-time">Time</th>
+            <th class="an-type">Type</th>
+            <th class="an-price">SPY Price</th>
+            <th class="an-mult">Vol Multiple</th>
+            <th class="an-tvol">Total Vol</th>
+            <th class="an-avgvol">Avg Vol</th>
+            <th class="an-tcalls">Total Calls</th>
+            <th class="an-tputs">Total Puts</th>
+            <th class="an-cp">C/P Ratio</th>
+            <th class="an-cchg">Call Chg%</th>
+            <th class="an-pchg">Put Chg%</th>
+            <th class="an-reason" style="text-align:left;min-width:240px">Reason</th>
           </tr>
         </thead>
         <tbody id="tbody-anomaly"></tbody>
@@ -2391,8 +2709,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.0';
-    const BUILD_TS = '2026-09-28T20:31Z';
+    const BUILD = '1.4.1';
+    const BUILD_TS = '2026-09-28T21:40Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -2694,22 +3012,39 @@
        screen it eats the rows. This hides the cards/regime/news/date band and
        hands that space to the table; the title row and tabs stay put.
        ══════════════════════════════════════════════════════ */
-    function toggleHeader() {
+    /* DOM and button state only, with no persistence. Split out of
+       toggleHeader() so the phone default below can collapse the band without
+       recording a preference the user never expressed: v2-header-collapsed is
+       shared with the desktop layout on the same device, and a remembered '1'
+       would go on to collapse the desktop header too. */
+    function applyHeaderCollapsed(collapsed) {
       const top = document.getElementById('top');
       if (!top) return;
-      const collapsed = top.classList.toggle('collapsed');
+      top.classList.toggle('collapsed', collapsed);
       const btn = document.getElementById('collapse-btn');
       if (btn) {
         btn.textContent = collapsed ? '⬇️ Expand' : '⬆️ Compact';
         btn.classList.toggle('active-toggle', collapsed);
       }
+    }
+
+    function toggleHeader() {
+      const top = document.getElementById('top');
+      if (!top) return;
+      const collapsed = !top.classList.contains('collapsed');
+      applyHeaderCollapsed(collapsed);
       try { localStorage.setItem('v2-header-collapsed', collapsed ? '1' : '0'); } catch (e) { }
     }
 
     function initHeaderCollapse() {
       let saved = null;
       try { saved = localStorage.getItem('v2-header-collapsed'); } catch (e) { }
-      if (saved === '1') toggleHeader();
+      if (saved === '1') { applyHeaderCollapsed(true); return; }
+      if (saved === '0') return;
+      // On a phone the header band would own the whole screen before a single
+      // table row is visible, so start collapsed -- but only when the user has
+      // made no choice yet, and without persisting this as their choice.
+      if (window.matchMedia('(max-width: 700px)').matches) applyHeaderCollapsed(true);
     }
 
     function initTheme() {
@@ -4547,18 +4882,18 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
 
         return `
       <tr class="${rowCls}">
-        <td>${fmtTime(x.candle_time_ny)}</td>
-        <td>${surgePill(x.anomaly_type)}</td>
-        <td>${escapeHtml(x.spy_price)}</td>
-        <td><b>${escapeHtml(x.vol_multiple)}x</b></td>
-        <td>${fmtNum(x.total_vol)}</td>
-        <td class="muted">${fmtNum(x.avg_vol)}</td>
-        <td class="call">${fmtNum(x.total_calls)}</td>
-        <td class="put">${fmtNum(x.total_puts)}</td>
-        <td class="${ratioCls}">${x.cp_ratio ?? '-'}</td>
-        <td class="${cpct > 0 ? 'up' : 'dn'}">${cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`}</td>
-        <td class="${ppct > 0 ? 'up' : 'dn'}">${ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`}</td>
-        <td class="reason-col">${escapeHtml(x.reason)}</td>
+        <td class="an-time">${fmtTime(x.candle_time_ny)}</td>
+        <td class="an-type">${surgePill(x.anomaly_type)}</td>
+        <td class="an-price">${escapeHtml(x.spy_price)}</td>
+        <td class="an-mult"><b>${escapeHtml(x.vol_multiple)}x</b></td>
+        <td class="an-tvol">${fmtNum(x.total_vol)}</td>
+        <td class="an-avgvol muted">${fmtNum(x.avg_vol)}</td>
+        <td class="an-tcalls call">${fmtNum(x.total_calls)}</td>
+        <td class="an-tputs put">${fmtNum(x.total_puts)}</td>
+        <td class="an-cp ${ratioCls}">${x.cp_ratio ?? '-'}</td>
+        <td class="an-cchg ${cpct > 0 ? 'up' : 'dn'}">${cpct == null ? '-' : `${cpct > 0 ? '+' : ''}${cpct}%`}</td>
+        <td class="an-pchg ${ppct > 0 ? 'up' : 'dn'}">${ppct == null ? '-' : `${ppct > 0 ? '+' : ''}${ppct}%`}</td>
+        <td class="an-reason reason-col">${escapeHtml(x.reason)}</td>
       </tr>`;
       }).join('');
 
