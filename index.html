@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.4.1">
+  <meta name="build" content="1.4.2">
 
   <title>Trade Flow Dashboard Pro</title>
   <style>
@@ -2709,8 +2709,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.1';
-    const BUILD_TS = '2026-09-28T21:40Z';
+    const BUILD = '1.4.2';
+    const BUILD_TS = '2026-09-28T22:15Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -2869,11 +2869,15 @@
       if (Notification.permission === 'granted') {
         pushEnabled = !pushEnabled;
         updatePushBtn();
+        persistPush();
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
             pushEnabled = true;
             updatePushBtn();
+            persistPush();
+            // Deliberately NOT requireInteraction: this is a transient
+            // acknowledgement of a button press, not an alert worth keeping.
             new Notification('Trade Flow Dashboard Pro', { body: 'Desktop push alerts enabled!' });
           }
         });
@@ -2890,12 +2894,36 @@
       }
     }
 
+    function persistPush() {
+      try { localStorage.setItem('v2-push', pushEnabled ? '1' : '0'); } catch (e) { }
+    }
+
+    /* Push used to reset to OFF on every reload -- the flag was the only
+       toggle in the dashboard with no init/restore pair -- so alerts went
+       quiet the moment the page was refreshed. */
+    function initPush() {
+      // Notification is undefined outside a secure context. sendPushNotification()
+      // reads Notification.permission OUTSIDE its try block, and that read was
+      // only ever unreachable because pushEnabled could not start true. Restoring
+      // the flag from storage removes that protection, so guard it here.
+      if (!('Notification' in window)) { updatePushBtn(); return; }
+      let saved = null;
+      try { saved = localStorage.getItem('v2-push'); } catch (e) { }
+      // Only restore ON if the OS permission is still live: it may have been
+      // revoked in browser settings since the flag was written.
+      if (saved === '1' && Notification.permission === 'granted') pushEnabled = true;
+      updatePushBtn();
+    }
+
     function sendPushNotification(sig) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
       const title = `🚨 SPY ${sig.direction} Alert (Score ${sig.score})`;
       const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: ${sig.flow} | Grade: ${sig.grade}`;
       try {
-        new Notification(title, { body });
+        // requireInteraction: the signal you missed while away from the desk is
+        // exactly the one worth keeping on screen -- same reasoning as the
+        // in-page sticky alert cards, which have no auto-dismiss timer either.
+        new Notification(title, { body, requireInteraction: true });
       } catch (e) {
         console.warn('Push notification failed:', e);
       }
@@ -2906,7 +2934,7 @@
       const title = `⚠️ SPY ${anom.anomaly_type} Detected`;
       const body = `${anom.vol_multiple}x avg vol | Calls: ${anom.total_calls} | Puts: ${anom.total_puts} | C/P ${anom.cp_ratio}`;
       try {
-        new Notification(title, { body });
+        new Notification(title, { body, requireInteraction: true });
       } catch (e) {
         console.warn('Push notification failed:', e);
       }
@@ -5114,6 +5142,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     initPinnedRows();
     initHiddenCols();
     initStickyAlerts();
+    initPush();
     loadAll();
     changeInterval();
     loadNews();
