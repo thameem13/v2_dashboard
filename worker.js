@@ -79,7 +79,16 @@ export default {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith('/api/rpc/')) {
-      return proxyRpc(request, env, pathname.slice('/api/rpc/'.length));
+      try {
+        return await proxyRpc(request, env, pathname.slice('/api/rpc/'.length));
+      } catch (err) {
+        /* Without this, an unhandled throw (Supabase unreachable, upstream
+           timeout) lets Cloudflare serve its own HTML error page - Error 1101.
+           index.html sniffs for HTML to detect an Access login redirect, so an
+           HTML body here would be read as an expired session and reload the
+           page instead of reporting the outage. Always answer JSON. */
+        return json({ error: 'Upstream request failed', detail: String((err && err.message) || err) }, 502);
+      }
     }
 
     // Everything else is the static site (index.html and friends).

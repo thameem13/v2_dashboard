@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.4.2">
+  <meta name="build" content="1.4.3">
 
   <title>Trade Flow Dashboard Pro</title>
   <style>
@@ -2709,8 +2709,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.2';
-    const BUILD_TS = '2026-09-28T22:15Z';
+    const BUILD = '1.4.3';
+    const BUILD_TS = '2026-09-30T02:57Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -4304,6 +4304,34 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        ?limit/&offset until a short page comes back. */
     const PAGE_SIZE = 1000;
 
+    /* The Cloudflare Access session expires on its own timer, and Access
+       answers a background call with a redirect to its login page rather than
+       with data. Without this the dashboard would poll on for hours, failing
+       silently every 10s. Reloading re-runs the Access handshake, which is a
+       no-op if the session is in fact still good. */
+    function recoverSession() {
+      let last = 0;
+      try { last = Number(sessionStorage.getItem('lastAuthReload') || 0); } catch (e) { }
+      // sessionStorage survives the reload, so this caps us at one reload per
+      // 30s and a genuinely broken login cannot become a refresh loop.
+      if (Date.now() - last < 30000) return;
+      try { sessionStorage.setItem('lastAuthReload', String(Date.now())); } catch (e) { }
+      window.location.reload();
+    }
+
+    function isAuthChallenge(res, ctype) {
+      // redirect:'manual' turns Access's 302 into an opaque response instead of
+      // a silently-followed navigation, so it can be recognised.
+      if (res.type === 'opaqueredirect') return true;
+      if (res.status === 401 || res.status === 403) return true;
+      /* Some Access configurations answer 200 with the login HTML, so a
+         content-type sniff is still worth having -- but ONLY on a non-error
+         status. Cloudflare's own failure pages (a Worker exception is 1101)
+         are HTML too, and treating a Supabase outage as an expired session
+         would reload the page instead of showing what actually broke. */
+      return res.ok && ctype.includes('text/html');
+    }
+
     async function rpcPage(fn, signal, params, offset) {
       const qs = offset > 0 ? `?limit=${PAGE_SIZE}&offset=${offset}` : '';
       const res = await fetch(`/api/rpc/${fn}${qs}`, {
@@ -4312,8 +4340,20 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(params),
-        signal: signal
+        signal: signal,
+        redirect: 'manual',
+        credentials: 'same-origin'
       });
+
+      // Safe on an opaque response: its header list is empty, not throwing.
+      const ctype = res.headers.get('content-type') || '';
+      if (isAuthChallenge(res, ctype)) {
+        recoverSession();
+        const err = new Error('Session expired - signing in again...');
+        err.name = 'AuthError';   // so rpcWithRetry does not back off on it
+        throw err;
+      }
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     }
@@ -4341,7 +4381,9 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
         try {
           return await rpc(fn, signal, params);
         } catch (e) {
-          if (e.name === 'AbortError') throw e; // Don't retry aborts
+          // Aborts are intentional; an auth challenge is already being handled
+          // by a reload, so backing off 2s/4s/8s on either is wasted.
+          if (e.name === 'AbortError' || e.name === 'AuthError') throw e;
           if (attempt === retries) throw e;
           // Exponential backoff: 2s, 4s, 8s
           const delay = Math.pow(2, attempt) * 1000;
