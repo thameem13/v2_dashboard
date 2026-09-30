@@ -35,6 +35,20 @@ const json = (obj, status) => new Response(JSON.stringify(obj), {
   headers: { 'content-type': 'application/json' },
 });
 
+/* Shared by the proxy and the alert cron so the credential handling, the
+   allowlist and the URL shape live in exactly one place. */
+function callSupabase(env, fn, qs, body) {
+  return fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}${qs ? '?' + qs : ''}`, {
+    method: 'POST',
+    headers: {
+      'apikey': env.SUPABASE_SECRET_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body,
+  });
+}
+
 async function proxyRpc(request, env, fn) {
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   if (!ALLOWED.has(fn)) return json({ error: 'Unknown function' }, 403);
@@ -51,18 +65,7 @@ async function proxyRpc(request, env, fn) {
   }
   const qs = forwarded.toString();
 
-  const upstream = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/rpc/${fn}${qs ? '?' + qs : ''}`,
-    {
-      method: 'POST',
-      headers: {
-        'apikey': env.SUPABASE_SECRET_KEY,
-        'Authorization': `Bearer ${env.SUPABASE_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: await request.text(),
-    }
-  );
+  const upstream = await callSupabase(env, fn, qs, await request.text());
 
   // Status passes through so rpcWithRetry's existing !res.ok handling still works.
   return new Response(upstream.body, {
@@ -72,6 +75,94 @@ async function proxyRpc(request, env, fn) {
       'cache-control': 'no-store',
     },
   });
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TELEGRAM ALERTS (cron)
+
+   The dashboard only alerts while its tab is open, and a corporate network can
+   block it outright. This path does not touch the browser at all: it runs
+   server-side on a schedule, so it is unaffected by Access sessions, by which
+   network you are on, or by whether anything is open.
+
+   Deliberately NOT routed through Access - a scheduled handler has no request
+   to authenticate, and adding an inbound trigger would mean opening a hole in
+   the gate we just finished closing.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const KV_LAST_ALERT = 'lastAlertedCandle';
+
+function tgEscape(s) {
+  // Telegram HTML parse_mode: only these three need escaping, and a stray "&"
+  // in a reason string would otherwise make the whole message fail to send.
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function alertText(sig) {
+  const dir = sig.direction === 'PUT' ? '🔴 PUT' : '🟢 CALL';
+  const time = String(sig.candle_time_ny || '').slice(11, 16);
+  // A real multi-line template literal, so there are no newline escapes to
+  // get mangled by whatever writes this file.
+  return `<b>SPY ${dir}</b> · Grade ${tgEscape(sig.grade)} · Score ${tgEscape(sig.score)}
+
+Strike   <b>${tgEscape(sig.atm_strike)}</b>
+Price    <b>${tgEscape(sig.price)}</b>
+Flow     <b>${tgEscape(sig.flow)}</b>
+Room     <b>${tgEscape(sig.room)}</b>
+POC      ${tgEscape(sig.poc)}
+Candle   ${tgEscape(time)} NY
+
+https://dashflow.trade/`;
+}
+
+async function sendTelegram(env, text) {
+  const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: env.TELEGRAM_CHAT_ID,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    }),
+  });
+  return res.ok;
+}
+
+async function checkAndAlert(env) {
+  // Missing bindings must not throw: the site has to keep serving even when
+  // alerting is half-configured.
+  if (!env.ALERTS || !env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
+    console.log('alerts: not configured, skipping');
+    return;
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return;
+
+  const res = await callSupabase(env, 'v2_dashboard_today', '', '{}');
+  if (!res.ok) { console.log('alerts: upstream', res.status); return; }
+
+  const rows = await res.json();
+  if (!Array.isArray(rows) || !rows.length) return;
+
+  // Rows arrive oldest-first, so scan backwards for the most recent fire.
+  let sig = null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (rows[i].has_signal) { sig = rows[i]; break; }
+  }
+  if (!sig) return;
+
+  const candle = String(sig.candle_time_ny || '');
+  const last = await env.ALERTS.get(KV_LAST_ALERT);
+  if (last === candle) return;          // already sent for this candle
+
+  const ok = await sendTelegram(env, alertText(sig));
+  /* Record ONLY on success. If Telegram is down the next tick retries rather
+     than silently swallowing the alert - the whole point of this path is that
+     a missed signal is the expensive failure. */
+  if (ok) await env.ALERTS.put(KV_LAST_ALERT, candle);
+  else console.log('alerts: telegram send failed, will retry next tick');
 }
 
 export default {
@@ -93,5 +184,14 @@ export default {
 
     // Everything else is the static site (index.html and friends).
     return env.ASSETS.fetch(request);
+  },
+
+  async scheduled(event, env, ctx) {
+    // waitUntil so a slow Telegram call cannot be cut off mid-send.
+    ctx.waitUntil(checkAndAlert(env).catch(err => {
+      // A throw here would retry the whole tick; the next cron is a minute
+      // away and will pick the signal up anyway, so just record it.
+      console.log('alerts: ' + ((err && err.message) || err));
+    }));
   },
 };

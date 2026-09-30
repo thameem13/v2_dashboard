@@ -14,9 +14,31 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.4.4">
+  <meta name="build" content="1.4.5">
 
   <title>Trade Flow Dashboard Pro</title>
+
+  <!-- Add-to-home-screen. crossorigin="use-credentials" is NOT optional here:
+       the manifest is fetched in CORS mode with credentials omitted by default,
+       so behind Cloudflare Access it would receive the login redirect instead
+       of JSON and the install prompt would silently never appear.
+
+       There is deliberately NO service worker. On a live trading dashboard a
+       cached shell is a hazard, not a feature - it would render hour-old prices
+       with no sign they are stale, and it would paint happily while /api/* is
+       being 302'd to login, defeating recoverSession(). iOS needs no service
+       worker for add-to-home-screen, and Android installs without one. -->
+  <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+  <meta name="theme-color" content="#0b0e11">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <!-- iOS ignores the manifest icons and reads only this one. -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flow">
+  <!-- black-translucent lets the dark header run under the status bar; the
+       env(safe-area-inset-*) padding already in the phone CSS keeps content
+       clear of the notch. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     :root {
       box-sizing: border-box;
@@ -2709,8 +2731,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.4';
-    const BUILD_TS = '2026-09-30T03:04Z';
+    const BUILD = '1.4.5';
+    const BUILD_TS = '2026-09-30T23:34Z';
 
     /* ── STATE ── */
     let soundEnabled = true;

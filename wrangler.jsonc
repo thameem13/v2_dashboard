@@ -19,8 +19,20 @@
   // two disagreeing. This URL is not a secret; it is already in index.html.
   "vars": {
     "SUPABASE_URL": "https://egsgycizhssexstjrsqi.supabase.co"
+  },
+
+  // Telegram alerting. Every minute on weekdays, roughly 09:30-17:00 ET with
+  // enough margin either side to cover both EDT and EST without changing this
+  // twice a year. Not 24/7: there is nothing to alert on out of hours, and it
+  // keeps the KV read count negligible.
+  "triggers": {
+    "crons": ["*/1 13-21 * * 1-5"]
   }
 
-  // SUPABASE_SECRET_KEY is deliberately NOT here - secrets never go in the
-  // repo. Add it as a Secret in the dashboard (or `wrangler secret put`).
+  // NOT here, deliberately:
+  //   SUPABASE_SECRET_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID - secrets never
+  //   go in the repo. Add them as Secrets in the dashboard.
+  //   kv_namespaces ALERTS - needs the namespace id, added once it exists.
+  //   Until then scheduled() logs "not configured" and no-ops, so deploying
+  //   this file early cannot break the site.
 }
