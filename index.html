@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.4.3">
+  <meta name="build" content="1.4.4">
 
   <title>Trade Flow Dashboard Pro</title>
   <style>
@@ -2709,8 +2709,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.3';
-    const BUILD_TS = '2026-09-30T02:57Z';
+    const BUILD = '1.4.4';
+    const BUILD_TS = '2026-09-30T03:04Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -2732,6 +2732,7 @@
     let hiddenCols = new Set();    // Hidden Flow columns
     let currentJournalSignal = null;
     let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
+    let volMap = {};               // Enriched volume rows keyed by candle_time_ny
     let lastAnomalyTimestamp = null;
     let volSurgeOnly = false;      // "Surge Only" preset on the volume tab
     let volRowsCache = null;       // Raw enriched volume rows, for CSV export
@@ -3362,6 +3363,79 @@
     /* ══════════════════════════════════════════════════════
        SIGNAL DETAIL & TRADE JOURNAL MODAL
        ══════════════════════════════════════════════════════ */
+    /* Option-volume context for the signal modal. The flow row says the signal
+       fired; this says whether there was any size behind it. rVOL is the one
+       that matters most -- a grade B on thin volume is a different trade from
+       the same grade on 2x the usual flow for that time of day. */
+    function volPanelHtml(sig) {
+      const wrap = (inner) =>
+        `<div style="background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--line);">
+           <div style="font-size:11px;color:var(--dim);margin-bottom:6px;text-transform:uppercase">Option Volume &mdash; this candle</div>
+           ${inner}
+         </div>`;
+
+      const v = volMap[tsKey(sig.candle_time_ny)];
+      if (!v) {
+        // Happens when the volume RPC failed, or the candle predates the
+        // enriched volume data. Say so rather than rendering empty cells.
+        return wrap('<div class="muted" style="font-size:11px">No volume row matched this candle.</div>');
+      }
+
+      const rv = v.rvol_tod == null ? null : +v.rvol_tod;
+      const rz = v.rvol_tod_z == null ? null : +v.rvol_tod_z;
+      const samples = v.tod_samples == null ? 0 : +v.tod_samples;
+      let rvolCls = 'rvol-cool';
+      if (rv != null) {
+        if (rv >= 2) rvolCls = 'rvol-hot';
+        else if (rv >= 1.3) rvolCls = 'rvol-warm';
+      }
+      const thin = samples > 0 && samples < 5;
+      const rvolTxt = rv == null
+        ? '<span class="muted">-</span>'
+        : `<span class="${rvolCls}">${rv.toFixed(2)}x</span>`
+          + (rz == null ? '' : ` <span class="rvol-z">${rz > 0 ? '+' : ''}${rz.toFixed(1)}σ</span>`)
+          + (thin ? ` <span class="rvol-z">(${samples} sessions)</span>` : '');
+
+      const ratio = v.call_put_ratio == null ? null : +v.call_put_ratio;
+      const dcp = v.dollar_cp_ratio == null ? null : +v.dollar_cp_ratio;
+      const diverges = v.cp_divergence === true;
+      const sideTxt = (r) => r == null ? '' : (r > 1 ? 'call heavy' : 'put heavy');
+      const sideCls = (r) => r == null ? 'muted' : (r > 1 ? 'call' : 'put');
+
+      const cell = (label, val, sub) =>
+        `<div><div class="modal-item-label">${label}</div>
+           <div class="modal-item-val">${val}</div>
+           ${sub ? `<div class="rg-sub">${sub}</div>` : ''}</div>`;
+
+      // Only worth a line when it actually happened -- these two are the
+      // interesting cases, not decoration.
+      const anom = anomalyMap[tsKey(sig.candle_time_ny)];
+      const notes = [];
+      if (anom) notes.push(surgePill(anom.anomaly_type) + ` <span class="muted">${escapeHtml(anom.vol_multiple)}x avg volume</span>`);
+      if (v.near_grid_edge === true) {
+        notes.push('<span class="grid-pill grid-warn">⚠ EDGE</span> <span class="muted">price near the captured strike grid edge &mdash; OTM buckets truncated, these totals understate</span>');
+      }
+
+      return wrap(`
+        <div class="modal-grid" style="padding:0;border:none;background:none">
+          ${cell('Total Volume', fmtCompact(v.total_vol),
+                 `<span class="call">${fmtCompact(v.total_calls)}</span> / <span class="put">${fmtCompact(v.total_puts)}</span>`)}
+          ${cell('rVOL (time of day)', rvolTxt, 'vs the same minute in earlier sessions')}
+          ${cell('C/P Ratio', `<span class="${sideCls(ratio)}">${ratio == null ? '-' : ratio.toFixed(2)}</span>`, sideTxt(ratio))}
+          ${cell('$ C/P Ratio',
+                 `<span class="${diverges ? 'dcp-diverge' : sideCls(dcp)}">${dcp == null ? '-' : dcp.toFixed(2)}</span>`,
+                 diverges ? '<span class="dcp-diverge">money leans the other way</span>' : sideTxt(dcp))}
+          ${cell('$ Traded', fmtDollar(v.total_notional),
+                 `<span class="call">${fmtDollar(v.call_notional)}</span> / <span class="put">${fmtDollar(v.put_notional)}</span>`)}
+          ${cell('Avg Premium',
+                 `<span class="call">${v.avg_call_premium == null ? '-' : (+v.avg_call_premium).toFixed(2)}</span>`
+                 + '<span class="muted"> / </span>'
+                 + `<span class="put">${v.avg_put_premium == null ? '-' : (+v.avg_put_premium).toFixed(2)}</span>`,
+                 'per contract, calls / puts')}
+        </div>
+        ${notes.length ? `<div style="margin-top:8px;font-size:11px;display:flex;flex-direction:column;gap:4px">${notes.map(n => `<div>${n}</div>`).join('')}</div>` : ''}`);
+    }
+
     function openSignalJournal(sig) {
       currentJournalSignal = sig;
       const titleEl = document.getElementById('modal-title');
@@ -3391,7 +3465,8 @@
             <span>Room: ${gate(sig.room_ok)}</span>
             <span>Clean: ${gate(sig.s_clean > 0)}</span>
           </div>
-        </div>`;
+        </div>
+        ${volPanelHtml(sig)}`;
 
       document.getElementById('modal-journal').classList.add('visible');
     }
@@ -4791,6 +4866,13 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     function _renderVolInner(rows) {
       volRowsCache = rows || null;
       renderVolSession(rows);
+
+      /* Keyed the same way anomalyMap is, so the signal modal can join a flow
+         row to its volume candle -- the two come from separate RPCs. Rebuilt
+         (not merged) on every load, or a stale entry from the previous range
+         could be shown against a signal from the current one. */
+      volMap = {};
+      (rows || []).forEach(r => { volMap[tsKey(r.candle_time_ny)] = r; });
 
       if (!rows || !rows.length) {
         document.getElementById('tbody-vol').innerHTML = '';
