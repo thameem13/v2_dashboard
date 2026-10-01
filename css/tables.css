@@ -91,7 +91,11 @@
     }
 
     thead tr.filter-row {
-      top: 27px;
+      /* 27px was the measured height of the row above it, so any change to
+         th padding or font-size left a gap or an overlap with no error.
+         syncStickyHeaderOffsets() now measures it; the literal is only the
+         fallback for the first paint before that runs. */
+      top: var(--thead-h, 27px);
       z-index: 11;
     }
 
@@ -129,6 +133,10 @@
       content: " ▼";
       color: var(--blue);
       font-size: var(--fs-micro);
+    }
+
+    .pin-col {
+      width: var(--pin-w);
     }
 
     /* Sticky First Column (Time) */

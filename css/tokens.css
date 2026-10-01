@@ -68,6 +68,13 @@
       --r-3xl: 12px;
       --r-full: 50%;
 
+      /* The pin column width. Load-bearing, not cosmetic: #tbl-vol's sticky
+         Time column is offset by exactly this, so the two must never drift.
+         It was a literal in three places - two inline th styles and the
+         sticky offset - which is how a wider tap target would have left a
+         seam under the sticky cell. */
+      --pin-w: 26px;
+
       /* Type scale, 9-18px. Dense by design; the redesign lifts the floor. */
       --fs-micro: 9px;
       --fs-xs: 10px;

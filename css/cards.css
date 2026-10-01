@@ -69,7 +69,11 @@
     /* ── VA GAUGE LEGEND (#11) ── */
     .va-legend {
       display: flex;
-      gap: 10px;
+      /* Five entries once the call/put walls are present - Price, POC, Value
+         Area, Call Wall, Put Wall - which cannot fit one row of a ~130px
+         card. Without wrapping they overflowed the card. */
+      flex-wrap: wrap;
+      gap: 2px 10px;
       margin-top: 4px;
       font-size: var(--fs-micro);
       color: var(--dim);
@@ -77,6 +81,7 @@
 
     .va-legend span {
       display: flex;
+      white-space: nowrap;
       align-items: center;
       gap: 3px;
     }

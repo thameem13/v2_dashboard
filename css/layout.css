@@ -87,8 +87,10 @@
     .col-menu {
       display: none;
       position: absolute;
-      top: 42px;
-      right: 12px;
+      /* Was top:42px - the height of the controls row, so taller buttons
+         would have left the menu floating. Anchored to the row instead. */
+      top: calc(100% + 6px);
+      right: 0;
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--r-2xl);

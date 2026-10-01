@@ -292,7 +292,7 @@
     #tbl-vol th:nth-child(2),
     #tbl-vol td:nth-child(2) {
       position: sticky;
-      left: 26px;
+      left: var(--pin-w);
       z-index: 3;
       background: var(--panel);
     }

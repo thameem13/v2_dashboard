@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.6.0">
+  <meta name="build" content="1.6.1">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=1.6.0">
-  <link rel="stylesheet" href="css/base.css?v=1.6.0">
-  <link rel="stylesheet" href="css/cards.css?v=1.6.0">
-  <link rel="stylesheet" href="css/tables.css?v=1.6.0">
-  <link rel="stylesheet" href="css/layout.css?v=1.6.0">
-  <link rel="stylesheet" href="css/panels.css?v=1.6.0">
-  <link rel="stylesheet" href="css/overlays.css?v=1.6.0">
-  <link rel="stylesheet" href="css/widgets.css?v=1.6.0">
+  <link rel="stylesheet" href="css/tokens.css?v=1.6.1">
+  <link rel="stylesheet" href="css/base.css?v=1.6.1">
+  <link rel="stylesheet" href="css/cards.css?v=1.6.1">
+  <link rel="stylesheet" href="css/tables.css?v=1.6.1">
+  <link rel="stylesheet" href="css/layout.css?v=1.6.1">
+  <link rel="stylesheet" href="css/panels.css?v=1.6.1">
+  <link rel="stylesheet" href="css/overlays.css?v=1.6.1">
+  <link rel="stylesheet" href="css/widgets.css?v=1.6.1">
 </head>
 
 <body>
@@ -219,7 +219,7 @@
       <table id="tbl-flow">
         <thead>
           <tr>
-            <th style="width:26px" title="Pin row to top">📌</th>
+            <th class="pin-col" title="Pin row to top">📌</th>
             <th class="col-time sortable" onclick="handleSort('flow', 1, false)">Time</th>
             <th class="col-price sortable" onclick="handleSort('flow', 2, true)">Price</th>
             <th class="col-strike sortable" onclick="handleSort('flow', 3, true)">Strike</th>
@@ -307,7 +307,7 @@
       <table id="tbl-vol">
         <thead>
           <tr>
-            <th style="width:26px" title="Pin row to top">📌</th>
+            <th class="pin-col" title="Pin row to top">📌</th>
             <th class="vcol-time sortable" onclick="handleSort('vol', 1, false)">Time</th>
             <th class="vcol-price sortable" onclick="handleSort('vol', 2, true)">Price</th>
             <th class="vcol-strike sortable" onclick="handleSort('vol', 3, true)">Strike</th>
@@ -490,8 +490,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.6.0';
-    const BUILD_TS = '2026-10-01T23:35Z';
+    const BUILD = '1.6.1';
+    const BUILD_TS = '2026-10-01T23:44Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -2584,6 +2584,33 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
        (align-items: stretch), so the old JS height-matching is not only
        unnecessary, its inline style would override the stylesheet. Clear any
        stale inline height and let CSS own the sizing. */
+    /* The filter row sticks directly beneath the label row, so its `top` has
+       to equal that row's real height. It was the literal 27px - a measurement
+       taken once - which silently desynced from any change to th padding or
+       font size, leaving a gap or an overlap with no error anywhere.
+
+       Measured here instead, and re-measured by a ResizeObserver so a zoom, a
+       late-loading font or a wrapped header all keep it flush. */
+    function syncStickyHeaderOffsets() {
+      document.querySelectorAll('table').forEach(tbl => {
+        const head = tbl.querySelector('thead tr:first-child');
+        if (!head || !tbl.querySelector('thead tr.filter-row')) return;
+        const h = head.getBoundingClientRect().height;
+        // A hidden tab measures 0; keep the last good value rather than
+        // collapsing the offset to nothing.
+        if (h) tbl.style.setProperty('--thead-h', h + 'px');
+      });
+    }
+
+    let theadObserver = null;
+    function watchStickyHeaders() {
+      syncStickyHeaderOffsets();
+      if (typeof ResizeObserver !== 'function') return;   // CSS fallback covers it
+      if (theadObserver) theadObserver.disconnect();
+      theadObserver = new ResizeObserver(syncStickyHeaderOffsets);
+      document.querySelectorAll('thead tr:first-child').forEach(r => theadObserver.observe(r));
+    }
+
     function syncNewsPanelHeight() {
       const panel = document.getElementById('news-panel');
       if (panel && panel.style.height) panel.style.height = '';
@@ -3072,6 +3099,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     }
 
     initBuildStamp();
+    watchStickyHeaders();
     initTheme();
     initHeaderCollapse();
     initDatePicker();
@@ -3083,7 +3111,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     changeInterval();
     loadNews();
     setInterval(() => loadNews(), 5 * 60 * 1000);
-    window.addEventListener('resize', () => syncNewsPanelHeight());
+    window.addEventListener('resize', () => { syncNewsPanelHeight(); syncStickyHeaderOffsets(); });
   </script>
 </body>
 
