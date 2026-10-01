@@ -109,6 +109,49 @@ function candleKey(t) {
     .replace(/(?:Z|[+-]\d{2}:?\d{2})$/, '').slice(0, 16);
 }
 
+function compact(n) {
+  // 112200 -> 112.2k, matching how the dashboard renders these so the message
+  // and the screen agree at a glance.
+  if (n == null || n === '' || isNaN(+n)) return null;
+  const v = +n, a = Math.abs(v), sign = v < 0 ? '-' : '';
+  if (a >= 1e6) return sign + (a / 1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return sign + (a / 1e3).toFixed(1) + 'k';
+  return sign + String(Math.round(a));
+}
+
+/* Volume lives in a different RPC from the signals, so it is joined on the
+   normalised candle time exactly as the dashboard's modal does. Fetched only
+   when there is something to send, and never allowed to block a send: volume
+   is context, and a missing row must not cost you the alert itself. */
+async function fetchVolumeMap(env) {
+  try {
+    const res = await callSupabase(env, 'v2_volume_enriched_today', '', '{}');
+    if (!res.ok) { console.log('alerts: volume upstream', res.status); return null; }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    const m = new Map();
+    for (const r of rows) m.set(candleKey(r.candle_time_ny), r);
+    return m;
+  } catch (err) {
+    console.log('alerts: volume lookup failed, sending without it');
+    return null;
+  }
+}
+
+function volBlock(v) {
+  if (!v) return '';
+  const c = v.total_calls == null ? null : +v.total_calls;
+  const p = v.total_puts == null ? null : +v.total_puts;
+  if (c == null || p == null) return '';
+  const net = c - p;
+  // The total is the denominator that makes the net readable - +3.7k means
+  // something different against 112k than against 12k.
+  const side = net > 0 ? 'call-heavy' : (net < 0 ? 'put-heavy' : 'even');
+  return `
+Volume   ${compact(c + p)} · C ${compact(c)} / P ${compact(p)}
+Net      ${net > 0 ? '+' : ''}${compact(net)} ${side}`;
+}
+
 function qualifies(r) {
   return Boolean(r.has_signal) || NOTIFY_GRADES.has(r.grade);
 }
@@ -120,7 +163,7 @@ function tgEscape(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function alertText(sig) {
+function alertText(sig, vol) {
   const dir = sig.direction === 'PUT' ? '🔴 PUT' : '🟢 CALL';
   const time = String(sig.candle_time_ny || '').slice(11, 16);
   const head = sig.has_signal ? '🚨 <b>ALERTED</b>' : '👀 <b>Near miss</b>';
@@ -134,7 +177,7 @@ Strike   <b>${tgEscape(sig.atm_strike)}</b>
 Price    <b>${tgEscape(sig.price)}</b>
 Flow     <b>${tgEscape(sig.flow)}</b>
 Room     <b>${tgEscape(sig.room)}</b>
-POC      ${tgEscape(sig.poc)}
+POC      ${tgEscape(sig.poc)}${volBlock(vol)}
 Candle   ${tgEscape(time)} NY${why}
 
 https://dashflow.trade/`;
@@ -247,9 +290,13 @@ async function checkAndAlert(env) {
   /* Oldest first so the chat reads in the order the session happened. The
      cursor advances only past candles that actually sent, so a Telegram
      outage mid-batch is retried next tick instead of being swallowed. */
+  // Only now that we know something is going out.
+  const volMap = await fetchVolumeMap(env);
+
   let lastOk = null;
   for (const sig of pending) {
-    const ok = await sendTelegram(env, alertText(sig));
+    const vol = volMap ? volMap.get(candleKey(sig.candle_time_ny)) : null;
+    const ok = await sendTelegram(env, alertText(sig, vol));
     if (!ok) { console.log('alerts: telegram send failed, will retry next tick'); break; }
     lastOk = candleKey(sig.candle_time_ny);
   }
