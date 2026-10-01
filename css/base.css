@@ -1,0 +1,133 @@
+/* base.css - reset, fonts, header shell, controls
+   Split from index.html; source order is preserved exactly.
+   Load order in index.html is load-bearing - see the comment there. */
+    body {
+      /* 100% of a mobile viewport is measured against the URL-bar-expanded
+         height, so the footer sits below the fold until you scroll -- and the
+         body cannot scroll. dvh tracks the bar collapsing; vh is the fallback. */
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    html {
+      /* Stop iOS inflating text when the phone is rotated to landscape. */
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--txt);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      user-select: text;
+    }
+
+    /* ── SANS-SERIF FOR NON-DATA UI (#14) ── */
+    h1,
+    .sub,
+    .card .label,
+    .status,
+    .tab,
+    .row-count-badge,
+    button,
+    select.ctrl-select,
+    #foot,
+    .err,
+    .va-legend,
+    .kbd-panel,
+    .sticky-alert {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* TOP SECTION */
+    #top {
+      flex-shrink: 0;
+      padding: 10px 12px 0;
+      background: var(--bg);
+      /* Safety net only. The natural header is ~356px (measured at 1505px wide
+         with the news list loaded), so the floor of 380px guarantees this never
+         clips real content; the ceiling of 560px stops a runaway band — a long
+         news list once inflated it to ~900px and pushed the table off-screen.
+         A plain vh cap was wrong: at 42vh it engaged on an 850px-tall window
+         and cut off the news panel. */
+      max-height: clamp(380px, 60vh, 560px);
+      /* Scroll rather than clip: if the cap ever does engage (e.g. a narrow
+         window where the band stacks to one column), the content stays
+         reachable instead of being silently cut off. */
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sub {
+      color: var(--dim);
+      font-size: 11px;
+      margin-top: 1px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button,
+    select.ctrl-select {
+      background: var(--panel2);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      outline: none;
+    }
+
+    /* Touch browsers latch :hover onto the last-tapped element and never
+       release it, so every hover rule in this file is gated on a real pointer. */
+    @media (hover: hover) {
+      button:hover,
+      select.ctrl-select:hover {
+        background: #222b37;
+        border-color: var(--dim);
+      }
+
+      [data-theme="light"] button:hover,
+      [data-theme="light"] select.ctrl-select:hover {
+        background: #d8dce2;
+      }
+    }
+
+    button:active {
+      background: var(--line);
+    }
+
+    button.active-toggle {
+      border-color: var(--green);
+      color: var(--green);
+    }
+

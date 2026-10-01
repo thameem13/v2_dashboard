@@ -1,0 +1,410 @@
+/* tables.css - tabs, table shell, sticky cols, cells, pills, skeletons
+   Split from index.html; source order is preserved exactly.
+   Load order in index.html is load-bearing - see the comment there. */
+    /* TABS & META */
+    .tab-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid var(--line);
+      border-bottom: none;
+      background: var(--panel2);
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.1s, color 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @media (hover: hover) {
+      .tab:hover {
+        color: var(--txt);
+      }
+    }
+
+    .tab.active {
+      background: var(--panel);
+      color: var(--txt);
+      border-bottom: 1px solid var(--panel);
+    }
+
+    .row-count-badge {
+      font-size: 11px;
+      color: var(--dim);
+      padding-bottom: 3px;
+      font-weight: 500;
+    }
+
+    /* SCROLLABLE TABLE & STICKY CONFIG */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 0 8px 8px 8px;
+      margin: 0 12px 8px;
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 12px;
+    }
+
+    /* Sticky headers */
+    thead tr {
+      position: sticky;
+      z-index: 10;
+      background: var(--panel2);
+    }
+
+    thead tr:first-child {
+      top: 0;
+    }
+
+    thead tr.filter-row {
+      top: 27px;
+      z-index: 11;
+    }
+
+    th {
+      padding: 6px 7px;
+      text-align: right;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+      color: var(--dim);
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    @media (hover: hover) {
+      th.sortable:hover {
+        color: var(--txt);
+        background: rgba(255, 255, 255, 0.03);
+      }
+    }
+
+    th.sorted-asc::after {
+      content: " ▲";
+      color: var(--blue);
+      font-size: 9px;
+    }
+
+    th.sorted-desc::after {
+      content: " ▼";
+      color: var(--blue);
+      font-size: 9px;
+    }
+
+    /* Sticky First Column (Time) */
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      padding-left: 10px;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--panel2);
+    }
+
+    tbody td:first-child {
+      background: var(--panel);
+      border-right: 1px solid rgba(42, 51, 63, 0.4);
+    }
+
+    thead tr:first-child th:first-child {
+      z-index: 15;
+    }
+
+    thead tr.filter-row th:first-child {
+      z-index: 15;
+    }
+
+    tr.sig td:first-child {
+      background: #15221d !important;
+    }
+
+    /* Filter inputs */
+    thead .filter-row th {
+      padding: 3px 4px;
+    }
+
+    thead .filter-row input,
+    thead .filter-row select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 2px 4px;
+      font-family: inherit;
+      font-size: 10px;
+      outline: none;
+    }
+
+    thead .filter-row input:focus,
+    thead .filter-row select:focus {
+      border-color: var(--blue);
+    }
+
+    td {
+      padding: 5px 7px;
+      text-align: right;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.1s;
+    }
+
+    td.reason-col {
+      text-align: left;
+      white-space: normal;
+      max-width: 220px;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    td.reason-col.fired {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    tr.sig {
+      background: rgba(63, 185, 80, 0.08);
+    }
+
+    /* ── SIGNAL ROW LEFT-BORDER ACCENT (#13) ── */
+    tr.sig td:first-child {
+      border-left: 3px solid var(--green);
+      padding-left: 7px;
+    }
+
+    tr.flip td {
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    tr.hidden {
+      display: none !important;
+    }
+
+    /* ── ROW HOVER HIGHLIGHT (#10) ── */
+    @media (hover: hover) {
+      tbody tr:hover td {
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      tbody tr.sig:hover td {
+        background: rgba(63, 185, 80, 0.14);
+      }
+
+      [data-theme="light"] tbody tr:hover td {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      [data-theme="light"] tbody tr.sig:hover td {
+        background: rgba(63, 185, 80, 0.1);
+      }
+    }
+
+    /* Indicators & Visual Bars */
+    .flowpos {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .flowneg {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .call {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .put {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--dim);
+    }
+
+    .gate-y {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .gate-n {
+      color: #5a636e;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .pA {
+      background: var(--a);
+      color: #04260d;
+    }
+
+    .pB {
+      background: var(--b);
+      color: #04223f;
+    }
+
+    .pC {
+      background: #30363d;
+      color: var(--dim);
+    }
+
+    .pD {
+      background: #30363d;
+      color: var(--dim);
+    }
+
+    .up {
+      color: var(--green);
+    }
+
+    .dn {
+      color: var(--red);
+    }
+
+    .flat {
+      color: var(--dim);
+    }
+
+    /* RATIO STACKED BAR */
+    .ratio-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .ratio-bar {
+      width: 36px;
+      height: 6px;
+      background: var(--red);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .ratio-bar-call {
+      background: var(--green);
+      height: 100%;
+    }
+
+    /* RELATIVE VOLUME BADGE */
+    .rvol-high {
+      background: rgba(210, 153, 34, 0.2);
+      color: var(--amber);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-size: 10px;
+    }
+
+    /* ── LOADING SKELETON (#3) ── */
+    .skeleton-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      height: 62px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skeleton-card::after,
+    .skeleton-row::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+      animation: shimmer 1.8s infinite;
+    }
+
+    .skeleton-card .skel-label {
+      width: 50%;
+      height: 8px;
+      background: var(--line);
+      border-radius: 3px;
+      opacity: 0.5;
+    }
+
+    .skeleton-card .skel-val {
+      width: 40%;
+      height: 14px;
+      background: var(--line);
+      border-radius: 3px;
+      margin-top: 8px;
+      opacity: 0.4;
+    }
+
+    .skeleton-row {
+      height: 30px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    /* ── STALE SYNC INDICATOR (#4) ── */
+    #foot-time.stale {
+      color: var(--red);
+      font-weight: 600;
+    }
+

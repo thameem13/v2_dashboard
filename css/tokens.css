@@ -1,0 +1,56 @@
+/* tokens.css - palette + theme overrides
+   Split from index.html; source order is preserved exactly.
+   Load order in index.html is load-bearing - see the comment there. */
+
+    :root {
+      box-sizing: border-box;
+      --bg: #0b0e11;
+      --panel: #151a21;
+      --panel2: #1b222b;
+      --line: #2a333f;
+      --txt: #e6edf3;
+      --dim: #8b98a8;
+      --green: #3fb950;
+      --red: #f85149;
+      --amber: #d29922;
+      --blue: #58a6ff;
+      --a: #3fb950;
+      --b: #58a6ff;
+      --pulse-green: rgba(63, 185, 80, 0.4);
+    }
+
+    /* ── LIGHT THEME (#8) ── */
+    [data-theme="light"] {
+      --bg: #f0f3f6;
+      --panel: #ffffff;
+      --panel2: #e9ecf0;
+      --line: #d0d7de;
+      --txt: #1f2328;
+      --dim: #656d76;
+      --pulse-green: rgba(63, 185, 80, 0.3);
+    }
+
+    [data-theme="light"] tbody td:first-child {
+      background: #ffffff;
+    }
+
+    [data-theme="light"] thead th:first-child {
+      background: var(--panel2);
+    }
+
+    [data-theme="light"] tr.sig td:first-child {
+      background: #e9f7ec !important;
+    }
+
+    [data-theme="light"] .kbd-panel,
+    [data-theme="light"] .sticky-alert {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: inherit;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,

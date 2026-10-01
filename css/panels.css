@@ -1,0 +1,293 @@
+/* panels.css - news, preset bars, sentiment, pinned rows, anomalies
+   Split from index.html; source order is preserved exactly.
+   Load order in index.html is load-bearing - see the comment there. */
+    /* The column reserves the space and is what the grid measures; it only ever
+       contributes its own min-height, never the headline list's height. */
+    .news-col {
+      position: relative;
+      min-height: 150px;
+      min-width: 0;
+    }
+
+    .news-inline {
+      position: absolute;
+      inset: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .news-inline h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--dim);
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .news-inline h4 button {
+      padding: 2px 7px;
+      font-size: 10px;
+    }
+
+    .news-inline #news-body {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .news-key-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .news-key-form input {
+      background: var(--bg);
+      color: var(--txt);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .news-key-form input:focus {
+      border-color: var(--blue);
+    }
+
+    .news-key-hint {
+      font-size: 10px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .news-key-hint a {
+      color: var(--blue);
+    }
+
+    .news-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .news-item {
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .news-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .news-item-time {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .news-item a {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--txt);
+      text-decoration: none;
+      margin: 2px 0;
+    }
+
+    @media (hover: hover) {
+      .news-item a:hover {
+        color: var(--blue);
+        text-decoration: underline;
+      }
+    }
+
+    .news-item-source {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .news-error {
+      font-size: 11px;
+      color: var(--red);
+      line-height: 1.5;
+    }
+
+    .news-change-key {
+      font-size: 10px;
+      color: var(--dim);
+      cursor: pointer;
+      text-decoration: underline;
+      margin-bottom: 8px;
+      display: inline-block;
+    }
+
+    /* ── FILTER PRESETS BAR ── */
+    .preset-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      flex-wrap: wrap;
+    }
+
+    .preset-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--dim);
+      margin-right: 4px;
+    }
+
+    .preset-btn {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 2px 9px;
+      font-size: 11px;
+      color: var(--txt);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    @media (hover: hover) {
+      .preset-btn:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+    }
+
+    .preset-btn.active {
+      background: rgba(88, 166, 255, 0.15);
+      border-color: var(--blue);
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    /* ── SESSION SENTIMENT METER ── */
+    .sentiment-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sentiment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      font-size: 11px;
+    }
+
+    .sentiment-bar-track {
+      height: 8px;
+      background: rgba(248, 81, 73, 0.25);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+    }
+
+    .sentiment-bar-fill {
+      height: 100%;
+      background: var(--green);
+      transition: width 0.4s ease;
+    }
+
+    /* ── PINNED ROW STYLES ── */
+    tr.pinned {
+      background: rgba(210, 153, 34, 0.1) !important;
+      border-left: 3px solid var(--amber) !important;
+    }
+
+    .pin-btn {
+      background: none;
+      border: none;
+      color: var(--dim);
+      cursor: pointer;
+      padding: 0 4px;
+      font-size: 11px;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.15s, color 0.15s;
+    }
+
+    tr.pinned .pin-btn {
+      opacity: 1;
+      color: var(--amber);
+    }
+
+    @media (hover: hover) {
+      .pin-btn:hover {
+        opacity: 1;
+        color: var(--amber);
+      }
+    }
+
+    /* ── ANOMALY DETECTION (VOLUME SURGES) ── */
+    .surge-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .surge-call {
+      background: rgba(255, 165, 0, 0.25);
+      color: var(--amber);
+    }
+
+    .surge-put {
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--red);
+    }
+
+    .surge-mixed {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--blue);
+    }
+
+    tr.anomaly-call {
+      background: rgba(255, 165, 0, 0.08);
+    }
+
+    tr.anomaly-call td:first-child {
+      border-left: 3px solid var(--amber);
+    }
+
+    tr.anomaly-put {
+      background: rgba(248, 81, 73, 0.08);
+    }
+
+    tr.anomaly-put td:first-child {
+      border-left: 3px solid var(--red);
+    }
+
+    tr.anomaly-mixed {
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    tr.anomaly-mixed td:first-child {
+      border-left: 3px solid var(--blue);
+    }
+
