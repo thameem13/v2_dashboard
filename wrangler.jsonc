@@ -27,12 +27,21 @@
   // keeps the KV read count negligible.
   "triggers": {
     "crons": ["*/1 13-21 * * 1-5"]
-  }
+  },
 
-  // NOT here, deliberately:
-  //   SUPABASE_SECRET_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID - secrets never
-  //   go in the repo. Add them as Secrets in the dashboard.
-  //   kv_namespaces ALERTS - needs the namespace id, added once it exists.
-  //   Until then scheduled() logs "not configured" and no-ops, so deploying
-  //   this file early cannot break the site.
+  // Holds lastAlertedCandle so a cron that re-reads the same candle does not
+  // re-send. Declared here rather than bound in the dashboard because a
+  // Git-deployed Worker treats this file as the source of truth - a binding
+  // added through the UI would be dropped by the next push.
+  //
+  // A namespace id is an identifier, not a credential: reading or writing it
+  // still requires account auth, which is why Cloudflare's own docs commit
+  // these to public repos.
+  "kv_namespaces": [
+    { "binding": "ALERTS", "id": "b083f6cb5db34bebaafeaa0f4ee82a04" }
+  ]
+
+  // NOT here, deliberately: SUPABASE_SECRET_KEY, TELEGRAM_BOT_TOKEN and
+  // TELEGRAM_CHAT_ID are secrets and never go in the repo. Add them as Secrets
+  // in the dashboard; they survive deploys, plain Variables do not.
 }
