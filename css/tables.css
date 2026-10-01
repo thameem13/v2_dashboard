@@ -6,7 +6,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding: 0 12px;
+      padding: 0 18px;
       flex-shrink: 0;
     }
 
@@ -16,7 +16,7 @@
     }
 
     .tab {
-      padding: 6px 14px;
+      padding: 9px 18px;
       border-radius: 6px 6px 0 0;
       border: 1px solid var(--line);
       border-bottom: none;
@@ -66,17 +66,22 @@
       flex: 1;
       overflow-y: auto;
       overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 0 8px 8px 8px;
-      margin: 0 12px 8px;
+      border: 1px solid transparent;
+      box-shadow: var(--sh-card);
+      border-radius: 0 var(--r-xl) var(--r-xl) var(--r-xl);
+      margin: 0 18px 12px;
       background: var(--panel);
+    }
+
+    [data-theme="dark"] .table-wrap {
+      border-color: var(--line);
     }
 
     table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      font-size: var(--fs-base);
+      font-size: var(--fs-cell);
     }
 
     /* Sticky headers */
@@ -100,7 +105,7 @@
     }
 
     th {
-      padding: 6px 7px;
+      padding: 9px 10px;
       text-align: right;
       white-space: nowrap;
       border-bottom: 1px solid var(--line);
@@ -191,7 +196,7 @@
     }
 
     td {
-      padding: 5px 7px;
+      padding: 7px 10px;
       text-align: right;
       white-space: nowrap;
       border-bottom: 1px solid var(--line);

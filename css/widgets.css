@@ -37,7 +37,8 @@
       gap: 0;
       flex-wrap: wrap;
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
+      box-shadow: var(--sh-card);
       border-radius: var(--r-xl);
       margin-bottom: 8px;
       overflow: hidden;
@@ -136,7 +137,7 @@
       font-size: var(--fs-sm);
       color: var(--dim);
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
       border-left: 3px solid var(--blue);
       border-radius: var(--r-lg);
       padding: 7px 10px;
@@ -265,7 +266,8 @@
       display: flex;
       align-items: stretch;
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
+      box-shadow: var(--sh-card);
       border-radius: var(--r-xl);
       overflow: hidden;
       flex-wrap: wrap;
@@ -383,3 +385,19 @@
       font-weight: 400;
     }
   
+
+    /* ── Dark keeps its edges ────────────────────────────────────────────
+       Light separates panels with elevation; on a dark background a shadow
+       is nearly invisible, so the hairline comes back there. Last file in
+       the load order, so these win without !important. */
+    [data-theme="dark"] .news-inline,
+    [data-theme="dark"] .sentiment-card,
+    [data-theme="dark"] .regime-strip,
+    [data-theme="dark"] .vol-session-strip,
+    [data-theme="dark"] .col-menu,
+    [data-theme="dark"] .modal-card,
+    [data-theme="dark"] .kbd-panel,
+    [data-theme="dark"] .sticky-alert,
+    [data-theme="dark"] .perf-note {
+      border-color: var(--line);
+    }

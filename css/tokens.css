@@ -45,6 +45,9 @@
       --sh-float: 0 4px 20px rgba(0, 0, 0, 0.10);
       --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.12);
       --sh-modal: 0 16px 48px rgba(0, 0, 0, 0.18);
+      /* Panels sit on elevation rather than a hairline border. Two layers:
+         a tight one for the edge, a wide soft one for the lift. */
+      --sh-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.05);
 
       /* ── Non-colour tokens ──────────────────────────────────────────────
          Added at today's exact values, so defining them changed nothing on
@@ -59,13 +62,13 @@
 
       /* Radii. An irregular scale because it grew by hand - the redesign
          collapses it upward (cards to --r-3xl and beyond). */
-      --r-xs: 2px;
-      --r-sm: 3px;
-      --r-md: 4px;
-      --r-lg: 6px;
-      --r-xl: 7px;
-      --r-2xl: 8px;
-      --r-3xl: 12px;
+      --r-xs: 4px;
+      --r-sm: 6px;
+      --r-md: 8px;
+      --r-lg: 10px;
+      --r-xl: 14px;
+      --r-2xl: 16px;
+      --r-3xl: 20px;
       --r-full: 50%;
 
       /* The pin column width. Load-bearing, not cosmetic: #tbl-vol's sticky
@@ -75,17 +78,22 @@
          seam under the sticky cell. */
       --pin-w: 26px;
 
-      /* Type scale, 9-18px. Dense by design; the redesign lifts the floor. */
-      --fs-micro: 9px;
-      --fs-xs: 10px;
-      --fs-sm: 11px;
-      --fs-base: 12px;
-      --fs-md: 13px;
-      --fs-lg: 14px;
-      --fs-xl: 15px;
-      --fs-2xl: 16px;
-      --fs-3xl: 17px;
-      --fs-4xl: 18px;
+      /* The table keeps its own size. Lifting the general scale makes the
+         chrome readable, but applying it to 21 columns would widen every
+         table and cost the density that makes them scannable. */
+      --fs-cell: 12px;
+
+      /* Type scale. Lifted roughly one step from the original 9-18px. */
+      --fs-micro: 10px;
+      --fs-xs: 11px;
+      --fs-sm: 12px;
+      --fs-base: 13px;
+      --fs-md: 14px;
+      --fs-lg: 15px;
+      --fs-xl: 17px;
+      --fs-2xl: 18px;
+      --fs-3xl: 22px;
+      --fs-4xl: 24px;
     }
 
     /* ── DARK ────────────────────────────────────────────────────────────
@@ -121,6 +129,9 @@
       --sh-float: 0 4px 24px rgba(0, 0, 0, 0.4);
       --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.4);
       --sh-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
+      /* Shadows read weakly on a dark background, so dark keeps a hairline
+         and uses elevation only to separate, not to lift. */
+      --sh-card: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     * {

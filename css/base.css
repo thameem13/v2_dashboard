@@ -18,7 +18,7 @@
     body {
       background: var(--bg);
       color: var(--txt);
-      font-family: var(--font-data);
+      font-family: var(--font-ui);
       font-size: var(--fs-md);
       line-height: 1.4;
       display: flex;
@@ -26,27 +26,24 @@
       user-select: text;
     }
 
-    /* ── SANS-SERIF FOR NON-DATA UI (#14) ── */
-    h1,
-    .sub,
-    .card .label,
-    .status,
-    .tab,
-    .row-count-badge,
-    button,
-    select.ctrl-select,
-    #foot,
-    .err,
-    .va-legend,
-    .kbd-panel,
-    .sticky-alert {
-      font-family: var(--font-ui);
+    /* body was monospace with a 13-selector list flipped to sans. Now body
+       is sans and the list is redundant, so the data surfaces opt back in to
+       aligned digits instead - without monospace, which is what made the old
+       dense look feel like a terminal. */
+    table,
+    .rg-val,
+    .rg-sub,
+    .card .val,
+    .modal-item-val,
+    .sticky-alert-row span:last-child {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
     }
 
     /* TOP SECTION */
     #top {
       flex-shrink: 0;
-      padding: 10px 12px 0;
+      padding: 16px 18px 0;
       background: var(--bg);
       /* Safety net only. The natural header is ~356px (measured at 1505px wide
          with the news list loaded), so the floor of 380px guarantees this never
@@ -54,7 +51,7 @@
          news list once inflated it to ~900px and pushed the table off-screen.
          A plain vh cap was wrong: at 42vh it engaged on an 850px-tall window
          and cut off the news panel. */
-      max-height: clamp(380px, 60vh, 560px);
+      max-height: clamp(380px, 62vh, 660px);
       /* Scroll rather than clip: if the cap ever does engage (e.g. a narrow
          window where the band stacks to one column), the content stays
          reachable instead of being silently cut off. */
@@ -99,7 +96,7 @@
       color: var(--txt);
       border: 1px solid var(--line);
       border-radius: var(--r-lg);
-      padding: 5px 10px;
+      padding: 7px 13px;
       font-family: inherit;
       font-size: var(--fs-base);
       cursor: pointer;

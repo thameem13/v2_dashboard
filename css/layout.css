@@ -92,7 +92,7 @@
       top: calc(100% + 6px);
       right: 0;
       background: var(--panel);
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
       border-radius: var(--r-2xl);
       padding: 10px 14px;
       z-index: 300;
