@@ -131,6 +131,54 @@ async function sendTelegram(env, text) {
   return res.ok;
 }
 
+/* Diagnostic for the alert path, reachable at /api/test-alert while signed in.
+   Exists because the cron is unverifiable outside a live session: with no
+   candles yet for today there is correctly nothing to send, which looks
+   identical to a broken configuration. This sends unconditionally and reports
+   exactly which half failed, so the answer arrives in the browser rather than
+   requiring logs to be switched on.
+
+   Safe to leave in place: it sits behind Access like everything else, it only
+   ever sends to the configured chat, and it never echoes a secret back. */
+async function testAlert(env) {
+  const state = {
+    supabase_url: Boolean(env.SUPABASE_URL),
+    supabase_key: Boolean(env.SUPABASE_SECRET_KEY),
+    kv_bound: Boolean(env.ALERTS),
+    telegram_token: Boolean(env.TELEGRAM_BOT_TOKEN),
+    telegram_chat_id: Boolean(env.TELEGRAM_CHAT_ID),
+  };
+
+  if (!state.telegram_token || !state.telegram_chat_id) {
+    return json({ sent: false, reason: 'Telegram not configured', state }, 200);
+  }
+
+  let res, body;
+  try {
+    res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: env.TELEGRAM_CHAT_ID,
+        text: 'Test alert from the Trade Flow dashboard. If you can read this, signal alerts will reach you.',
+        disable_web_page_preview: true,
+      }),
+    });
+    body = await res.json();
+  } catch (err) {
+    return json({ sent: false, reason: String((err && err.message) || err), state }, 200);
+  }
+
+  return json({
+    sent: Boolean(body && body.ok),
+    // Telegram's own wording is the useful part - "chat not found" means the
+    // bot has never been messaged; "Unauthorized" means a bad token.
+    telegram_error: body && body.ok ? null : (body && body.description) || ('HTTP ' + res.status),
+    last_alerted_candle: state.kv_bound ? await env.ALERTS.get(KV_LAST_ALERT) : null,
+    state,
+  }, 200);
+}
+
 async function checkAndAlert(env) {
   // Missing bindings must not throw: the site has to keep serving even when
   // alerting is half-configured.
@@ -168,6 +216,15 @@ async function checkAndAlert(env) {
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
+
+    // Diagnostic, gated by Access like the rest of the origin.
+    if (pathname === '/api/test-alert') {
+      try {
+        return await testAlert(env);
+      } catch (err) {
+        return json({ sent: false, reason: String((err && err.message) || err) }, 500);
+      }
+    }
 
     if (pathname.startsWith('/api/rpc/')) {
       try {
