@@ -140,16 +140,36 @@ async function fetchVolumeMap(env) {
 
 function volBlock(v) {
   if (!v) return '';
+  const lines = [];
+
   const c = v.total_calls == null ? null : +v.total_calls;
   const p = v.total_puts == null ? null : +v.total_puts;
-  if (c == null || p == null) return '';
-  const net = c - p;
-  // The total is the denominator that makes the net readable - +3.7k means
-  // something different against 112k than against 12k.
-  const side = net > 0 ? 'call-heavy' : (net < 0 ? 'put-heavy' : 'even');
-  return `
-Volume   ${compact(c + p)} · C ${compact(c)} / P ${compact(p)}
-Net      ${net > 0 ? '+' : ''}${compact(net)} ${side}`;
+  if (c != null && p != null) {
+    const net = c - p;
+    // The total is the denominator that makes the net readable - +3.7k means
+    // something different against 112k than against 12k.
+    const side = net > 0 ? 'call-heavy' : (net < 0 ? 'put-heavy' : 'even');
+    lines.push(`Volume   ${compact(c + p)} · C ${compact(c)} / P ${compact(p)}`);
+    lines.push(`Net      ${net > 0 ? '+' : ''}${compact(net)} ${side}`);
+  }
+
+  const ratio = v.call_put_ratio == null ? null : +v.call_put_ratio;
+  const dcp = v.dollar_cp_ratio == null ? null : +v.dollar_cp_ratio;
+  const lean = r => (r > 1 ? 'call' : (r < 1 ? 'put' : 'even'));
+
+  /* Contract count and dollars can point to opposite sides of parity: lots of
+     cheap calls against fewer expensive puts reads call-heavy by headcount and
+     put-heavy by money. Prefer the pipeline’s own cp_divergence flag, but
+     derive it when absent so the warning never silently disappears. */
+  const diverges = v.cp_divergence === true
+    || (v.cp_divergence == null && ratio != null && dcp != null && (ratio > 1) !== (dcp > 1));
+
+  if (ratio != null) lines.push(`C/P      ${ratio.toFixed(2)} ${lean(ratio)}-heavy`);
+  if (dcp != null) {
+    lines.push(`$ C/P    ${dcp.toFixed(2)} ${lean(dcp)}-heavy${diverges ? '  ⚠ money disagrees' : ''}`);
+  }
+
+  return lines.length ? '\n' + lines.join('\n') : '';
 }
 
 function qualifies(r) {
