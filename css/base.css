@@ -18,8 +18,8 @@
     body {
       background: var(--bg);
       color: var(--txt);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size: 13px;
+      font-family: var(--font-data);
+      font-size: var(--fs-md);
       line-height: 1.4;
       display: flex;
       flex-direction: column;
@@ -40,7 +40,7 @@
     .va-legend,
     .kbd-panel,
     .sticky-alert {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: var(--font-ui);
     }
 
     /* TOP SECTION */
@@ -72,7 +72,7 @@
     }
 
     h1 {
-      font-size: 15px;
+      font-size: var(--fs-xl);
       font-weight: 700;
       letter-spacing: -0.2px;
       display: flex;
@@ -82,7 +82,7 @@
 
     .sub {
       color: var(--dim);
-      font-size: 11px;
+      font-size: var(--fs-sm);
       margin-top: 1px;
     }
 
@@ -98,10 +98,10 @@
       background: var(--panel2);
       color: var(--txt);
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: var(--r-lg);
       padding: 5px 10px;
       font-family: inherit;
-      font-size: 12px;
+      font-size: var(--fs-base);
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
       outline: none;

@@ -11,21 +11,21 @@
     .card {
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 7px;
+      border-radius: var(--r-xl);
       padding: 8px 10px;
       position: relative;
     }
 
     .card .label {
       color: var(--dim);
-      font-size: 10px;
+      font-size: var(--fs-xs);
       text-transform: uppercase;
       letter-spacing: .5px;
       font-weight: 600;
     }
 
     .card .val {
-      font-size: 17px;
+      font-size: var(--fs-3xl);
       font-weight: 700;
       margin-top: 2px;
     }
@@ -36,7 +36,7 @@
       width: 100%;
       height: 6px;
       background: #222b37;
-      border-radius: 3px;
+      border-radius: var(--r-sm);
       margin-top: 6px;
     }
 
@@ -48,7 +48,7 @@
       position: absolute;
       height: 100%;
       background: rgba(88, 166, 255, 0.4);
-      border-radius: 3px;
+      border-radius: var(--r-sm);
     }
 
     .va-poc {
@@ -66,7 +66,7 @@
       height: 10px;
       top: -2px;
       background: var(--green);
-      border-radius: 2px;
+      border-radius: var(--r-xs);
       transform: translateX(-50%);
       box-shadow: 0 0 4px var(--green);
     }
@@ -76,7 +76,7 @@
       display: flex;
       gap: 10px;
       margin-top: 4px;
-      font-size: 9px;
+      font-size: var(--fs-micro);
       color: var(--dim);
     }
 
@@ -90,7 +90,7 @@
       display: inline-block;
       width: 6px;
       height: 6px;
-      border-radius: 2px;
+      border-radius: var(--r-xs);
       flex-shrink: 0;
     }
 
@@ -106,7 +106,7 @@
     .va-legend .leg-va .leg-dot {
       background: rgba(88, 166, 255, 0.6);
       width: 12px;
-      border-radius: 2px;
+      border-radius: var(--r-xs);
     }
 
     /* ── SPARKLINE (#9) ── */
@@ -119,15 +119,15 @@
       width: 100%;
       height: 22px;
       display: block;
-      border-radius: 2px;
+      border-radius: var(--r-xs);
     }
 
     /* STATUS BAR */
     .status {
       grid-column: 1 / -1;
-      border-radius: 7px;
+      border-radius: var(--r-xl);
       padding: 9px 12px;
-      font-size: 13px;
+      font-size: var(--fs-md);
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -152,7 +152,7 @@
       display: inline-block;
       width: 8px;
       height: 8px;
-      border-radius: 50%;
+      border-radius: var(--r-full);
       background: var(--green);
       margin-right: 4px;
     }
@@ -180,8 +180,8 @@
       border: 1px solid var(--red);
       color: var(--red);
       padding: 8px 10px;
-      border-radius: 7px;
+      border-radius: var(--r-xl);
       margin-bottom: 8px;
-      font-size: 12px;
+      font-size: var(--fs-base);
     }
 

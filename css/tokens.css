@@ -17,6 +17,50 @@
       --a: #3fb950;
       --b: #58a6ff;
       --pulse-green: rgba(63, 185, 80, 0.4);
+
+      /* ── Non-colour tokens ──────────────────────────────────────────────
+         Added at today's exact values, so defining them changed nothing on
+         screen. They exist so the redesign can move radii, type scale and
+         elevation from here instead of hunting ~130 literals across 8 files.
+
+         Fonts. body is --font-data today and a 13-selector list is flipped
+         to --font-ui; the redesign swaps that round and adds tabular-nums
+         so the tables keep their column alignment without monospace. */
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-data: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+      /* Radii. An irregular scale because it grew by hand - the redesign
+         collapses it upward (cards to --r-3xl and beyond). */
+      --r-xs: 2px;
+      --r-sm: 3px;
+      --r-md: 4px;
+      --r-lg: 6px;
+      --r-xl: 7px;
+      --r-2xl: 8px;
+      --r-3xl: 12px;
+      --r-full: 50%;
+
+      /* Type scale, 9-18px. Dense by design; the redesign lifts the floor. */
+      --fs-micro: 9px;
+      --fs-xs: 10px;
+      --fs-sm: 11px;
+      --fs-base: 12px;
+      --fs-md: 13px;
+      --fs-lg: 14px;
+      --fs-xl: 15px;
+      --fs-2xl: 16px;
+      --fs-3xl: 17px;
+      --fs-4xl: 18px;
+
+      /* Overlays and elevation. These are the light-theme hazard: a white
+         wash and black shadows only read correctly on a dark background, so
+         each theme must redefine them rather than patch the rules that use
+         them. */
+      --ov-hover: rgba(255, 255, 255, 0.04);
+      --ov-hover-weak: rgba(255, 255, 255, 0.03);
+      --sh-float: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.4);
+      --sh-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
     }
 
     /* ── LIGHT THEME (#8) ── */
