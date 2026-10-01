@@ -93,6 +93,26 @@ async function proxyRpc(request, env, fn) {
 
 const KV_LAST_ALERT = 'lastAlertedCandle';
 
+/* Grades worth hearing about even when the strategy did not fire. A high-grade
+   candle blocked only by the time window is useful to see; C and D are the bulk
+   of a session and would turn the channel into noise you learn to ignore. */
+const NOTIFY_GRADES = new Set(['A', 'B']);
+
+// Bounds a burst if the KV cursor is ever lost or reset mid-session.
+const MAX_PER_TICK = 5;
+
+function candleKey(t) {
+  // Normalised to YYYY-MM-DDTHH:MM so plain string comparison orders candles
+  // correctly - the RPCs disagree about timestamp vs timestamptz, and a zone
+  // suffix on one side would break a > comparison.
+  return String(t == null ? '' : t).replace(' ', 'T')
+    .replace(/(?:Z|[+-]\d{2}:?\d{2})$/, '').slice(0, 16);
+}
+
+function qualifies(r) {
+  return Boolean(r.has_signal) || NOTIFY_GRADES.has(r.grade);
+}
+
 function tgEscape(s) {
   // Telegram HTML parse_mode: only these three need escaping, and a stray "&"
   // in a reason string would otherwise make the whole message fail to send.
@@ -103,16 +123,19 @@ function tgEscape(s) {
 function alertText(sig) {
   const dir = sig.direction === 'PUT' ? '🔴 PUT' : '🟢 CALL';
   const time = String(sig.candle_time_ny || '').slice(11, 16);
-  // A real multi-line template literal, so there are no newline escapes to
-  // get mangled by whatever writes this file.
-  return `<b>SPY ${dir}</b> · Grade ${tgEscape(sig.grade)} · Score ${tgEscape(sig.score)}
+  const head = sig.has_signal ? '🚨 <b>ALERTED</b>' : '👀 <b>Near miss</b>';
+  // On a near miss the reason IS the message: it names the gate that blocked
+  // an otherwise high-grade candle.
+  const why = sig.has_signal ? '' : `
+Why      ${tgEscape(String(sig.reason || '-').replace(/^no signal - /i, ''))}`;
+  return `${head} · SPY ${dir} · Grade ${tgEscape(sig.grade)} · Score ${tgEscape(sig.score)}
 
 Strike   <b>${tgEscape(sig.atm_strike)}</b>
 Price    <b>${tgEscape(sig.price)}</b>
 Flow     <b>${tgEscape(sig.flow)}</b>
 Room     <b>${tgEscape(sig.room)}</b>
 POC      ${tgEscape(sig.poc)}
-Candle   ${tgEscape(time)} NY
+Candle   ${tgEscape(time)} NY${why}
 
 https://dashflow.trade/`;
 }
@@ -128,7 +151,12 @@ async function sendTelegram(env, text) {
       disable_web_page_preview: true,
     }),
   });
-  return res.ok;
+  /* Telegram reports failure in the body as well as the status. Trust both:
+     a 200 carrying {"ok":false} must not advance the cursor past an alert that
+     was never delivered. */
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* non-JSON: fall back to status */ }
+  return body ? Boolean(body.ok) : res.ok;
 }
 
 /* Diagnostic for the alert path, reachable at /api/test-alert while signed in.
@@ -194,23 +222,38 @@ async function checkAndAlert(env) {
   const rows = await res.json();
   if (!Array.isArray(rows) || !rows.length) return;
 
-  // Rows arrive oldest-first, so scan backwards for the most recent fire.
-  let sig = null;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].has_signal) { sig = rows[i]; break; }
+  const candidates = rows.filter(qualifies);   // rows arrive oldest-first
+  if (!candidates.length) return;
+
+  const raw = await env.ALERTS.get(KV_LAST_ALERT);
+  const last = raw ? candleKey(raw) : null;    // normalised, so an old-format value still compares
+
+  let pending;
+  if (!last) {
+    /* First tick of a session, or the cursor was cleared. Seed from the newest
+       candidate rather than replaying the whole session into the chat - a
+       deploy at 3pm should not dump every candle since the open. */
+    pending = candidates.slice(-1);
+  } else {
+    pending = candidates.filter(r => candleKey(r.candle_time_ny) > last);
   }
-  if (!sig) return;
+  if (!pending.length) return;
 
-  const candle = String(sig.candle_time_ny || '');
-  const last = await env.ALERTS.get(KV_LAST_ALERT);
-  if (last === candle) return;          // already sent for this candle
+  if (pending.length > MAX_PER_TICK) {
+    console.log('alerts: ' + pending.length + ' pending, sending newest ' + MAX_PER_TICK);
+    pending = pending.slice(-MAX_PER_TICK);
+  }
 
-  const ok = await sendTelegram(env, alertText(sig));
-  /* Record ONLY on success. If Telegram is down the next tick retries rather
-     than silently swallowing the alert - the whole point of this path is that
-     a missed signal is the expensive failure. */
-  if (ok) await env.ALERTS.put(KV_LAST_ALERT, candle);
-  else console.log('alerts: telegram send failed, will retry next tick');
+  /* Oldest first so the chat reads in the order the session happened. The
+     cursor advances only past candles that actually sent, so a Telegram
+     outage mid-batch is retried next tick instead of being swallowed. */
+  let lastOk = null;
+  for (const sig of pending) {
+    const ok = await sendTelegram(env, alertText(sig));
+    if (!ok) { console.log('alerts: telegram send failed, will retry next tick'); break; }
+    lastOk = candleKey(sig.candle_time_ny);
+  }
+  if (lastOk) await env.ALERTS.put(KV_LAST_ALERT, lastOk);
 }
 
 export default {
