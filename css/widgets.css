@@ -82,14 +82,12 @@
     .rg-val {
       font-size: var(--fs-md);
       font-weight: 700;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       white-space: nowrap;
     }
 
     .rg-sub {
       font-size: var(--fs-micro);
       color: var(--dim);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
 
     .rg-pill {

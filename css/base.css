@@ -43,7 +43,7 @@
     /* TOP SECTION */
     #top {
       flex-shrink: 0;
-      padding: 16px 18px 0;
+      padding: 10px 14px 0;
       background: var(--bg);
       /* Safety net only. The natural header is ~356px (measured at 1505px wide
          with the news list loaded), so the floor of 380px guarantees this never
@@ -51,7 +51,7 @@
          news list once inflated it to ~900px and pushed the table off-screen.
          A plain vh cap was wrong: at 42vh it engaged on an 850px-tall window
          and cut off the news panel. */
-      max-height: clamp(380px, 62vh, 660px);
+      max-height: clamp(380px, 60vh, 580px);
       /* Scroll rather than clip: if the cap ever does engage (e.g. a narrow
          window where the band stacks to one column), the content stays
          reachable instead of being silently cut off. */
@@ -96,7 +96,7 @@
       color: var(--txt);
       border: 1px solid var(--line);
       border-radius: var(--r-lg);
-      padding: 7px 13px;
+      padding: 5px 11px;
       font-family: inherit;
       font-size: var(--fs-base);
       cursor: pointer;

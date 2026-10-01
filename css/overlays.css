@@ -21,7 +21,7 @@
     .modal-card {
       background: var(--panel);
       border: 1px solid transparent;
-      border-radius: var(--fs-base);
+      border-radius: var(--r-3xl);
       width: 100%;
       max-width: 520px;
       box-shadow: var(--sh-modal);
@@ -142,7 +142,8 @@
       border: 1px solid var(--line);
       border-radius: var(--r-sm);
       padding: 0px 5px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      /* The only surface that still wants monospace: a key cap. */
+      font-family: var(--font-data);
       font-size: var(--fs-xs);
       min-width: 18px;
       text-align: center;

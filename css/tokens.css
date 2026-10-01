@@ -66,9 +66,9 @@
       --r-sm: 6px;
       --r-md: 8px;
       --r-lg: 10px;
-      --r-xl: 14px;
-      --r-2xl: 16px;
-      --r-3xl: 20px;
+      --r-xl: 12px;
+      --r-2xl: 14px;
+      --r-3xl: 16px;
       --r-full: 50%;
 
       /* The pin column width. Load-bearing, not cosmetic: #tbl-vol's sticky
@@ -83,17 +83,20 @@
          table and cost the density that makes them scannable. */
       --fs-cell: 12px;
 
-      /* Type scale. Lifted roughly one step from the original 9-18px. */
-      --fs-micro: 10px;
-      --fs-xs: 11px;
-      --fs-sm: 12px;
-      --fs-base: 13px;
-      --fs-md: 14px;
-      --fs-lg: 15px;
-      --fs-xl: 17px;
-      --fs-2xl: 18px;
-      --fs-3xl: 22px;
-      --fs-4xl: 24px;
+      /* Back at the original sizes after the first pass read too loose.
+         Only --fs-3xl is deliberately larger (17 -> 20): the KPI value is the
+         one number you glance at, and a big value over a small label is the
+         whole shape of the look. */
+      --fs-micro: 9px;
+      --fs-xs: 10px;
+      --fs-sm: 11px;
+      --fs-base: 12px;
+      --fs-md: 13px;
+      --fs-lg: 14px;
+      --fs-xl: 16px;
+      --fs-2xl: 17px;
+      --fs-3xl: 20px;
+      --fs-4xl: 20px;
     }
 
     /* ── DARK ────────────────────────────────────────────────────────────

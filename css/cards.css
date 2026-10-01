@@ -3,9 +3,9 @@
    Load order in index.html is load-bearing - see the comment there. */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+      gap: 7px;
+      margin-bottom: 8px;
     }
 
     .card {
@@ -15,7 +15,7 @@
       border: 1px solid transparent;
       box-shadow: var(--sh-card);
       border-radius: var(--r-xl);
-      padding: 14px 16px;
+      padding: 9px 11px;
       position: relative;
       min-width: 0;
     }
@@ -37,7 +37,7 @@
       font-size: var(--fs-3xl);
       font-weight: 650;
       letter-spacing: -0.02em;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     /* VALUE AREA GAUGE */
@@ -136,7 +136,7 @@
     .status {
       grid-column: 1 / -1;
       border-radius: var(--r-xl);
-      padding: 13px 16px;
+      padding: 9px 13px;
       font-size: var(--fs-md);
       font-weight: 600;
       display: flex;

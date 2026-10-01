@@ -156,7 +156,7 @@
     .preset-btn {
       background: var(--panel2);
       border: 1px solid var(--line);
-      border-radius: var(--fs-base);
+      border-radius: var(--r-3xl);
       padding: 2px 9px;
       font-size: var(--fs-sm);
       color: var(--txt);
