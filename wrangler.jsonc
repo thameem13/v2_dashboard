@@ -25,8 +25,10 @@
   // enough margin either side to cover both EDT and EST without changing this
   // twice a year. Not 24/7: there is nothing to alert on out of hours, and it
   // keeps the KV read count negligible.
+  // TEMPORARY - every minute, to verify alerting outside market hours.
+  // Revert to ["*/1 13-21 * * 1-5"] once a test message has arrived.
   "triggers": {
-    "crons": ["*/1 13-21 * * 1-5"]
+    "crons": ["*/1 * * * *"]
   },
 
   // Holds lastAlertedCandle so a cron that re-reads the same candle does not
