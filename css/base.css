@@ -69,9 +69,9 @@
     }
 
     h1 {
-      font-size: var(--fs-xl);
-      font-weight: 700;
-      letter-spacing: -0.2px;
+      font-size: var(--fs-title);
+      font-weight: 650;
+      letter-spacing: -0.4px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -79,8 +79,8 @@
 
     .sub {
       color: var(--dim);
-      font-size: var(--fs-sm);
-      margin-top: 1px;
+      font-size: var(--fs-base);
+      margin-top: 2px;
     }
 
     .controls {

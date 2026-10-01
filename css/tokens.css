@@ -97,6 +97,11 @@
       --fs-2xl: 17px;
       --fs-3xl: 20px;
       --fs-4xl: 20px;
+
+      /* The page title. Its own token rather than a shared step: it is the
+         only 22px on the page, and borrowing --fs-3xl would drag the KPI
+         values with it. */
+      --fs-title: 22px;
     }
 
     /* ── DARK ────────────────────────────────────────────────────────────
