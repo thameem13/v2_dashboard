@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.5.0">
+  <meta name="build" content="1.6.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -29,7 +29,7 @@
        being 302'd to login, defeating recoverSession(). iOS needs no service
        worker for add-to-home-screen, and Android installs without one. -->
   <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
-  <meta name="theme-color" content="#0b0e11">
+  <meta name="theme-color" content="#f7f7f5">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <!-- iOS ignores the manifest icons and reads only this one. -->
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -38,7 +38,7 @@
   <!-- black-translucent lets the dark header run under the status bar; the
        env(safe-area-inset-*) padding already in the phone CSS keeps content
        clear of the notch. -->
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <!-- Stylesheets, split out of a 2,261-line inline <style>.
 
        LOAD ORDER IS LOAD-BEARING. These are contiguous slices of the original
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=1.5.0">
-  <link rel="stylesheet" href="css/base.css?v=1.5.0">
-  <link rel="stylesheet" href="css/cards.css?v=1.5.0">
-  <link rel="stylesheet" href="css/tables.css?v=1.5.0">
-  <link rel="stylesheet" href="css/layout.css?v=1.5.0">
-  <link rel="stylesheet" href="css/panels.css?v=1.5.0">
-  <link rel="stylesheet" href="css/overlays.css?v=1.5.0">
-  <link rel="stylesheet" href="css/widgets.css?v=1.5.0">
+  <link rel="stylesheet" href="css/tokens.css?v=1.6.0">
+  <link rel="stylesheet" href="css/base.css?v=1.6.0">
+  <link rel="stylesheet" href="css/cards.css?v=1.6.0">
+  <link rel="stylesheet" href="css/tables.css?v=1.6.0">
+  <link rel="stylesheet" href="css/layout.css?v=1.6.0">
+  <link rel="stylesheet" href="css/panels.css?v=1.6.0">
+  <link rel="stylesheet" href="css/overlays.css?v=1.6.0">
+  <link rel="stylesheet" href="css/widgets.css?v=1.6.0">
 </head>
 
 <body>
@@ -490,8 +490,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.5.0';
-    const BUILD_TS = '2026-10-01T23:25Z';
+    const BUILD = '1.6.0';
+    const BUILD_TS = '2026-10-01T23:35Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -806,13 +806,25 @@
     /* ══════════════════════════════════════════════════════
        THEME TOGGLE (#8)
        ══════════════════════════════════════════════════════ */
-    function toggleTheme() {
+    /* Light is now the default, so the absence of a data-theme attribute
+       means light and [data-theme="dark"] is the override. The stored values
+       are still the strings 'light' and 'dark', so anyone with an existing
+       preference keeps it - only the no-preference default moved. */
+    function applyTheme(name) {
       const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      html.setAttribute('data-theme', next);
+      if (name === 'dark') html.setAttribute('data-theme', 'dark');
+      else html.removeAttribute('data-theme');
       const btn = document.getElementById('theme-btn');
-      btn.textContent = next === 'light' ? '☀️ Light' : '🌙 Dark';
+      // The label names the theme you would switch TO, not the current one.
+      if (btn) btn.textContent = name === 'dark' ? '☀️ Light' : '🌙 Dark';
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', name === 'dark' ? '#0b0e11' : '#f7f7f5');
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark'
+        ? 'light' : 'dark';
+      applyTheme(next);
       try { localStorage.setItem('v2-theme', next); } catch (e) { }
     }
 
@@ -858,13 +870,9 @@
     }
 
     function initTheme() {
-      try {
-        const saved = localStorage.getItem('v2-theme');
-        if (saved === 'light') {
-          document.documentElement.setAttribute('data-theme', 'light');
-          document.getElementById('theme-btn').textContent = '☀️ Light';
-        }
-      } catch (e) { }
+      let saved = null;
+      try { saved = localStorage.getItem('v2-theme'); } catch (e) { }
+      applyTheme(saved === 'dark' ? 'dark' : 'light');
     }
 
     /* ══════════════════════════════════════════════════════
@@ -1825,6 +1833,11 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
     /* ══════════════════════════════════════════════════════
        SPARKLINE RENDERER (#9)
        ══════════════════════════════════════════════════════ */
+    function themeColor(token) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+      return v || '#3fb950';   // a token can be missing mid-deploy; never draw nothing
+    }
+
     function drawSparkline(canvasId, data, color) {
       const canvas = document.getElementById(canvasId);
       if (!canvas || !data.length) return;
@@ -2555,9 +2568,14 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
 
       // (#9) Draw sparklines after DOM is updated
       requestAnimationFrame(() => {
-        drawSparkline('spark-price', priceHistory, '#3fb950');
+        /* Canvas cannot read var(), so the stroke colours were hardcoded to
+           the dark palette and stayed dark-green on a white card. Resolve the
+           tokens at draw time instead - this runs on every render, so it
+           follows a theme switch without extra wiring. */
+        const pos = themeColor('--green'), neg = themeColor('--red');
+        drawSparkline('spark-price', priceHistory, pos);
         drawSparkline('spark-flow', flowHistory,
-          (flowHistory.length && flowHistory[flowHistory.length - 1] >= 0) ? '#3fb950' : '#f85149');
+          (flowHistory.length && flowHistory[flowHistory.length - 1] >= 0) ? pos : neg);
         syncNewsPanelHeight();
       });
     }

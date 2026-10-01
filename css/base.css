@@ -112,13 +112,8 @@
     @media (hover: hover) {
       button:hover,
       select.ctrl-select:hover {
-        background: #222b37;
+        background: var(--btn-hover-bg);
         border-color: var(--dim);
-      }
-
-      [data-theme="light"] button:hover,
-      [data-theme="light"] select.ctrl-select:hover {
-        background: #d8dce2;
       }
     }
 

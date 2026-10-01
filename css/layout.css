@@ -37,14 +37,9 @@
     }
 
     .date-bar input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(0.7);
+      filter: var(--date-icon-filter);
       cursor: pointer;
     }
-
-    [data-theme="light"] .date-bar input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: none;
-    }
-
     .date-presets {
       display: flex;
       gap: 4px;

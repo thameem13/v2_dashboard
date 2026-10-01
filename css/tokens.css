@@ -4,19 +4,47 @@
 
     :root {
       box-sizing: border-box;
-      --bg: #0b0e11;
-      --panel: #151a21;
-      --panel2: #1b222b;
-      --line: #2a333f;
-      --txt: #e6edf3;
-      --dim: #8b98a8;
-      --green: #3fb950;
-      --red: #f85149;
-      --amber: #d29922;
-      --blue: #58a6ff;
-      --a: #3fb950;
-      --b: #58a6ff;
-      --pulse-green: rgba(63, 185, 80, 0.4);
+
+      /* ── LIGHT, the default ──────────────────────────────────────────── */
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --panel2: #f0f0ed;
+      --line: #e3e3de;
+      --txt: #16181d;
+      --dim: #6a6f7a;
+
+      /* Accents are NOT shared between themes. The dark hues (#3fb950 etc)
+         fail contrast on white, which is why the old light theme - which
+         overrode only 7 tokens and left these alone - never really worked. */
+      --green: #0f7a43;
+      --red: #c0352b;
+      --amber: #8a6400;
+      --blue: #2563a8;
+      --a: #0f7a43;
+      --b: #2563a8;
+      --pulse-green: rgba(15, 122, 67, 0.25);
+
+      /* ── Derived, theme-specific ──────────────────────────────────────
+         Each of these replaced a [data-theme="light"] rule that patched one
+         selector. Defining them here means a theme states its surfaces once
+         instead of chasing every rule that paints one. */
+      --btn-hover-bg: #e6e6e2;
+      --track-bg: #e0e0db;
+      --sig-cell-bg: #eaf6ee;
+      --sig-row-bg: rgba(15, 122, 67, 0.07);
+      --sig-hover-bg: rgba(15, 122, 67, 0.12);
+      --date-icon-filter: none;
+
+      /* Grade pills are a solid accent fill, so the label has to flip with
+         the theme or it is dark-on-dark. */
+      --pill-fg: #ffffff;
+      --pill-muted-bg: #e3e3de;
+
+      --ov-hover: rgba(0, 0, 0, 0.035);
+      --ov-hover-weak: rgba(0, 0, 0, 0.022);
+      --sh-float: 0 4px 20px rgba(0, 0, 0, 0.10);
+      --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.12);
+      --sh-modal: 0 16px 48px rgba(0, 0, 0, 0.18);
 
       /* ── Non-colour tokens ──────────────────────────────────────────────
          Added at today's exact values, so defining them changed nothing on
@@ -51,44 +79,41 @@
       --fs-2xl: 16px;
       --fs-3xl: 17px;
       --fs-4xl: 18px;
+    }
 
-      /* Overlays and elevation. These are the light-theme hazard: a white
-         wash and black shadows only read correctly on a dark background, so
-         each theme must redefine them rather than patch the rules that use
-         them. */
+    /* ── DARK ────────────────────────────────────────────────────────────
+       Every value here is what :root held before the flip, so dark mode is
+       unchanged by this phase - light is added, dark is not touched. */
+    [data-theme="dark"] {
+      --bg: #0b0e11;
+      --panel: #151a21;
+      --panel2: #1b222b;
+      --line: #2a333f;
+      --txt: #e6edf3;
+      --dim: #8b98a8;
+      --green: #3fb950;
+      --red: #f85149;
+      --amber: #d29922;
+      --blue: #58a6ff;
+      --a: #3fb950;
+      --b: #58a6ff;
+      --pulse-green: rgba(63, 185, 80, 0.4);
+
+      --btn-hover-bg: #222b37;
+      --track-bg: #222b37;
+      --sig-cell-bg: #15221d;
+      --sig-row-bg: rgba(63, 185, 80, 0.08);
+      --sig-hover-bg: rgba(63, 185, 80, 0.14);
+      --date-icon-filter: invert(0.7);
+
+      --pill-fg: #04260d;
+      --pill-muted-bg: #30363d;
+
       --ov-hover: rgba(255, 255, 255, 0.04);
       --ov-hover-weak: rgba(255, 255, 255, 0.03);
       --sh-float: 0 4px 24px rgba(0, 0, 0, 0.4);
       --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.4);
       --sh-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
-    }
-
-    /* ── LIGHT THEME (#8) ── */
-    [data-theme="light"] {
-      --bg: #f0f3f6;
-      --panel: #ffffff;
-      --panel2: #e9ecf0;
-      --line: #d0d7de;
-      --txt: #1f2328;
-      --dim: #656d76;
-      --pulse-green: rgba(63, 185, 80, 0.3);
-    }
-
-    [data-theme="light"] tbody td:first-child {
-      background: #ffffff;
-    }
-
-    [data-theme="light"] thead th:first-child {
-      background: var(--panel2);
-    }
-
-    [data-theme="light"] tr.sig td:first-child {
-      background: #e9f7ec !important;
-    }
-
-    [data-theme="light"] .kbd-panel,
-    [data-theme="light"] .sticky-alert {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
 
     * {

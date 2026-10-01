@@ -156,7 +156,7 @@
     }
 
     tr.sig td:first-child {
-      background: #15221d !important;
+      background: var(--sig-cell-bg) !important;
     }
 
     /* Filter inputs */
@@ -204,7 +204,7 @@
     }
 
     tr.sig {
-      background: rgba(63, 185, 80, 0.08);
+      background: var(--sig-row-bg);
     }
 
     /* ── SIGNAL ROW LEFT-BORDER ACCENT (#13) ── */
@@ -229,15 +229,7 @@
       }
 
       tbody tr.sig:hover td {
-        background: rgba(63, 185, 80, 0.14);
-      }
-
-      [data-theme="light"] tbody tr:hover td {
-        background: rgba(0, 0, 0, 0.03);
-      }
-
-      [data-theme="light"] tbody tr.sig:hover td {
-        background: rgba(63, 185, 80, 0.1);
+        background: var(--sig-hover-bg);
       }
     }
 
@@ -285,21 +277,21 @@
 
     .pA {
       background: var(--a);
-      color: #04260d;
+      color: var(--pill-fg);
     }
 
     .pB {
       background: var(--b);
-      color: #04223f;
+      color: var(--pill-fg);
     }
 
     .pC {
-      background: #30363d;
+      background: var(--pill-muted-bg);
       color: var(--dim);
     }
 
     .pD {
-      background: #30363d;
+      background: var(--pill-muted-bg);
       color: var(--dim);
     }
 

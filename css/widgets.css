@@ -210,17 +210,12 @@
       display: inline-block;
       width: 58px;
       height: 5px;
-      background: #222b37;
+      background: var(--track-bg);
       border-radius: var(--r-sm);
       vertical-align: middle;
       margin-left: 6px;
       overflow: hidden;
     }
-
-    [data-theme="light"] .hitbar {
-      background: #d0d7de;
-    }
-
     .hitbar i {
       position: absolute;
       left: 0;
@@ -306,15 +301,6 @@
       z-index: 5;
       background: var(--panel2);
     }
-
-    [data-theme="light"] #tbl-vol tbody td:nth-child(2) {
-      background: #ffffff;
-    }
-
-    [data-theme="light"] #tbl-vol thead th:nth-child(2) {
-      background: var(--panel2);
-    }
-
     #tbl-vol tr.pinned td:nth-child(2) {
       background: var(--panel2);
     }
