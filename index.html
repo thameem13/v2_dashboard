@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.4.5">
+  <meta name="build" content="1.4.6">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -2327,6 +2327,7 @@
         <button id="collapse-btn" onclick="toggleHeader()" title="Collapse the header band for maximum table height (H)">⬆️ Compact</button>
         <button id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
         <button id="refresh-btn" onclick="loadAll()">Refresh</button>
+        <button id="logout-btn" onclick="logout()" title="Sign out of Cloudflare Access on this device">🚪 Sign out</button>
 
         <!-- COLUMN VISIBILITY MENU -->
         <div class="col-menu" id="col-menu">
@@ -2731,8 +2732,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '1.4.5';
-    const BUILD_TS = '2026-09-30T23:34Z';
+    const BUILD = '1.4.6';
+    const BUILD_TS = '2026-10-01T04:26Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -4427,6 +4428,19 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
          are HTML too, and treating a Supabase outage as an expired session
          would reload the page instead of showing what actually broke. */
       return res.ok && ctype.includes('text/html');
+    }
+
+    /* Ends the Cloudflare Access session on this device. /cdn-cgi/access/ is
+       handled at Cloudflare's edge before both Access and the Worker - verified
+       by it answering 200 while an unknown path answers a 302 to the login page
+       - so this needs no route of its own and never reaches worker.js.
+
+       Confirmed first: signing back in costs an OTP round-trip, and on a phone
+       this button sits in a horizontally scrolling strip where a mis-tap is
+       easy. */
+    function logout() {
+      if (!confirm('Sign out? You will need a new login code to get back in.')) return;
+      window.location.href = '/cdn-cgi/access/logout';
     }
 
     async function rpcPage(fn, signal, params, offset) {
