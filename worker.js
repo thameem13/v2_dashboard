@@ -231,7 +231,45 @@ async function sendTelegram(env, text) {
 
    Safe to leave in place: it sits behind Access like everything else, it only
    ever sends to the configured chat, and it never echoes a secret back. */
-async function testAlert(env) {
+/* What the cron actually sees. The send path can be healthy while the
+   selection finds nothing, and those two look identical from the outside -
+   silence. This reports the counts without sending, so "no alert today" can
+   be answered rather than guessed at. */
+async function scanState(env) {
+  const out = { upstream: null, rows: 0, candidates: 0, pending: 0,
+                cursor: null, newest_candle: null, grades: {} };
+  try {
+    const res = await callSupabase(env, 'v2_dashboard_today', '', '{}');
+    out.upstream = res.status;
+    if (!res.ok) return out;
+
+    const rows = await res.json();
+    if (!Array.isArray(rows)) { out.upstream = 'not an array'; return out; }
+    out.rows = rows.length;
+    if (rows.length) out.newest_candle = candleKey(rows[rows.length - 1].candle_time_ny);
+
+    // what the session actually contains, so "nothing qualified" is visible
+    for (const r of rows) {
+      const k = r.has_signal ? 'ALERTED' : (r.grade || 'no-grade');
+      out.grades[k] = (out.grades[k] || 0) + 1;
+    }
+
+    const candidates = rows.filter(qualifies);
+    out.candidates = candidates.length;
+
+    const raw = env.ALERTS ? await env.ALERTS.get(KV_LAST_ALERT) : null;
+    out.cursor = raw;
+    const last = raw ? candleKey(raw) : null;
+    out.pending = last
+      ? candidates.filter(r => candleKey(r.candle_time_ny) > last).length
+      : Math.min(candidates.length, 1);
+  } catch (err) {
+    out.error = String((err && err.message) || err);
+  }
+  return out;
+}
+
+async function testAlert(env, quiet) {
   const state = {
     supabase_url: Boolean(env.SUPABASE_URL),
     supabase_key: Boolean(env.SUPABASE_SECRET_KEY),
@@ -240,9 +278,14 @@ async function testAlert(env) {
     telegram_chat_id: Boolean(env.TELEGRAM_CHAT_ID),
   };
 
+  const scan = await scanState(env);
+
   if (!state.telegram_token || !state.telegram_chat_id) {
-    return json({ sent: false, reason: 'Telegram not configured', state }, 200);
+    return json({ sent: false, reason: 'Telegram not configured', state, scan }, 200);
   }
+
+  // ?quiet=1 diagnoses without putting another message in the chat
+  if (quiet) return json({ sent: false, reason: 'quiet', state, scan }, 200);
 
   let res, body;
   try {
@@ -267,6 +310,7 @@ async function testAlert(env) {
     telegram_error: body && body.ok ? null : (body && body.description) || ('HTTP ' + res.status),
     last_alerted_candle: state.kv_bound ? await env.ALERTS.get(KV_LAST_ALERT) : null,
     state,
+    scan,
   }, 200);
 }
 
@@ -330,7 +374,7 @@ export default {
     // Diagnostic, gated by Access like the rest of the origin.
     if (pathname === '/api/test-alert') {
       try {
-        return await testAlert(env);
+        return await testAlert(env, new URL(request.url).searchParams.get('quiet') === '1');
       } catch (err) {
         return json({ sent: false, reason: String((err && err.message) || err) }, 500);
       }
