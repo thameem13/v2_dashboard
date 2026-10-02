@@ -1,6 +1,15 @@
 /* base.css - reset, fonts, header shell, controls
    Split from index.html; source order is preserved exactly.
    Load order in index.html is load-bearing - see the comment there. */
+    /* Reunited with its selector. The stylesheet split cut this list in two -
+       the html side stayed behind in tokens.css - so html lost its height and
+       overflow, leaving the html box unconstrained and showing as dead space
+       below the footer on the phone.
+
+       Concatenating the files reproduced the original byte for byte, which is
+       why the check passed: browsers parse each file separately, so a cut
+       between two selectors breaks a rule the join cannot reveal. */
+    html,
     body {
       /* 100% of a mobile viewport is measured against the URL-bar-expanded
          height, so the footer sits below the fold until you scroll -- and the
