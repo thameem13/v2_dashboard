@@ -543,5 +543,165 @@
         bottom: 8px;
         max-height: 45dvh;
       }
+
+      /* ══════════════════════════════════════════════════════
+         CARD VIEW
+         A 16- or 21-column table cannot be read on a phone, and horizontal
+         scrolling hides the columns that matter. Each row becomes a card.
+
+         Done by restacking the SAME table DOM rather than rendering
+         something different, because behaviour is bound to table structure:
+         applyFlowFilters() reads cells by index (c[1], c[2]...), applySort()
+         reorders <tr>s, the CSV export walks the DOM and updateRowCounts()
+         counts tr:not(.hidden). A separate mobile renderer would break all
+         four while still looking correct.
+
+         Labels come from the column classes each cell already carries, so no
+         JS template changes and nothing new to keep in sync. Only the columns
+         left visible by the rules above need one.
+         ══════════════════════════════════════════════════════ */
+      #tbl-flow, #tbl-vol, #tbl-anomaly,
+      #tbl-flow tbody, #tbl-vol tbody, #tbl-anomaly tbody,
+      #tbl-flow tr, #tbl-vol tr, #tbl-anomaly tr,
+      #tbl-flow td, #tbl-vol td, #tbl-anomaly td {
+        display: block;
+      }
+
+      #tbl-flow thead, #tbl-vol thead, #tbl-anomaly thead {
+        display: none;
+      }
+
+      /* The wrapper stops being the card - the rows are. It stays the scroll
+         container, which loadAll() depends on to restore scrollTop. */
+      .table-wrap {
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        overflow-x: hidden;
+        /* Longhands, not a shorthand: the safe-area insets are set earlier in
+           this same block and a shorthand would silently drop them, which only
+           shows up in landscape on a notched phone. */
+        margin-top: 0;
+        margin-bottom: 8px;
+        margin-left: max(10px, env(safe-area-inset-left));
+        margin-right: max(10px, env(safe-area-inset-right));
+      }
+
+      /* Grid rather than plain block so the time and price can share the
+         first line without a negative margin pulling one onto the other -
+         that trick breaks the moment a font size moves. Everything else
+         spans both columns. */
+      #tbl-flow tr, #tbl-vol tr, #tbl-anomaly tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        position: relative;
+        background: var(--panel);
+        box-shadow: var(--sh-card);
+        border-radius: var(--r-xl);
+        border-left: 3px solid transparent;
+        padding: 9px 12px 8px;
+        margin-bottom: 8px;
+      }
+
+      /* Sticky columns are meaningless once the row is a card, and would
+         pin a cell to the viewport edge. The #tbl-vol selector has to match
+         the id-level specificity it is overriding. */
+      #tbl-flow td:first-child, #tbl-vol td:first-child, #tbl-anomaly td:first-child,
+      #tbl-vol td:nth-child(2) {
+        position: static;
+        left: auto;
+        border-right: 0;
+      }
+
+      #tbl-flow td, #tbl-vol td, #tbl-anomaly td {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 14px;
+        padding: 2px 0;
+        border-bottom: 0;
+        text-align: right;
+        white-space: normal;
+      }
+
+      #tbl-flow td::before, #tbl-vol td::before, #tbl-anomaly td::before {
+        content: '';
+        color: var(--dim);
+        font-size: var(--fs-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        text-align: left;
+        flex: 0 0 auto;
+      }
+
+      /* Time is the card's heading, price the figure beside it. */
+      #tbl-flow .col-time, #tbl-vol .vcol-time, #tbl-anomaly .an-time {
+        grid-column: 1;
+        grid-row: 1;
+        font-size: var(--fs-md);
+        font-weight: 650;
+        padding-bottom: 6px;
+      }
+
+      #tbl-flow .col-price, #tbl-vol .vcol-price, #tbl-anomaly .an-price {
+        grid-column: 2;
+        grid-row: 1;
+        justify-content: flex-end;
+        padding-right: 18px;      /* clear of the pin button in the corner */
+        font-size: var(--fs-md);
+        font-weight: 650;
+      }
+
+      /* Labels, only for what survives the column trimming above. */
+      #tbl-flow .col-strike::before { content: 'Strike'; }
+      #tbl-flow .col-flow::before   { content: 'Flow'; }
+      #tbl-flow .col-dir::before    { content: 'Direction'; }
+      #tbl-flow .col-grade::before  { content: 'Grade'; }
+      #tbl-vol .vcol-tvol::before   { content: 'Total Vol'; }
+      #tbl-vol .vcol-rvol::before   { content: 'rVOL'; }
+      #tbl-vol .vcol-cp::before     { content: 'C/P Ratio'; }
+      #tbl-anomaly .an-type::before { content: 'Type'; }
+      #tbl-anomaly .an-mult::before { content: 'Vol Multiple'; }
+      #tbl-anomaly .an-tvol::before { content: 'Total Vol'; }
+      #tbl-anomaly .an-cp::before   { content: 'C/P Ratio'; }
+
+      /* The reason runs full width under the figures. */
+      #tbl-flow .reason-col, #tbl-vol .vcol-anom, #tbl-anomaly .an-reason {
+        display: block;
+        text-align: left;
+        max-width: none;
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid var(--line);
+      }
+
+      /* The pin sits in the corner instead of owning a row of its own. */
+      #tbl-flow td:first-child, #tbl-vol td:first-child {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        width: auto;
+        padding: 0;
+      }
+
+      /* Row state moves from the sticky first cell to the card edge. */
+      #tbl-flow tr.sig, #tbl-vol tr.sig {
+        border-left-color: var(--green);
+      }
+
+      #tbl-flow tr.pinned, #tbl-vol tr.pinned {
+        border-left-color: var(--amber) !important;
+      }
+
+      #tbl-flow tr.sig td:first-child {
+        border-left: 0;
+        padding-left: 0;
+      }
+
+      #tbl-vol tr.anomaly-call { border-left-color: var(--amber); }
+      #tbl-vol tr.anomaly-put { border-left-color: var(--red); }
+      #tbl-vol tr.anomaly-mixed { border-left-color: var(--blue); }
+
     }
 
