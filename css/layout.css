@@ -298,7 +298,10 @@
       /* ── Header band ── */
       #top {
         max-height: 55dvh;
-        padding-top: 8px;
+        /* viewport-fit=cover puts the page under the status bar, and only the
+           left/right insets were being honoured - so in the installed app the
+           title sat behind the clock. */
+        padding-top: max(8px, env(safe-area-inset-top));
       }
 
       /* The 1000px block hands this back to auto-fit, which yields one
@@ -593,7 +596,9 @@
          spans both columns. */
       #tbl-flow tr, #tbl-vol tr, #tbl-anomaly tr {
         display: grid;
-        grid-template-columns: 1fr auto;
+        /* time | price | pin. The pin was absolutely positioned and sat on
+           top of the price, clipping it - a card has room for all three. */
+        grid-template-columns: auto 1fr auto;
         position: relative;
         background: var(--panel);
         box-shadow: var(--sh-card);
@@ -636,6 +641,10 @@
       }
 
       /* Time is the card's heading, price the figure beside it. */
+      #tbl-anomaly .an-price {
+        grid-column: 2 / -1;
+      }
+
       #tbl-flow .col-time, #tbl-vol .vcol-time, #tbl-anomaly .an-time {
         grid-column: 1;
         grid-row: 1;
@@ -648,9 +657,14 @@
         grid-column: 2;
         grid-row: 1;
         justify-content: flex-end;
-        padding-right: 18px;      /* clear of the pin button in the corner */
         font-size: var(--fs-md);
         font-weight: 650;
+      }
+
+      /* A candle with no direction renders an empty Grade cell, which left a
+         labelled blank row on the card. */
+      #tbl-flow td:empty, #tbl-vol td:empty, #tbl-anomaly td:empty {
+        display: none;
       }
 
       /* Labels, only for what survives the column trimming above. */
@@ -676,13 +690,13 @@
         border-top: 1px solid var(--line);
       }
 
-      /* The pin sits in the corner instead of owning a row of its own. */
+      /* The pin shares the heading line rather than floating over it. */
       #tbl-flow td:first-child, #tbl-vol td:first-child {
-        position: absolute;
-        top: 4px;
-        right: 6px;
+        grid-column: 3;
+        grid-row: 1;
+        justify-content: flex-end;
+        padding: 0 0 0 10px;
         width: auto;
-        padding: 0;
       }
 
       /* Row state moves from the sticky first cell to the card edge. */
