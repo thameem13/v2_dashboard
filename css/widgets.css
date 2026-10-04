@@ -45,13 +45,11 @@
       font-family: var(--font-ui);
     }
 
+    /* Type comes from .panel-title. What stays is the tinted gutter this
+       title actually is - and it must stay here, because this selector
+       outranks that class. */
     .regime-strip .rg-title {
-      display: flex;
-      align-items: center;
-      gap: 6px;
       padding: 7px 11px;
-      font-size: var(--fs-sm);
-      font-weight: 700;
       background: var(--panel2);
       border-right: 1px solid var(--line);
       white-space: nowrap;
@@ -272,12 +270,9 @@
       font-family: var(--font-ui);
     }
 
+    /* Same as .rg-title above: gutter here, type in .panel-title. */
     .vol-session-strip .vs-title {
-      display: flex;
-      align-items: center;
       padding: 7px 11px;
-      font-size: var(--fs-base);
-      font-weight: 700;
       background: var(--panel2);
       border-right: 1px solid var(--line);
       white-space: nowrap;

@@ -16,7 +16,10 @@
       return document.getElementById('alert-stack');
     }
 
-    function pushStickyAlert({ kind, title, rows, ts }) {
+    /* `icon` is a sprite symbol id rather than a glyph inside `title`:
+       the title is escapeHtml'd below, so an <svg> passed through there
+       would render as literal markup. */
+    function pushStickyAlert({ kind, title, icon, rows, ts }) {
       if (!stickyAlertsEnabled) return;
       const stack = stickyAlertStack();
       if (!stack) return;
@@ -33,7 +36,7 @@
       card.innerHTML = `
         <div class="sticky-alert-head">
           <div>
-            <div class="sticky-alert-title">${escapeHtml(title)}</div>
+            <div class="sticky-alert-title">${iconMarkup(icon)}${escapeHtml(title)}</div>
             <div class="sticky-alert-time">${ts ? fmtTime(ts) : ''}</div>
           </div>
           <button class="alert-close" title="Dismiss">✕</button>
@@ -102,11 +105,10 @@
     }
 
     function updateAlertBtn() {
-      const btn = document.getElementById('alert-btn');
-      if (btn) {
-        btn.textContent = stickyAlertsEnabled ? '📌 Alerts: ON' : '📌 Alerts: OFF';
-        btn.classList.toggle('active-toggle', stickyAlertsEnabled);
-      }
+      setIconBtn('alert-btn', {
+        on: stickyAlertsEnabled,
+        label: 'Sticky alerts: ' + (stickyAlertsEnabled ? 'on' : 'off')
+      });
     }
 
     function initStickyAlerts() {
@@ -145,11 +147,10 @@
     }
 
     function updatePushBtn() {
-      const btn = document.getElementById('push-btn');
-      if (btn) {
-        btn.textContent = pushEnabled ? '🔔 Push: ON' : '🔔 Push: OFF';
-        btn.classList.toggle('active-toggle', pushEnabled);
-      }
+      setIconBtn('push-btn', {
+        on: pushEnabled,
+        label: 'Push notifications: ' + (pushEnabled ? 'on' : 'off')
+      });
     }
 
     function persistPush() {
@@ -213,7 +214,8 @@
       playChime(dir);
       pushStickyAlert({
         kind: 'anomaly',
-        title: `⚠️ SPY ${latest.anomaly_type} Detected`,
+        title: `SPY ${latest.anomaly_type} Detected`,
+        icon: 'ic-alert',
         rows: [
           ['Vol', `${latest.vol_multiple}x avg`],
           ['Calls', latest.total_calls],
@@ -273,9 +275,11 @@
 
     function toggleSound() {
       soundEnabled = !soundEnabled;
-      const btn = document.getElementById('sound-btn');
-      btn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
-      btn.classList.toggle('active-toggle', soundEnabled);
+      setIconBtn('sound-btn', {
+        on: soundEnabled,
+        icon: soundEnabled ? 'ic-volume' : 'ic-volume-off',
+        label: 'Alert chime: ' + (soundEnabled ? 'on' : 'off') + ' (S)'
+      });
       if (soundEnabled) playChime('CALL');
     }
 

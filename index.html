@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="1.9.0">
+  <meta name="build" content="1.10.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,17 +51,57 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=1.9.0">
-  <link rel="stylesheet" href="css/base.css?v=1.9.0">
-  <link rel="stylesheet" href="css/cards.css?v=1.9.0">
-  <link rel="stylesheet" href="css/tables.css?v=1.9.0">
-  <link rel="stylesheet" href="css/layout.css?v=1.9.0">
-  <link rel="stylesheet" href="css/panels.css?v=1.9.0">
-  <link rel="stylesheet" href="css/overlays.css?v=1.9.0">
-  <link rel="stylesheet" href="css/widgets.css?v=1.9.0">
+  <link rel="stylesheet" href="css/tokens.css?v=1.10.0">
+  <link rel="stylesheet" href="css/base.css?v=1.10.0">
+  <link rel="stylesheet" href="css/cards.css?v=1.10.0">
+  <link rel="stylesheet" href="css/tables.css?v=1.10.0">
+  <link rel="stylesheet" href="css/layout.css?v=1.10.0">
+  <link rel="stylesheet" href="css/panels.css?v=1.10.0">
+  <link rel="stylesheet" href="css/overlays.css?v=1.10.0">
+  <link rel="stylesheet" href="css/widgets.css?v=1.10.0">
 </head>
 
 <body>
+
+  <!-- ICON SPRITE — the single source for every glyph in the chrome.
+       Replaces the emoji this page used to label its controls with: emoji are
+       rendered by the OS, so they ignored currentColor and never matched either
+       theme, and they sit off the text baseline.
+
+       INLINE, not an external <use href="icons.svg#id">. An external sprite is
+       one more same-origin asset fetch, and behind Cloudflare Access that is
+       exactly the failure already documented for the manifest above - the
+       request is answered with the login redirect instead of the file, and the
+       whole toolbar would silently lose its labels. Inline cannot fail.
+
+       No fill/stroke attributes here on purpose: fill and stroke are inherited
+       CSS properties and inheritance crosses the <use> shadow boundary, so the
+       single .ico rule in base.css paints all of them, in both themes. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <!-- Row pinning. -off is the empty outline, -on the filled state. -->
+    <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></symbol>
+    <symbol id="ic-pin-on" viewBox="0 0 24 24"><path d="M12 17v5"/><path fill="currentColor" d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="ic-volume" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></symbol>
+    <symbol id="ic-volume-off" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></symbol>
+    <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-chevron-up" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></symbol>
+    <symbol id="ic-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="ic-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="ic-filter-off" viewBox="0 0 24 24"><path d="M13.01 3H2l8 9.46V19l4 2v-8.54l.9-1.06"/><path d="m22 3-5 5"/><path d="m17 3 5 5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+    <symbol id="ic-news" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"/></symbol>
+    <symbol id="ic-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+    <symbol id="ic-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+    <symbol id="ic-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+    <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="ic-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
+    <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  </svg>
 
   <div id="top">
     <div class="row">
@@ -69,23 +109,89 @@
         <h1>Trade Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
         <div class="sub" id="sub">Connecting to Supabase...</div>
       </div>
+      <!-- The row is unchanged structurally - still one wrapping flex line - but
+           its eleven equal-weight buttons are now read as four zones. The
+           stateful toggles are icon-only: the word "ON" in a label is debug
+           output, and flipping it resized the button on every click. State now
+           lives in aria-pressed + .active-toggle, which currentColor carries
+           into the icon stroke, and in the title tooltip, which the JS rewrites.
+
+           The two .col-menu popovers must stay direct children of .controls:
+           they are absolutely positioned against top:calc(100% + 6px) of this
+           row, so moving one inside a .ctrl-group would re-anchor it. -->
       <div class="controls">
-        <button id="alert-btn" onclick="toggleStickyAlerts()">📌 Alerts: ON</button>
-        <button id="push-btn" onclick="togglePushNotifications()">🔔 Push: OFF</button>
-        <button id="sound-btn" onclick="toggleSound()">🔊 Sound: ON</button>
-        <button id="cols-btn" onclick="toggleColumnMenu()">👁️ Columns</button>
-        <select id="poll-interval" class="ctrl-select" onchange="changeInterval()">
-          <option value="10000" selected>Auto: 10s</option>
-          <option value="30000">Auto: 30s</option>
-          <option value="60000">Auto: 60s</option>
-          <option value="0">Manual</option>
-        </select>
-        <button onclick="exportCurrentCSV()">Export CSV</button>
-        <button onclick="clearFilters()">Clear filters</button>
-        <button id="collapse-btn" onclick="toggleHeader()" title="Collapse the header band for maximum table height (H)">⬆️ Compact</button>
-        <button id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
-        <button id="refresh-btn" onclick="loadAll()">Refresh</button>
-        <button id="logout-btn" onclick="logout()" title="Sign out of Cloudflare Access on this device">🚪 Sign out</button>
+        <div class="ctrl-group">
+          <button id="refresh-btn" class="icon-btn" onclick="loadAll()"
+                  aria-label="Refresh" title="Refresh now (R)">
+            <svg class="ico"><use href="#ic-refresh"></use></svg>
+          </button>
+          <select id="poll-interval" class="ctrl-select" onchange="changeInterval()"
+                  aria-label="Auto-refresh interval">
+            <option value="10000" selected>Auto: 10s</option>
+            <option value="30000">Auto: 30s</option>
+            <option value="60000">Auto: 60s</option>
+            <option value="0">Manual</option>
+          </select>
+        </div>
+
+        <span class="ctrl-sep"></span>
+
+        <div class="ctrl-group">
+          <button id="alert-btn" class="icon-btn" onclick="toggleStickyAlerts()"
+                  aria-pressed="true" aria-label="Sticky alerts" title="Sticky alerts: on">
+            <svg class="ico"><use href="#ic-pin"></use></svg>
+          </button>
+          <button id="push-btn" class="icon-btn" onclick="togglePushNotifications()"
+                  aria-pressed="false" aria-label="Push notifications" title="Push notifications: off">
+            <svg class="ico"><use href="#ic-bell"></use></svg>
+          </button>
+          <button id="sound-btn" class="icon-btn" onclick="toggleSound()"
+                  aria-pressed="true" aria-label="Alert chime" title="Alert chime: on (S)">
+            <svg class="ico"><use href="#ic-volume"></use></svg>
+          </button>
+        </div>
+
+        <span class="ctrl-sep"></span>
+
+        <div class="ctrl-group">
+          <button id="cols-btn" class="icon-btn" onclick="toggleColumnMenu()"
+                  aria-label="Toggle columns" title="Show or hide columns">
+            <svg class="ico"><use href="#ic-eye"></use></svg>
+          </button>
+          <button id="collapse-btn" class="icon-btn" onclick="toggleHeader()"
+                  aria-pressed="false" aria-label="Compact header"
+                  title="Collapse the header band for maximum table height (H)">
+            <svg class="ico"><use href="#ic-chevron-up"></use></svg>
+          </button>
+          <!-- A mode, not a toggle, so no aria-pressed: the icon names the
+               theme you would switch TO, matching the label it replaced. -->
+          <button id="theme-btn" class="icon-btn" onclick="toggleTheme()"
+                  aria-label="Switch theme" title="Switch to dark theme (T)">
+            <svg class="ico"><use href="#ic-moon"></use></svg>
+          </button>
+        </div>
+
+        <span class="ctrl-sep"></span>
+
+        <!-- These two keep their words: they carry no state to show, and an
+             unlabelled export is a button nobody dares press. -->
+        <div class="ctrl-group">
+          <button onclick="exportCurrentCSV()">
+            <svg class="ico"><use href="#ic-download"></use></svg>Export CSV
+          </button>
+          <button onclick="clearFilters()">
+            <svg class="ico"><use href="#ic-filter-off"></use></svg>Clear filters
+          </button>
+        </div>
+
+        <span class="ctrl-sep"></span>
+
+        <div class="ctrl-group">
+          <button id="logout-btn" class="icon-btn" onclick="logout()"
+                  aria-label="Sign out" title="Sign out of Cloudflare Access on this device">
+            <svg class="ico"><use href="#ic-logout"></use></svg>
+          </button>
+        </div>
 
         <!-- COLUMN VISIBILITY MENU -->
         <div class="col-menu" id="col-menu">
@@ -137,7 +243,7 @@
     <div id="err"></div>
     <!-- DATE RANGE PICKER -->
     <div class="date-bar">
-      <label>📅 Range</label>
+      <label class="panel-title"><svg class="ico"><use href="#ic-calendar"></use></svg>Range</label>
       <input type="date" id="date-start" title="Start date" onchange="onDateChange()">
       <span class="date-sep">→</span>
       <input type="date" id="date-end" title="End date" onchange="onDateChange()">
@@ -165,14 +271,14 @@
       <div class="top-mid">
         <!-- REGIME CONTEXT STRIP -->
         <div class="regime-strip" id="regime-strip" style="display:none">
-          <div class="rg-title">🌡️ Regime</div>
+          <div class="rg-title panel-title"><svg class="ico"><use href="#ic-gauge"></use></svg>Regime</div>
           <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
         </div>
 
         <!-- SESSION SENTIMENT BAR -->
         <div class="sentiment-card" id="sentiment-card">
           <div class="sentiment-header">
-            <span style="font-weight:600;white-space:nowrap">📊 Session Flow Sentiment</span>
+            <span class="panel-title" style="white-space:nowrap"><svg class="ico"><use href="#ic-chart"></use></svg>Session Flow Sentiment</span>
             <span id="sentiment-bias-label">Calculating sentiment...</span>
           </div>
           <div class="sentiment-bar-track" title="Call (Green) vs Put (Red) Flow Ratio">
@@ -186,7 +292,9 @@
            can never stretch the header row. -->
       <div class="news-col">
         <div class="news-inline" id="news-panel">
-          <h4>📰 Market News <button onclick="loadNews(true)">🔄 Refresh</button></h4>
+          <h4 class="panel-title"><svg class="ico"><use href="#ic-news"></use></svg>Market News
+            <button class="icon-btn" onclick="loadNews(true)" aria-label="Refresh news" title="Reload headlines"><svg class="ico"><use href="#ic-refresh"></use></svg></button>
+          </h4>
           <div id="news-body">Loading...</div>
         </div>
       </div>
@@ -208,7 +316,7 @@
   <div id="tab-flow" class="tab-content active">
     <!-- PRESET FILTER BAR -->
     <div class="preset-bar">
-      <span class="preset-title">⚡ Quick Filters:</span>
+      <span class="preset-title panel-title"><svg class="ico"><use href="#ic-zap"></use></svg>Quick Filters</span>
       <button class="preset-btn active" onclick="applyPreset('all')">All</button>
       <button class="preset-btn" onclick="applyPreset('grade-a-calls')">Grade A Calls</button>
       <button class="preset-btn" onclick="applyPreset('grade-a-puts')">Grade A Puts</button>
@@ -219,7 +327,7 @@
       <table id="tbl-flow">
         <thead>
           <tr>
-            <th class="pin-col" title="Pin row to top">📌</th>
+            <th class="pin-col" title="Pin row to top"><svg class="ico"><use href="#ic-pin"></use></svg></th>
             <th class="col-time sortable" onclick="handleSort('flow', 1, false)">Time</th>
             <th class="col-price sortable" onclick="handleSort('flow', 2, true)">Price</th>
             <th class="col-strike sortable" onclick="handleSort('flow', 3, true)">Strike</th>
@@ -288,13 +396,13 @@
     <!-- SESSION CUMULATIVE STRIP + PRESETS share one row -->
     <div class="vol-toolbar">
       <div class="vol-session-strip" id="vol-session-strip" style="display:none">
-        <div class="vs-title">Σ Session</div>
+        <div class="vs-title panel-title">Σ Session</div>
         <div id="vol-session-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
       </div>
 
       <!-- PRESET FILTER BAR -->
       <div class="preset-bar vol-preset-bar">
-        <span class="preset-title">⚡ Quick Filters:</span>
+        <span class="preset-title panel-title"><svg class="ico"><use href="#ic-zap"></use></svg>Quick Filters</span>
       <button class="preset-btn vpreset active" onclick="applyVolPreset('all')">All</button>
       <button class="preset-btn vpreset" onclick="applyVolPreset('surge')">Surge Only</button>
       <button class="preset-btn vpreset" onclick="applyVolPreset('rvol2')">rVOL &ge; 2</button>
@@ -307,7 +415,7 @@
       <table id="tbl-vol">
         <thead>
           <tr>
-            <th class="pin-col" title="Pin row to top">📌</th>
+            <th class="pin-col" title="Pin row to top"><svg class="ico"><use href="#ic-pin"></use></svg></th>
             <th class="vcol-time sortable" onclick="handleSort('vol', 1, false)">Time</th>
             <th class="vcol-price sortable" onclick="handleSort('vol', 2, true)">Price</th>
             <th class="vcol-strike sortable" onclick="handleSort('vol', 3, true)">Strike</th>
@@ -461,15 +569,15 @@
   <div id="modal-journal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
     <div class="modal-card">
       <div class="modal-head">
-        <h3 id="modal-title">📌 Signal Detail &amp; Trade Log</h3>
+        <h3 id="modal-title">Signal Detail &amp; Trade Log</h3>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-body" id="modal-body">
         <!-- Dynamic content filled by JS -->
       </div>
       <div class="modal-foot">
-        <button onclick="copyTradeLog()">📋 Copy Trade Log</button>
-        <button onclick="exportSignalSnapshot()">📸 Download Summary</button>
+        <button onclick="copyTradeLog()"><svg class="ico"><use href="#ic-clipboard"></use></svg>Copy Trade Log</button>
+        <button onclick="exportSignalSnapshot()"><svg class="ico"><use href="#ic-camera"></use></svg>Download Summary</button>
         <button onclick="closeModal()">Close</button>
       </div>
     </div>
@@ -489,18 +597,18 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=1.9.0"></script>
-  <script src="js/alerts.js?v=1.9.0"></script>
-  <script src="js/chrome.js?v=1.9.0"></script>
-  <script src="js/news.js?v=1.9.0"></script>
-  <script src="js/signal.js?v=1.9.0"></script>
-  <script src="js/format.js?v=1.9.0"></script>
-  <script src="js/filters.js?v=1.9.0"></script>
-  <script src="js/charts.js?v=1.9.0"></script>
-  <script src="js/perf.js?v=1.9.0"></script>
-  <script src="js/rpc.js?v=1.9.0"></script>
-  <script src="js/render.js?v=1.9.0"></script>
-  <script src="js/main.js?v=1.9.0"></script>
+  <script src="js/config.js?v=1.10.0"></script>
+  <script src="js/alerts.js?v=1.10.0"></script>
+  <script src="js/chrome.js?v=1.10.0"></script>
+  <script src="js/news.js?v=1.10.0"></script>
+  <script src="js/signal.js?v=1.10.0"></script>
+  <script src="js/format.js?v=1.10.0"></script>
+  <script src="js/filters.js?v=1.10.0"></script>
+  <script src="js/charts.js?v=1.10.0"></script>
+  <script src="js/perf.js?v=1.10.0"></script>
+  <script src="js/rpc.js?v=1.10.0"></script>
+  <script src="js/render.js?v=1.10.0"></script>
+  <script src="js/main.js?v=1.10.0"></script>
 </body>
 
 </html>

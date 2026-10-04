@@ -48,7 +48,7 @@
       const errEl = document.getElementById('err');
       const todayNY = todayStr();
       if (day && day !== todayNY) {
-        errEl.innerHTML = `<div class="err">⚠️ No data for today (${todayNY}). Showing last session: ${escapeHtml(day)} — market closed or weekend.</div>`;
+        errEl.innerHTML = `<div class="err">${iconMarkup('ic-alert')}No data for today (${todayNY}). Showing last session: ${escapeHtml(day)} — market closed or weekend.</div>`;
       } else {
         if (errEl.innerHTML.includes('last session')) errEl.innerHTML = '';
       }
@@ -89,7 +89,8 @@
           // card has to show up regardless of that.
           pushStickyAlert({
             kind: last.direction === 'PUT' ? 'put' : 'call',
-            title: `🚨 SPY ${last.direction} Signal · Score ${last.score}`,
+            title: `SPY ${last.direction} Signal · Score ${last.score}`,
+            icon: 'ic-alert',
             rows: [
               ['Strike', last.atm_strike],
               ['Price', last.price],
@@ -285,7 +286,7 @@
 
         return `
       <tr class="${x.has_signal ? 'sig' : ''} ${x.is_flip ? 'flip' : ''} ${isPinned ? 'pinned' : ''}" onclick='openSignalJournal(${jsonStr})' style="cursor:pointer" title="Click to view signal detail & copy trade log">
-        <td><button class="pin-btn" onclick="togglePinFlow('${rowKey}', event)">${isPinned ? '📌' : '📍'}</button></td>
+        <td><button class="pin-btn" onclick="togglePinFlow('${rowKey}', event)" aria-pressed="${isPinned}" title="${isPinned ? 'Unpin this row' : 'Pin this row to the top'}">${iconMarkup(isPinned ? 'ic-pin-on' : 'ic-pin')}</button></td>
         <td class="col-time">${fmtTime(x.candle_time_ny)}</td>
         <td class="col-price">${escapeHtml(x.price)}</td>
         <td class="col-strike">${escapeHtml(x.atm_strike)}${x.is_flip ? ' (flip)' : ''}</td>
@@ -437,7 +438,7 @@
           data-diverge="${diverges ? '1' : '0'}"
           data-gridedge="${x.lowest_strike == null ? '' : (edge ? '1' : '0')}"
           data-anomaly="${anomType}">
-        <td><button class="pin-btn" onclick="togglePinVol('${rowKey}', event)">${isPinned ? '📌' : '📍'}</button></td>
+        <td><button class="pin-btn" onclick="togglePinVol('${rowKey}', event)" aria-pressed="${isPinned}" title="${isPinned ? 'Unpin this row' : 'Pin this row to the top'}">${iconMarkup(isPinned ? 'ic-pin-on' : 'ic-pin')}</button></td>
         <td class="vcol-time">${fmtTime(x.candle_time_ny)}</td>
         <td class="vcol-price">${escapeHtml(x.price)}</td>
         <td class="vcol-strike">${escapeHtml(x.atm_strike)}</td>

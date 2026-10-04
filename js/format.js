@@ -15,6 +15,24 @@
         .replace(/"/g, '&quot;');
     }
 
+    /* One <use> reference into the sprite inlined at the top of index.html.
+       The rows and banners that used to carry an emoji are built as HTML
+       strings, and the id is the only part that varies - so this keeps the
+       markup in one place instead of repeating it at seven call sites.
+
+       The id is whitelisted rather than interpolated: every caller passes a
+       literal today, but this returns raw markup into innerHTML, and an id
+       that ever came from a row value would be an injection point. An unknown
+       id yields nothing, which degrades to the plain text beside it. */
+    const ICON_IDS = new Set([
+      'ic-pin', 'ic-pin-on', 'ic-alert', 'ic-refresh'
+    ]);
+
+    function iconMarkup(id) {
+      if (!ICON_IDS.has(id)) return '';
+      return `<svg class="ico"><use href="#${id}"></use></svg>`;
+    }
+
     function fmtTime(ts) {
       if (!ts) return '-';
       const m = String(ts).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);

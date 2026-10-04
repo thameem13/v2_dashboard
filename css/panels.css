@@ -22,11 +22,33 @@
       overflow: hidden;
     }
 
-    .news-inline h4 {
+/* ── PANEL TITLE ──────────────────────────────────────────────────────
+       The one convention for naming a panel. Before this, six headings each
+       invented their own: two weights (600 and 700), two cases, two sizes,
+       and an emoji apiece.
+
+       Typography ONLY. Every selector below that adopts this class also
+       carries layout that is load-bearing - the news heading holds its own
+       Refresh button, the regime and session titles are tinted gutters with a
+       right border - so those rules keep their layout and have had just their
+       type declarations removed. That removal is not optional: three of them
+       (.news-inline h4, .regime-strip .rg-title, .vol-session-strip .vs-title)
+       are two-component selectors and would outrank this class, so adding it
+       alone would have changed nothing on exactly the panels that disagreed
+       most. */
+    .panel-title {
       font-size: var(--fs-sm);
+      font-weight: 600;
+      color: var(--dim);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .news-inline h4 {
+      /* Type comes from .panel-title. Layout stays here. */
       margin-bottom: 6px;
       padding-bottom: 4px;
       border-bottom: 1px solid var(--line);
@@ -37,8 +59,7 @@
     }
 
     .news-inline h4 button {
-      padding: 2px 7px;
-      font-size: var(--fs-xs);
+      padding: 3px;
     }
 
     .news-inline #news-body {
@@ -146,10 +167,9 @@
       flex-wrap: wrap;
     }
 
+    /* Type comes from .panel-title; this was the one heading that never
+       made it to uppercase. */
     .preset-title {
-      font-size: var(--fs-sm);
-      font-weight: 600;
-      color: var(--dim);
       margin-right: 4px;
     }
 

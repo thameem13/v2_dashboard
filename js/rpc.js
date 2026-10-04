@@ -128,7 +128,11 @@
       const signal = abortController.signal;
 
       const refBtn = document.getElementById('refresh-btn');
-      refBtn.textContent = 'Loading...';
+      // Was textContent = 'Loading...', which on an icon-only button removed
+      // the <svg> and never put it back. Left unguarded exactly as before:
+      // adding a null check here would change how this path fails.
+      refBtn.classList.add('is-loading');
+      refBtn.setAttribute('aria-busy', 'true');
       document.getElementById('err').innerHTML = '';
 
       // (#6) Save scroll positions before re-render
@@ -221,7 +225,8 @@
         }
       } finally {
         isFetching = false;
-        refBtn.textContent = 'Refresh';
+        refBtn.classList.remove('is-loading');
+        refBtn.removeAttribute('aria-busy');
       }
     }
 

@@ -162,7 +162,7 @@
       let staleHtml = '';
       const lag = r.regime_lag_min == null ? null : +r.regime_lag_min;
       if (lag != null && lag >= 10) {
-        staleHtml = `<div class="rg-stale">⚠️ regime feed ${num(lag, 0)}m behind flow</div>`;
+        staleHtml = `<div class="rg-stale">${iconMarkup('ic-alert')}regime feed ${num(lag, 0)}m behind flow</div>`;
       }
 
       body.innerHTML = items.join('') + staleHtml;

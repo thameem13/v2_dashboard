@@ -106,7 +106,7 @@
       if (!el) return;
 
       if (!rows || !rows.length) {
-        el.innerHTML = '<div class="perf-empty">No ALERTED signals in the selected date range. Widen the range with the 📅 presets above — signal history begins 2026-09-08.</div>';
+        el.innerHTML = '<div class="perf-empty">No ALERTED signals in the selected date range. Widen the range with the date presets above — signal history begins 2026-09-08.</div>';
         return;
       }
 

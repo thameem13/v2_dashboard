@@ -195,7 +195,7 @@
       const isCall = sig.direction === 'CALL';
       const dirCls = isCall ? 'call' : (sig.direction === 'PUT' ? 'put' : 'muted');
 
-      titleEl.innerHTML = `📌 SPY $${sig.atm_strike} ${sig.direction || ''} Signal &nbsp; ${gradePill(sig.grade)}`;
+      titleEl.innerHTML = `SPY $${sig.atm_strike} ${sig.direction || ''} Signal &nbsp; ${gradePill(sig.grade)}`;
       bodyEl.innerHTML = `
         <div class="modal-grid">
           <div><div class="modal-item-label">Timestamp</div><div class="modal-item-val">${fmtTime(sig.candle_time_ny)}</div></div>

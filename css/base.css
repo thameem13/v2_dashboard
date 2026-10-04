@@ -132,3 +132,99 @@
       color: var(--green);
     }
 
+
+    /* ── ICONS ────────────────────────────────────────────────────────────
+       One rule paints every glyph in the chrome. fill and stroke are
+       inherited CSS properties and inheritance crosses the <use> shadow
+       boundary, so setting them here reaches inside the sprite's symbols -
+       which is why no symbol carries a colour of its own and why both themes
+       work with no overrides. currentColor also means .active-toggle's green
+       flows straight into the stroke, so a pressed toggle needs no extra rule. */
+    .ico {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      /* The icons sit beside text in the buttons that kept their labels. */
+      vertical-align: -2px;
+    }
+
+    /* Icon-only buttons. Square padding is the point: the labels these
+       replaced ("Alerts: ON" -> "Alerts: OFF") changed width on every click
+       and reflowed the whole control row. */
+    .icon-btn {
+      padding: 5px;
+      line-height: 0;
+    }
+
+    /* Icons that sit before text need the space themselves: .panel-title is a
+       flex row and gets it from gap, but these containers are not flex, and
+       gap does nothing there. Kept as an opt-in list rather than a default
+       margin so adding one to a flex container never double-spaces it. */
+    button:not(.icon-btn) > .ico,
+    .err > .ico,
+    .rg-stale > .ico,
+    .sticky-alert-title > .ico {
+      margin-right: 5px;
+      vertical-align: -2px;
+    }
+
+    /* The table's pin icon is held to the 11px glyph it replaced. .pin-btn has
+       line-height:1, so a 14px inline icon would have grown the line box in
+       every row of a table whose density is the point - a visible change, and
+       this pass makes none. */
+    .pin-btn > .ico {
+      width: 12px;
+      height: 12px;
+      vertical-align: middle;
+    }
+
+    /* Refresh has no text node left to write 'Loading...' into, so the fetch
+       in rpc.js toggles this class instead. transform-origin is explicit
+       because an SVG's default origin is the viewport corner, not its centre. */
+    .icon-btn.is-loading .ico {
+      animation: spin 0.8s linear infinite;
+      transform-origin: 50% 50%;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── CONTROL ZONES ────────────────────────────────────────────────────
+       The row stays one wrapping flex line; these only bind related controls
+       tighter than the row's own 6px gap and divide the clusters.
+
+       Deliberately no margin-left:auto to push the last group right:
+       .controls is flex-wrap:wrap inside a .row that is already
+       justify-content:space-between, and an auto margin inside a wrapping
+       flex container behaves differently once the row breaks - which on a
+       narrow window would move things, and this pass moves nothing. */
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .ctrl-sep {
+      width: 1px;
+      align-self: stretch;
+      margin: 2px 1px;
+      background: var(--line);
+    }
+
+    /* Sign out is the only destructive control in the row, so it is the only
+       one that says so on hover. Inside the hover gate for the touch-latching
+       reason documented above. */
+    @media (hover: hover) {
+      #logout-btn:hover {
+        border-color: var(--red);
+        color: var(--red);
+      }
+    }

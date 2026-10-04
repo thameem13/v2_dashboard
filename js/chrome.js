@@ -10,13 +10,45 @@
        means light and [data-theme="dark"] is the override. The stored values
        are still the strings 'light' and 'dark', so anyone with an existing
        preference keeps it - only the no-preference default moved. */
+    /* ════════════════════════════════════════════════════
+       ICON BUTTON STATE
+       ════════════════════════════════════════════════════
+       The toolbar toggles are icon-only, so they have no text node: state is
+       the icon, the pressed flag and the tooltip. Every caller below used to
+       write textContent, which on these buttons would DELETE the <svg> child
+       and leave a blank square - which is why none of them set a label any
+       more, and why the one write left in the fetch path (rpc.js) became a
+       class instead.
+
+       Declared here rather than in alerts.js, which loads earlier: function
+       declarations do not hoist across classic scripts, but every caller runs
+       after load from main.js, so by then this is defined.
+       ════════════════════════════════════════════════════ */
+    function setIconBtn(id, { on, icon, label } = {}) {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if (on !== undefined) {
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.classList.toggle('active-toggle', on);
+      }
+      if (icon) {
+        const use = btn.querySelector('use');
+        if (use) use.setAttribute('href', '#' + icon);
+      }
+      if (label) btn.title = label;
+    }
+
     function applyTheme(name) {
       const html = document.documentElement;
       if (name === 'dark') html.setAttribute('data-theme', 'dark');
       else html.removeAttribute('data-theme');
-      const btn = document.getElementById('theme-btn');
-      // The label names the theme you would switch TO, not the current one.
-      if (btn) btn.textContent = name === 'dark' ? '☀️ Light' : '🌙 Dark';
+      // The icon and tooltip name the theme you would switch TO, not the
+      // current one. No aria-pressed: this is a mode, not an on/off toggle,
+      // so 'pressed' would have no honest value.
+      setIconBtn('theme-btn', {
+        icon: name === 'dark' ? 'ic-sun' : 'ic-moon',
+        label: name === 'dark' ? 'Switch to light theme (T)' : 'Switch to dark theme (T)'
+      });
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', name === 'dark' ? '#0b0e11' : '#f7f7f5');
     }
@@ -43,11 +75,13 @@
       const top = document.getElementById('top');
       if (!top) return;
       top.classList.toggle('collapsed', collapsed);
-      const btn = document.getElementById('collapse-btn');
-      if (btn) {
-        btn.textContent = collapsed ? '⬇️ Expand' : '⬆️ Compact';
-        btn.classList.toggle('active-toggle', collapsed);
-      }
+      setIconBtn('collapse-btn', {
+        on: collapsed,
+        icon: collapsed ? 'ic-chevron-down' : 'ic-chevron-up',
+        label: collapsed
+          ? 'Expand the header band (H)'
+          : 'Collapse the header band for maximum table height (H)'
+      });
     }
 
     function toggleHeader() {
