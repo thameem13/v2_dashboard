@@ -109,6 +109,21 @@ function candleKey(t) {
     .replace(/(?:Z|[+-]\d{2}:?\d{2})$/, '').slice(0, 16);
 }
 
+/* Today's date as the candles spell it: YYYY-MM-DD in New York.
+
+   Deliberately NOT the dashboard's todayStr(), which reads the *browser's*
+   local date. That is right in a browser sitting in New York and wrong here:
+   a Worker's local time is UTC, so after 20:00 ET the UTC date has already
+   rolled over and every candle in the live session would look like yesterday's.
+   The exchange's day is the only one the candles agree with, so ask for it
+   directly. en-CA because it formats as YYYY-MM-DD, matching candleKey(). */
+function nyToday(d = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
+}
+
 function compact(n) {
   // 112200 -> 112.2k, matching how the dashboard renders these so the message
   // and the screen agree at a glance.
@@ -237,7 +252,8 @@ async function sendTelegram(env, text) {
    be answered rather than guessed at. */
 async function scanState(env) {
   const out = { upstream: null, rows: 0, candidates: 0, pending: 0,
-                cursor: null, newest_candle: null, grades: {} };
+                cursor: null, newest_candle: null, grades: {},
+                today_ny: null, session_date: null, stale: false };
   try {
     const res = await callSupabase(env, 'v2_dashboard_today', '', '{}');
     out.upstream = res.status;
@@ -254,7 +270,16 @@ async function scanState(env) {
       out.grades[k] = (out.grades[k] || 0) + 1;
     }
 
-    const candidates = rows.filter(qualifies);
+    /* Same stale-session filter checkAndAlert() applies, so this reports what
+       would actually be sent. A diagnostic that counts candidates the send path
+       then silently refuses is worse than no diagnostic - it was the thing
+       consulted to decide nothing was wrong. */
+    out.today_ny = nyToday();
+    out.session_date = rows.length
+      ? candleKey(rows[rows.length - 1].candle_time_ny).slice(0, 10) : null;
+    out.stale = Boolean(out.session_date && out.session_date !== out.today_ny);
+
+    const candidates = out.stale ? [] : rows.filter(qualifies);
     out.candidates = candidates.length;
 
     const raw = env.ALERTS ? await env.ALERTS.get(KV_LAST_ALERT) : null;
@@ -329,8 +354,29 @@ async function checkAndAlert(env) {
   const rows = await res.json();
   if (!Array.isArray(rows) || !rows.length) return;
 
-  const candidates = rows.filter(qualifies);   // rows arrive oldest-first
-  if (!candidates.length) return;
+  /* v2_dashboard_today does not mean "today". When the session has no candles
+     yet it returns the LAST session instead, which is why the dashboard carries
+     a "Showing last session" banner for exactly this case (render.js). This
+     path used to take those rows at face value, and that is how a cron tick at
+     13:00 UTC on Sunday 2026-10-04 replayed five of Friday afternoon's Grade B
+     near misses into the chat.
+
+     The schedule is not a defence. The cron expression lives in Cloudflare's
+     own config, not in this repo - the deployed Worker was running
+     "*\/30 * * * *" (every half hour, every day) while wrangler.jsonc said
+     weekday market hours - so this code cannot assume it only ever runs when
+     the market is open. It has to check.
+
+     Filtering rather than just testing the newest row: it costs the same and
+     stays correct if the upstream ever returns a session boundary mid-array. */
+  const today = nyToday();
+  const candidates = rows.filter(qualifies)    // rows arrive oldest-first
+    .filter(r => candleKey(r.candle_time_ny).slice(0, 10) === today);
+  if (!candidates.length) {
+    const newest = candleKey(rows[rows.length - 1].candle_time_ny).slice(0, 10);
+    if (newest !== today) console.log(`alerts: newest session is ${newest}, not ${today} - stale, skipping`);
+    return;
+  }
 
   const raw = await env.ALERTS.get(KV_LAST_ALERT);
   const last = raw ? candleKey(raw) : null;    // normalised, so an old-format value still compares
