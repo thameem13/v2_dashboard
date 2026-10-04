@@ -219,6 +219,7 @@
     initHiddenCols();
     initStickyAlerts();
     initPush();
+    initSound();
     loadAll();
     changeInterval();
     loadNews();

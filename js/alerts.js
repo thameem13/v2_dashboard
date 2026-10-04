@@ -273,13 +273,34 @@
       }
     }
 
-    function toggleSound() {
-      soundEnabled = !soundEnabled;
+    /* Paired with initSound() below, matching updateAlertBtn/initStickyAlerts
+       and updatePushBtn/initPush. Keeping the button's look derived from
+       soundEnabled - rather than hardcoding the on state into the markup -
+       is what makes it still correct if sound ever gains persistence. */
+    function updateSoundBtn() {
       setIconBtn('sound-btn', {
         on: soundEnabled,
         icon: soundEnabled ? 'ic-volume' : 'ic-volume-off',
         label: 'Alert chime: ' + (soundEnabled ? 'on' : 'off') + ' (S)'
       });
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      updateSoundBtn();
       if (soundEnabled) playChime('CALL');
+    }
+
+    /* Sound was the one toggle with no init, so the button never got
+       .active-toggle on load and rendered grey - identical to a genuinely
+       disabled toggle - while soundEnabled was true and the chime was armed.
+       Harmless while the label read "Sound: ON" in words; a lie once the
+       button became icon-only and the icon was the only signal left.
+
+       There is nothing to restore here: unlike theme, header, sticky alerts
+       and push, sound is deliberately not persisted, so it starts on every
+       session. This exists to make the button say so. */
+    function initSound() {
+      updateSoundBtn();
     }
 
