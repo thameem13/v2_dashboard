@@ -1,0 +1,4 @@
+# Local wrangler state. wrangler-account.json carries the account id and the
+# account's display name, which is an email address - this repo is public.
+.wrangler/
+node_modules/
