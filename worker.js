@@ -14,6 +14,19 @@
    to every function in the database - including the set_bucket_candle_ts
    trigger. Adding a strategy later means adding its RPC name here. */
 const ALLOWED = new Set([
+  // The strategy-aware set the dashboard calls. Each takes p_strategy and
+  // resolves it to a symbol in SQL.
+  'list_strategies',
+  'v2_dashboard_by_strategy',
+  'v2_dashboard_range_by_strategy',
+  'v2_volume_enriched_today_by_strategy',
+  'v2_volume_enriched_range_by_strategy',
+  'v2_anomalies_today_by_strategy',
+  'v2_anomalies_range_by_strategy',
+  'v2_regime_context_by_strategy',
+  'v2_signal_performance_by_strategy',
+  // The original SPY-only set. Kept callable so a cached page from before the
+  // switch keeps working, and so there is something to fall back to.
   'v2_dashboard_today',
   'v2_dashboard_range',
   'v2_volume_enriched_today',

@@ -212,6 +212,7 @@
 
     initBuildStamp();
     watchStickyHeaders();
+    initStrategy();
     initTheme();
     initHeaderCollapse();
     initDatePicker();
@@ -221,6 +222,7 @@
     initPush();
     initSound();
     loadAll();
+    loadStrategies();   // fills the dropdown; loadAll already has the saved id
     changeInterval();
     loadNews();
     setInterval(() => loadNews(), 5 * 60 * 1000);

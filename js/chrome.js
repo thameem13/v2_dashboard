@@ -192,3 +192,73 @@
       hiddenCols = new Set(DEFAULT_HIDDEN_COLS);
     }
 
+
+    /* ══════════════════════════════════════════════════════
+       STRATEGY SELECTION
+       ══════════════════════════════════════════════════════ */
+    function initStrategy() {
+      try {
+        const saved = localStorage.getItem('v2-strategy');
+        if (saved) currentStrategy = saved;
+      } catch (e) { }
+    }
+
+    async function loadStrategies() {
+      try {
+        const rows = await rpcWithRetry('list_strategies', null, {}, 1);
+        strategyList = Array.isArray(rows) ? rows : [];
+      } catch (e) {
+        console.warn('Strategy list failed:', e);
+        strategyList = [];
+      }
+
+      const sel = document.getElementById('strategy-select');
+      if (!sel) return;
+
+      if (!strategyList.length) {
+        /* The registry is unreachable. Rather than an empty dropdown that
+           looks broken, show the strategy we are actually running. */
+        sel.innerHTML = `<option value="${escapeHtml(currentStrategy)}">Two-Tier Divergence - SPY</option>`;
+        return;
+      }
+
+      // A saved strategy that has since been retired would select nothing and
+      // leave the dropdown blank while the page loaded that strategy's data.
+      if (!strategyList.some(s => s.id === currentStrategy)) {
+        currentStrategy = strategyList[0].id;
+      }
+
+      sel.innerHTML = strategyList.map(s =>
+        `<option value="${escapeHtml(s.id)}"${s.id === currentStrategy ? ' selected' : ''}>` +
+        `${escapeHtml(s.label || (s.name + ' - ' + s.symbol))}</option>`).join('');
+    }
+
+    function changeStrategy() {
+      const sel = document.getElementById('strategy-select');
+      if (!sel || sel.value === currentStrategy) return;
+      currentStrategy = sel.value;
+      try { localStorage.setItem('v2-strategy', currentStrategy); } catch (e) { }
+
+      /* Every cache below is keyed by candle time, not by strategy, so leaving
+         any of them would paint one symbol's history under another's name.
+         Sparklines are the worst of these: stale history still draws a
+         plausible line, so it is wrong without looking wrong. */
+      volRowsCache = null;
+      volMap = {};
+      anomalyMap = {};
+      perfRows = null;
+      perfKey = null;
+      priceHistory = [];
+      flowHistory = [];
+      regimeCtx = null;
+      lastAlertTimestamp = null;     // do not re-chime the other symbol's last signal
+      lastAnomalyTimestamp = null;
+
+      loadAll();
+      if (activeTab === 'perf') loadPerf(true);
+    }
+
+    function currentStrategyLabel() {
+      const s = strategyList.find(x => x.id === currentStrategy);
+      return s ? (s.label || (s.name + ' - ' + s.symbol)) : currentStrategy;
+    }

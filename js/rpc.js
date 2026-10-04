@@ -158,21 +158,26 @@
           if (err.name !== 'AbortError') console.warn('Regime context load failed:', err);
           return null;
         };
-        const regimePromise = rpcWithRetry('v2_regime_context', signal,
-          dateCtx.isLive ? {} : { p_date: dateCtx.end || dateCtx.start }, 1)
+        /* p_strategy goes on every call. The RPC resolves it to a symbol in
+           SQL, so the browser never learns which table a strategy reads - and
+           a new strategy needs no change here at all. */
+        const strat = { p_strategy: currentStrategy };
+
+        const regimePromise = rpcWithRetry('v2_regime_context_by_strategy', signal,
+          dateCtx.isLive ? strat : { p_date: dateCtx.end || dateCtx.start, ...strat }, 1)
           .catch(regimeOnFail);
 
         if (dateCtx.isLive) {
-          // Live mode: today's data via original functions
-          flowPromise = rpcWithRetry('v2_dashboard_today', signal);
-          volPromise  = rpcWithRetry('v2_volume_enriched_today', signal);
-          anomaliesPromise = rpcWithRetry('v2_anomalies_today', signal, {}, 1).catch(anomaliesOnFail);
+          // Live mode: today's session
+          flowPromise = rpcWithRetry('v2_dashboard_by_strategy', signal, strat);
+          volPromise  = rpcWithRetry('v2_volume_enriched_today_by_strategy', signal, strat);
+          anomaliesPromise = rpcWithRetry('v2_anomalies_today_by_strategy', signal, strat, 1).catch(anomaliesOnFail);
         } else {
-          // Historical / range mode: use range functions
-          const params = { p_start: dateCtx.start, p_end: dateCtx.end };
-          flowPromise = rpcWithRetry('v2_dashboard_range', signal, params);
-          volPromise  = rpcWithRetry('v2_volume_enriched_range', signal, params);
-          anomaliesPromise = rpcWithRetry('v2_anomalies_range', signal, params, 1).catch(anomaliesOnFail);
+          // Historical / range mode
+          const params = { p_start: dateCtx.start, p_end: dateCtx.end, ...strat };
+          flowPromise = rpcWithRetry('v2_dashboard_range_by_strategy', signal, params);
+          volPromise  = rpcWithRetry('v2_volume_enriched_range_by_strategy', signal, params);
+          anomaliesPromise = rpcWithRetry('v2_anomalies_range_by_strategy', signal, params, 1).catch(anomaliesOnFail);
         }
 
         const [flow, vol, anomalies, regime] = await Promise.all([

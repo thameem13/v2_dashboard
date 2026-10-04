@@ -8,7 +8,9 @@
        ══════════════════════════════════════════════════════ */
     async function loadPerf(force) {
       const ctx = getDateContext();
-      const key = `${ctx.start || ''}|${ctx.end || ''}`;
+      // strategy is part of the key, or a switch would reuse the other
+      // symbol's rows for the same date range
+      const key = `${currentStrategy}|${ctx.start || ''}|${ctx.end || ''}`;
       if (!force && perfRows && perfKey === key) {
         renderPerf(perfRows);
         return;
@@ -21,8 +23,8 @@
 
       try {
         // Null start/end makes the RPC span all available history.
-        const rows = await rpcWithRetry('v2_signal_performance', null,
-          { p_start: ctx.start, p_end: ctx.end }, 2);
+        const rows = await rpcWithRetry('v2_signal_performance_by_strategy', null,
+          { p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy }, 2);
         perfRows = rows || [];
         perfKey = key;
         renderPerf(perfRows);
