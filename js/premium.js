@@ -366,12 +366,43 @@
         + 'out of session rather than hitting a target">' + a.un + '</span>';
     }
 
-    /* One bucket row. Premium group on the left, direction group on the right,
-       each with its OWN n - they cover different ranges and universes. */
-    function bucketRow(label, pRows, dRows, base, isTotal, withDirection) {
+    /* One bucket row, in one of three modes:
+
+         'both'  premium group + a condensed direction group
+         'prem'  premium only   - buckets that only exist on premium rows
+                                  (RVOL, put/call bias)
+         'dir'   direction only - a strategy with no premium feed
+
+       'dir' is a real layout, not the 'both' layout with the premium half
+       blanked: seven dashes under a "Premium P&L" heading reads as "premium
+       data exists and it is zero", which is the opposite of the truth. With
+       the premium columns gone there is also room for the full direction
+       detail - 30m/60m/EOD and both excursions - which is what the old
+       Signal Performance tab showed. */
+    function bucketRow(label, pRows, dRows, base, isTotal, mode) {
+      const tr = '<tr class="' + (isTotal ? 'perf-total' : '') + '">'
+        + '<td>' + escapeHtml(label) + '</td>';
+
+      if (mode === 'dir') {
+        const d = aggPerf(dRows || []);
+        const edgeCls = d.edge == null ? 'muted' : (d.edge >= 1.5 ? 'call' : (d.edge >= 1 ? '' : 'put'));
+        return tr
+          + '<td>' + d.n + '</td>'
+          + '<td>' + pctCell(d.w30, d.n30) + '</td>'
+          + '<td>' + pctCell(d.w60, d.n60) + '</td>'
+          + '<td>' + pctCell(d.weod, d.neod) + '</td>'
+          + '<td>' + signedCell(d.avg30) + '</td>'
+          + '<td>' + signedCell(d.avg60) + '</td>'
+          + '<td>' + signedCell(d.avgEod) + '</td>'
+          + '<td><span class="call">' + (d.avgMfe == null ? '-' : d.avgMfe.toFixed(2)) + '</span></td>'
+          + '<td><span class="put">' + (d.avgMae == null ? '-' : d.avgMae.toFixed(2)) + '</span></td>'
+          + '<td><span class="' + edgeCls + '">' + (d.edge == null ? '-' : d.edge.toFixed(2)) + '</span></td>'
+          + '</tr>';
+      }
+
       const a = aggPrem(pRows);
       let dir = '';
-      if (withDirection) {
+      if (mode === 'both') {
         const d = aggPerf(dRows || []);
         dir = '<td class="grp-start">' + (d.n || '<span class="muted">0</span>') + '</td>'
           + '<td>' + (d.n60 ? pctCell(d.w60, d.n60) : '<span class="muted">-</span>') + '</td>'
@@ -380,8 +411,7 @@
                       : '<span class="' + (d.edge >= 1.5 ? 'call' : (d.edge >= 1 ? '' : 'put'))
                         + '">' + d.edge.toFixed(2) + '</span>') + '</td>';
       }
-      return '<tr class="' + (isTotal ? 'perf-total' : '') + '">'
-        + '<td>' + escapeHtml(label) + '</td>'
+      return tr
         + '<td>' + a.n + '</td>'
         + '<td>' + premPctCell(a) + '</td>'
         + '<td>' + probCell(a, base) + '</td>'
@@ -393,7 +423,22 @@
         + '</tr>';
     }
 
-    function tableHead(withDirection) {
+    function tableHead(mode) {
+      if (mode === 'dir') {
+        return '<thead><tr>'
+          + '<th>Bucket</th>'
+          + '<th title="ALERTED signals in this bucket">Signals</th>'
+          + '<th title="Share where price was on the signal\'s side 30 minutes later">Hit 30m</th>'
+          + '<th title="Share where price was on the signal\'s side 60 minutes later">Hit 60m</th>'
+          + '<th title="Share where price closed on the signal\'s side">Hit EOD</th>'
+          + '<th title="Average direction-adjusted move in points at +30m">Avg 30m</th>'
+          + '<th title="Average direction-adjusted move in points at +60m">Avg 60m</th>'
+          + '<th title="Average direction-adjusted move in points at the close">Avg EOD</th>'
+          + '<th title="Max favourable excursion within 60m - the realistic best exit, in points">MFE</th>'
+          + '<th title="Max adverse excursion within 60m - the heat you had to survive">MAE</th>'
+          + '<th title="MFE / MAE. Above 1.5 means the move paid for the drawdown; under 1 means it did not.">MFE:MAE</th>'
+          + '</tr></thead>';
+      }
       const prem =
           '<th title="Trades taken in this bucket">N</th>'
         + '<th title="Wins as a share of RESOLVED trades, with a 95% Wilson interval. '
@@ -404,7 +449,7 @@
         + '<th title="Average profit per trade, in premium dollars per contract">Avg $</th>'
         + '<th title="Gross profit divided by gross loss. Below 1 loses money.">PF</th>'
         + '<th title="Average max adverse excursion - the heat endured before the exit">MAE</th>';
-      const dir = withDirection
+      const dir = mode === 'both'
         ? '<th class="grp-start" title="ALERTED signals in this bucket over the full signal history">N</th>'
           + '<th title="Share where the underlying was on the signal\'s side 60 minutes later">Hit 60m</th>'
           + '<th title="Average direction-adjusted move in points at +60m">Avg move</th>'
@@ -412,18 +457,18 @@
         : '';
       const groups = '<tr class="grp-row"><th></th>'
         + '<th colspan="7">Premium P&amp;L <span class="grp-sub">what the contract paid</span></th>'
-        + (withDirection
+        + (mode === 'both'
             ? '<th colspan="4" class="grp-start">Direction <span class="grp-sub">where the underlying went</span></th>'
             : '')
         + '</tr>';
       return '<thead>' + groups + '<tr><th>Bucket</th>' + prem + dir + '</tr></thead>';
     }
 
-    function section(title, hint, body, withDirection) {
+    function section(title, hint, body, mode) {
       if (!body) return '';
       return '<div class="perf-section-title">' + title
         + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</div>'
-        + '<table class="perf-tbl">' + tableHead(withDirection) + '<tbody>' + body + '</tbody></table>';
+        + '<table class="perf-tbl">' + tableHead(mode) + '<tbody>' + body + '</tbody></table>';
     }
 
     /* Buckets rvol_tod - chain volume against the same minute in earlier
@@ -528,37 +573,37 @@
         const set = rows.filter(r => r.grade === g);
         const dset = dRows.filter(r => r.grade === g);
         return (set.length || dset.length)
-          ? bucketRow('Grade ' + g, set, dset, base, false, true) : '';
-      }).join('') + bucketRow('All', rows, dRows, base, true, true);
+          ? bucketRow('Grade ' + g, set, dset, base, false, 'both') : '';
+      }).join('') + bucketRow('All', rows, dRows, base, true, 'both');
 
       const byDir = ['CALL', 'PUT'].map(d => {
         const set = rows.filter(r => r.direction === d);
         const dset = dRows.filter(r => r.direction === d);
         return (set.length || dset.length)
-          ? bucketRow(d, set, dset, base, false, true) : '';
+          ? bucketRow(d, set, dset, base, false, 'both') : '';
       }).join('');
 
       const hourKeys = Array.from(new Set(
         Object.keys(hours).concat(dRows.map(hourOf)))).sort();
       const byHour = hourKeys.map(h =>
         bucketRow(h + ':00 - ' + h + ':59', hours[h] || [],
-                  dRows.filter(r => hourOf(r) === h), base, false, true)).join('');
+                  dRows.filter(r => hourOf(r) === h), base, false, 'both')).join('');
 
       const byAlert = [['Alerted', true], ['Near-miss (never alerted)', false]].map(p => {
         const set = rows.filter(r => !!r.has_signal === p[1]);
         // every row in the direction set is by definition an alerted signal
         const dset = p[1] ? dRows : [];
-        return set.length ? bucketRow(p[0], set, dset, base, false, true) : '';
+        return set.length ? bucketRow(p[0], set, dset, base, false, 'both') : '';
       }).join('');
 
       const rv = {};
       rows.forEach(r => { const b = rvolBucket(r); (rv[b] = rv[b] || []).push(r); });
       const byRvol = PREM_RVOL_ORDER.filter(k => rv[k]).map(k =>
-        bucketRow(k, rv[k], null, base, false, false)).join('');
+        bucketRow(k, rv[k], null, base, false, 'prem')).join('');
 
       const byBias = ['CALL-HEAVY', 'BALANCED', 'PUT-HEAVY'].map(b => {
         const set = rows.filter(r => r.side_bias === b);
-        return set.length ? bucketRow(b, set, null, base, false, false) : '';
+        return set.length ? bucketRow(b, set, null, base, false, 'prem') : '';
       }).join('');
 
       el.innerHTML =
@@ -598,31 +643,100 @@
         +   'own N - do not read them as one sample.'
         + '</div>'
 
-        + section('By Grade', 'does a higher score earn more?', byGrade, true)
+        + section('By Grade', 'does a higher score earn more?', byGrade, 'both')
         + section('Alerted vs Near-miss', 'is the alert filter adding anything over the grade alone?',
-                  byAlert, true)
+                  byAlert, 'both')
         + section('By Hour of Day (NY)',
                   'read Open first - late entries resolve less often because the session ends, '
-                  + 'not because the hour is bad', byHour, true)
-        + section('By Direction', '', byDir, true)
+                  + 'not because the hour is bad', byHour, 'both')
+        + section('By Direction', '', byDir, 'both')
         + section('By Relative Volume (time of day)',
-                  'chain volume vs the same minute in earlier sessions', byRvol, false)
+                  'chain volume vs the same minute in earlier sessions', byRvol, 'prem')
         + section('By Put/Call Bias at Entry', 'chain-wide positioning when the trade was taken',
-                  byBias, false)
+                  byBias, 'prem')
         + ledgerHtml(rows);
 
       updateRowCounts();
     }
 
-    /* Shown when a strategy has no premium feed - the direction half still
-       works, so the tab is not empty. */
+    /* The whole tab for a strategy with no premium feed. Not a degraded
+       version of the combined view - the premium columns are absent rather
+       than blank, and the direction detail expands into the space, which is
+       everything the old Signal Performance tab showed. */
     function directionOnlyBlock(dRows) {
+      const d = aggPerf(dRows);
+      const days = new Set(dRows.map(r => r.trade_date)).size;
+      const sess = days === 1 ? '' : 's';
+
+      const kpis = [
+        ['Signals', String(d.n), 'alerted, over ' + days + ' session' + sess],
+        ['Hit 60m', d.n60 ? Math.round((d.w60 / d.n60) * 100) + '%' : '-',
+         d.n60 ? d.w60 + ' of ' + d.n60 + ' went the way the signal called' : 'no data yet'],
+        ['Avg move 60m', d.avg60 == null ? '-'
+          : (d.avg60 > 0 ? '+' : '') + d.avg60.toFixed(2),
+         'points, direction-adjusted'],
+        ['MFE:MAE', d.edge == null ? '-' : d.edge.toFixed(2),
+         d.edge == null ? 'no data yet' : 'reach per unit of heat taken']
+      ].map(k => {
+        const v = k[1];
+        const cls = v.indexOf('+') === 0 ? 'call' : (v.indexOf('-') === 0 && v.length > 1 ? 'put' : '');
+        return '<div class="kpi"><div class="kpi-label">' + k[0] + '</div>'
+          + '<div class="kpi-value ' + cls + '">' + v + '</div>'
+          + '<div class="kpi-sub">' + k[2] + '</div></div>';
+      }).join('');
+
+      const hours = {};
+      dRows.forEach(r => { (hours[hourOf(r)] = hours[hourOf(r)] || []).push(r); });
+      const hourKeys = Object.keys(hours).sort();
+      const hourItems = hourKeys.map(h => {
+        const a = aggPerf(hours[h]);
+        return { label: h + ':00', v: a.avg60, n: a.n };
+      });
+      const gradeItems = ['A', 'B', 'C', 'D'].map(g => {
+        const set = dRows.filter(r => r.grade === g);
+        if (!set.length) return null;
+        const a = aggPerf(set);
+        return { label: 'Grade ' + g, v: a.avg60, n: a.n };
+      }).filter(Boolean);
+
+      const byGradeDir = [];
+      ['A', 'B', 'C', 'D'].forEach(g => ['CALL', 'PUT'].forEach(dir => {
+        const set = dRows.filter(r => r.grade === g && r.direction === dir);
+        if (set.length) byGradeDir.push(bucketRow('Grade ' + g + ' · ' + dir, [], set, 0.5, false, 'dir'));
+      }));
+
       const byGrade = ['A', 'B', 'C', 'D'].map(g => {
         const set = dRows.filter(r => r.grade === g);
-        return set.length ? bucketRow('Grade ' + g, [], set, 0.5, false, true) : '';
-      }).join('') + bucketRow('All', [], dRows, 0.5, true, true);
-      return section('By Grade', 'direction only - no premium feed for this symbol',
-                     byGrade, true);
+        return set.length ? bucketRow('Grade ' + g, [], set, 0.5, false, 'dir') : '';
+      }).join('') + bucketRow('All signals', [], dRows, 0.5, true, 'dir');
+
+      const byDir = ['CALL', 'PUT'].map(dir => {
+        const set = dRows.filter(r => r.direction === dir);
+        return set.length ? bucketRow(dir, [], set, 0.5, false, 'dir') : '';
+      }).join('');
+
+      const byHour = hourKeys.map(h =>
+        bucketRow(h + ':00 - ' + h + ':59', [], hours[h], 0.5, false, 'dir')).join('');
+
+      return '<div class="hero">'
+        +   '<div class="hero-kpis">' + kpis + '</div>'
+        +   '<div class="hero-chart">'
+        +     '<div class="chart-title">Average 60m move by hour'
+        +       '<span class="hint">points, direction-adjusted (NY)</span></div>'
+        +     svgSignedBars(hourItems, 'points')
+        +   '</div>'
+        + '</div>'
+        + (gradeItems.length > 1
+            ? '<div class="chart-grid"><div class="chart-card">'
+              + '<div class="chart-title">Average 60m move by grade'
+              + '<span class="hint">is the score ranking your signals?</span></div>'
+              + svgSignedBars(gradeItems, 'points') + '</div></div>'
+            : '')
+        + section('By Grade', 'is the score ranking your signals?', byGrade, 'dir')
+        + section('By Grade &amp; Direction', '', byGradeDir.join(''), 'dir')
+        + section('By Direction', '', byDir, 'dir')
+        + section('By Hour of Day (NY)', 'which part of the session is worth trading',
+                  byHour, 'dir');
     }
 
     function ledgerHtml(rows) {
