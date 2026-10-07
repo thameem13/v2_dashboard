@@ -111,31 +111,55 @@
       premSL = (isFinite(sl) && sl > 0) ? sl : 0.50;
       const g = document.getElementById('prem-grades').value;
       premGrades = g === 'all' ? ['A', 'B', 'C', 'D'] : (g === 'a' ? ['A'] : ['A', 'B']);
-      try {
-        localStorage.setItem('v2-prem-params', JSON.stringify({ tp: premTP, sl: premSL, g: g }));
-      } catch (e) { }
+      savePremParams(g);
       /* TP/SL decide which bar the trade exits on, so this cannot be re-sliced
          in the browser - the parameters have to reach SQL. */
       loadPremium(true);
     }
 
-    function initPremParams() {
+    /* Stored PER STRATEGY. The symbols are not run on the same rules - QQQ at
+       $1.00 against SPY at $0.50 - and one shared setting means whichever you
+       touched last silently redefines the other's backtest. */
+    function premParamStore() {
+      let m = null;
+      try { m = JSON.parse(localStorage.getItem('v2-prem-params') || 'null'); } catch (e) { }
+      if (!m || typeof m !== 'object') return {};
+      // Migrate the older flat {tp,sl,g} shape onto whichever strategy is live.
+      if ('tp' in m || 'sl' in m || 'g' in m) {
+        const one = {};
+        one[currentStrategy] = m;
+        return one;
+      }
+      return m;
+    }
+
+    function savePremParams(g) {
       try {
-        const s = JSON.parse(localStorage.getItem('v2-prem-params') || 'null');
-        if (s) {
-          if (isFinite(s.tp) && s.tp > 0) premTP = s.tp;
-          if (isFinite(s.sl) && s.sl > 0) premSL = s.sl;
-          if (s.g) {
-            premGrades = s.g === 'all' ? ['A', 'B', 'C', 'D'] : (s.g === 'a' ? ['A'] : ['A', 'B']);
-            const el = document.getElementById('prem-grades');
-            if (el) el.value = s.g;
-          }
-        }
+        const m = premParamStore();
+        m[currentStrategy] = { tp: premTP, sl: premSL, g: g };
+        localStorage.setItem('v2-prem-params', JSON.stringify(m));
       } catch (e) { }
+    }
+
+    function initPremParams() {
+      // Defaults for a strategy that has never been configured.
+      premTP = 0.50; premSL = 0.50; premGrades = ['A', 'B'];
+      let g = 'ab';
+      const s = premParamStore()[currentStrategy];
+      if (s) {
+        if (isFinite(s.tp) && s.tp > 0) premTP = s.tp;
+        if (isFinite(s.sl) && s.sl > 0) premSL = s.sl;
+        if (s.g) {
+          g = s.g;
+          premGrades = g === 'all' ? ['A', 'B', 'C', 'D'] : (g === 'a' ? ['A'] : ['A', 'B']);
+        }
+      }
       const tpEl = document.getElementById('prem-tp');
       const slEl = document.getElementById('prem-sl');
+      const gEl = document.getElementById('prem-grades');
       if (tpEl) tpEl.value = premTP.toFixed(2);
       if (slEl) slEl.value = premSL.toFixed(2);
+      if (gEl) gEl.value = g;
     }
 
     /* ══════════════════════════════════════════════════════
@@ -180,12 +204,19 @@
     function aggPrem(rows) {
       const a = {
         n: rows.length, tp: 0, sl: 0, un: 0,
+        tpTarget: 0, slStop: 0, tpEod: 0, slEod: 0,
         pnl: 0, gain: 0, loss: 0,
         pcts: [], maes: [], mfes: [], mins: [], ivs: []
       };
       rows.forEach(r => {
-        if (r.outcome === 'TP') a.tp++;
-        else if (r.outcome === 'SL') a.sl++;
+        /* Every trade closes: on a target, or flattened at the last snapshot
+           of the session and labelled by the sign of that exit. a.un is kept
+           at 0 so anything still reading it sees "none open" rather than
+           undefined. */
+        if (r.outcome === 'TP') { a.tp++; a.tpTarget++; }
+        else if (r.outcome === 'TP_EOD') { a.tp++; a.tpEod++; }
+        else if (r.outcome === 'SL') { a.sl++; a.slStop++; }
+        else if (r.outcome === 'SL_EOD') { a.sl++; a.slEod++; }
         else a.un++;
         const p = r.pnl == null ? null : +r.pnl;
         if (p != null) {
@@ -198,14 +229,16 @@
         if (r.mins_held != null) a.mins.push(+r.mins_held);
         if (r.entry_iv != null) a.ivs.push(+r.entry_iv);
       });
-      /* Resolved is the honest win-rate denominator; UNRESOLVED is neither a
-         win nor a loss, and folding it into either would be a thumb on the
-         scale. It gets its own column instead. */
+      /* Every trade resolves now, so the win-rate denominator is simply all
+         of them - no bucket is excluded and nothing needs defending. */
       a.resolved = a.tp + a.sl;
       a.winRate = a.resolved ? a.tp / a.resolved : null;
       a.ci = wilson(a.tp, a.resolved);
-      /* Averaged over ALL trades, unresolved included: those are flattened at
-         the close at a real mark, so they belong in the expectancy. */
+      /* Exits taken on time rather than on a target. This is what the old
+         "open" count used to tell you - which hours run out of session - and
+         it is still worth seeing, just no longer as an unfinished trade. */
+      a.eod = a.tpEod + a.slEod;
+      a.eodShare = a.n ? a.eod / a.n : null;
       a.avgPnl = a.n ? a.pnl / a.n : null;
       a.avgPct = mean(a.pcts);
       a.pf = a.loss > 0 ? a.gain / a.loss : (a.gain > 0 ? Infinity : null);
@@ -213,7 +246,6 @@
       a.avgMfe = mean(a.mfes);
       a.medMins = median(a.mins);
       a.avgIv = mean(a.ivs);
-      a.censored = a.n ? a.un / a.n : null;
       return a;
     }
 
@@ -267,13 +299,15 @@
       </svg>`;
     }
 
-    /* Stacked proportion bar: won / lost / still open. */
+    /* Stacked proportion bar: won / lost. */
     function svgOutcomeBar(a) {
       if (!a.n) return '';
+      /* Won / lost only - every trade closes. The split between a target
+         exit and a time exit is carried in the key line underneath rather
+         than as extra segments, which at four colours stopped being readable. */
       const seg = [
         [a.tp, 'var(--green)', 'Won'],
-        [a.sl, 'var(--red)', 'Lost'],
-        [a.un, 'var(--dim)', 'Open']
+        [a.sl, 'var(--red)', 'Lost']
       ].filter(s => s[0] > 0);
       let off = 0;
       const bars = seg.map(s => {
@@ -284,7 +318,11 @@
         return r;
       }).join('');
       const key = seg.map(s =>
-        `<span class="ob-key"><i style="background:${s[1]}"></i>${s[2]} ${s[0]}</span>`).join('');
+        `<span class="ob-key"><i style="background:${s[1]}"></i>${s[2]} ${s[0]}</span>`).join('')
+        + (a.eod
+            ? `<span class="ob-key muted">${a.eod} closed at the EOD mark`
+              + ` (${a.tpEod} up, ${a.slEod} down)</span>`
+            : '');
       return `<div class="ob-wrap"><div class="ob-bar">${bars}</div><div class="ob-keys">${key}</div></div>`;
     }
 
@@ -365,11 +403,15 @@
       return '<span class="' + cls + '">' + pf.toFixed(2) + '</span>';
     }
 
-    function censorCell(a) {
+    /* Exits taken on time rather than on a target. Highlighted past 40%,
+       because a bucket where most trades ran out of session is describing the
+       clock as much as the signal. */
+    function eodCell(a) {
       if (!a.n) return '<span class="muted">-</span>';
-      const cls = a.censored >= 0.4 ? 'prem-censor' : 'muted';
-      return '<span class="' + cls + '" title="Trades still open at the close - they ran '
-        + 'out of session rather than hitting a target">' + a.un + '</span>';
+      const cls = a.eodShare >= 0.4 ? 'prem-censor' : 'muted';
+      return '<span class="' + cls + '" title="Closed at the end-of-day mark rather than on '
+        + 'the target or the stop - ' + a.tpEod + ' in profit, ' + a.slEod + ' at a loss">'
+        + a.eod + '</span>';
     }
 
     /* One bucket row, in one of three modes:
@@ -421,7 +463,7 @@
         + '<td>' + a.n + '</td>'
         + '<td>' + premPctCell(a) + '</td>'
         + '<td>' + probCell(a, base) + '</td>'
-        + '<td>' + censorCell(a) + '</td>'
+        + '<td>' + eodCell(a) + '</td>'
         + '<td>' + signedCell(a.avgPnl) + '</td>'
         + '<td>' + pfCell(a.pf) + '</td>'
         + '<td><span class="put">' + (a.avgMae == null ? '-' : a.avgMae.toFixed(2)) + '</span></td>'
@@ -451,7 +493,7 @@
         + '* marks a bucket with fewer than ' + PREM_MIN_N + ' resolved trades.">Win %</th>'
         + '<th title="Win rate shrunk toward the overall base rate, so a tiny bucket cannot '
         + 'read 0% or 100%. A base rate from history, not a forecast.">P(win)</th>'
-        + '<th title="Still open at the close - ran out of session rather than resolving">Open</th>'
+        + '<th title="Closed at the end-of-day mark rather than on a target. A bucket that is mostly EOD exits is describing the clock as much as the signal.">EOD</th>'
         + '<th title="Average profit per trade, in premium dollars per contract">Avg $</th>'
         + '<th title="Gross profit divided by gross loss. Below 1 loses money.">PF</th>'
         + '<th title="Average max adverse excursion - the heat endured before the exit">MAE</th>';
@@ -541,7 +583,8 @@
         ['Net P&L', (net > 0 ? '+' : net < 0 ? '-' : '') + '$' + Math.abs(net).toFixed(2),
          `across ${all.n} trade${all.n === 1 ? '' : 's'}, holding 1 contract each`],
         ['Win rate', all.resolved ? Math.round(all.winRate * 100) + '%' : '-',
-         `${all.tp} won, ${all.sl} lost, ${all.un} still open at the close`],
+         `${all.tp} won, ${all.sl} lost`
+         + (all.eod ? ` - ${all.eod} of them closed at the EOD mark` : '')],
         ['Average trade', (all.avgPnl == null ? '-'
             : (all.avgPnl > 0 ? '+' : all.avgPnl < 0 ? '-' : '') + '$' + Math.abs(all.avgPnl).toFixed(2)),
          'what one trade is worth on average'],
@@ -653,8 +696,8 @@
         + section('Alerted vs Near-miss', 'is the alert filter adding anything over the grade alone?',
                   byAlert, 'both')
         + section('By Hour of Day (NY)',
-                  'read Open first - late entries resolve less often because the session ends, '
-                  + 'not because the hour is bad', byHour, 'both')
+                  'read EOD first - late entries run out of session and exit on the clock '
+                  + 'rather than on a target', byHour, 'both')
         + section('By Direction', '', byDir, 'both')
         + section('By Relative Volume (time of day)',
                   'chain volume vs the same minute in earlier sessions', byRvol, 'prem')
@@ -748,7 +791,11 @@
     function ledgerHtml(rows) {
       if (!rows.length) return '';
       const body = rows.slice().reverse().map(r => {
-        const oCls = r.outcome === 'TP' ? 'call' : (r.outcome === 'SL' ? 'put' : 'muted');
+        const won = r.outcome === 'TP' || r.outcome === 'TP_EOD';
+        const oCls = won ? 'call' : 'put';
+        // TP_EOD/SL_EOD read as "TP (EOD)" - same colour as a target exit,
+        // since it is still a win or a loss, with the reason in the suffix.
+        const oTxt = String(r.outcome || '').replace('_EOD', ' (EOD)');
         /* C/P, not P/C: the signal modal and the Option Volume tab both show
            call/put, and the same number under an inverted label in a third
            place is how you end up comparing 2.21 against 0.45. */
@@ -761,7 +808,7 @@
           + '<td>' + (r.strike == null ? '-' : (+r.strike).toFixed(0)) + '</td>'
           + '<td>' + (r.entry_px == null ? '-' : (+r.entry_px).toFixed(2)) + '</td>'
           + '<td>' + (r.exit_px == null ? '-' : (+r.exit_px).toFixed(2)) + '</td>'
-          + '<td><span class="' + oCls + '">' + escapeHtml(r.outcome || '') + '</span></td>'
+          + '<td><span class="' + oCls + '">' + escapeHtml(oTxt) + '</span></td>'
           + '<td>' + signedCell(r.pnl, 2) + '</td>'
           + '<td>' + signedCell(r.pnl_pct, 1) + '</td>'
           + '<td>' + (r.mins_held == null ? '-' : r.mins_held) + '</td>'
