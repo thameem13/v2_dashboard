@@ -29,6 +29,12 @@
        bucket cannot advertise itself as a 100% strategy. */
     const PREM_SHRINK_K = 10;
 
+    /* The first session with option premium snapshots. A fixed historical fact
+       - the day collection started - not a value that moves. The signal history
+       reaches back to 2026-09-08, so any range before this returns nothing, and
+       the empty state has to say why rather than implying no signals fired. */
+    const PREM_FIRST_DAY = '2026-10-02';
+
     function premKeyFor(ctx) {
       return [currentStrategy, ctx.start || '', ctx.end || '',
               premTP, premSL, premGrades.join('')].join('|');
@@ -60,9 +66,11 @@
         if (src && src.available === false) {
           /* premRows stays null deliberately. Caching [] here would be truthy
              on the next visit, short-circuit to renderPremium([]) and claim
-             "no trades in range" - the right emptiness for the wrong reason. */
+             "no trades in range" - the right emptiness for the wrong reason.
+             premKey IS set, so loadAll's range check sees this range as
+             already handled and does not re-enter on every live poll. */
           premRows = null;
-          premKey = null;
+          premKey = key;
           if (bodyEl) {
             bodyEl.innerHTML = '<div class="perf-empty"><b>' + escapeHtml(src.reason) + '.</b><br>'
               + 'The backtest prices every trade from an option chain snapshot, so it '
@@ -314,10 +322,23 @@
       if (!el) return;
 
       if (!rows || !rows.length) {
-        el.innerHTML = '<div class="perf-empty">No tradeable signals in the selected range. '
-          + 'Option premium history begins <b>2026-10-02</b> - the signal history goes back '
-          + 'further, but a trade cannot be priced without a chain snapshot, so the backtest '
-          + 'covers only the premium days.</div>';
+        /* Name the range that was actually queried. "No trades" has two very
+           different causes - a range with no A/B signals, and a range with no
+           premium snapshots at all - and they need different reactions. */
+        const c = getDateContext();
+        const span = (c.start || c.end)
+          ? `<b>${escapeHtml(c.start || '...')}</b> to <b>${escapeHtml(c.end || '...')}</b>`
+          : 'all available history';
+        const beforeCoverage = c.end && c.end < PREM_FIRST_DAY;
+        el.innerHTML = '<div class="perf-empty">No backtested trades for ' + span + '.<br>'
+          + (beforeCoverage
+              ? 'That range ends before option premium collection started on <b>'
+                + PREM_FIRST_DAY + '</b>. The signal history goes back further, but a trade '
+                + 'cannot be priced without a chain snapshot, so the backtest cannot reach it.'
+              : 'Either there were no ' + premGrades.join('/') + ' candles with a tradeable '
+                + 'direction in that range, or premium snapshots are missing for it - '
+                + 'collection begins <b>' + PREM_FIRST_DAY + '</b>.')
+          + '</div>';
         updateRowCounts();
         return;
       }

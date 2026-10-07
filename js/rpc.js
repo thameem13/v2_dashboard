@@ -220,6 +220,15 @@
         }
         if (activeTab === 'perf') loadPerf();
 
+        /* The premium backtest is keyed on the date range too, and nothing else
+           reloads it: switchTab only fires when you arrive at the tab, so
+           changing the range while already standing on it left the old range's
+           trades on screen under the new dates. Compared against the full key
+           rather than called unconditionally, so the 10s live poll does not
+           re-run the backtest - and does not re-render the ledger out from
+           under you while you are scrolled into it. */
+        if (activeTab === 'prem' && premKey !== premKeyFor(dateCtx)) loadPremium();
+
       } catch (e) {
         if (e.name === 'AbortError') {
           // Silently ignore aborted requests
