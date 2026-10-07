@@ -288,6 +288,8 @@
       + '<th title="Average implied volatility at entry">IV</th>'
       + '</tr></thead>';
 
+    /* Buckets rvol_tod - chain volume against the same minute in earlier
+       sessions, which is the dashboard's one definition of RVOL. */
     function rvolBucket(r) {
       if (r.rvol == null) return 'Unknown';
       const v = +r.rvol;
@@ -389,8 +391,10 @@
       /* ── Ledger ── */
       const ledger = rows.slice().reverse().map(r => {
         const oCls = r.outcome === 'TP' ? 'call' : (r.outcome === 'SL' ? 'put' : 'muted');
-        const pc = (r.put_volume != null && +r.call_volume > 0)
-          ? (+r.put_volume / +r.call_volume).toFixed(2) : '-';
+        /* C/P, not P/C: the signal modal and the Option Volume tab both show
+           call/put, and the same number under an inverted label in a third
+           place is how you end up comparing 2.21 against 0.45. */
+        const cp = r.cp_ratio == null ? '-' : (+r.cp_ratio).toFixed(2);
         return '<tr>'
           + '<td>' + fmtTime(r.candle_time_ny) + '</td>'
           + '<td>' + gradePill(r.grade) + '</td>'
@@ -407,9 +411,10 @@
           + '<td><span class="call">' + (r.mfe == null ? '-' : (+r.mfe).toFixed(2)) + '</span></td>'
           + '<td>' + fmtCompact(r.call_volume) + '</td>'
           + '<td>' + fmtCompact(r.put_volume) + '</td>'
-          + '<td>' + pc + '</td>'
-          + '<td>' + (r.rvol == null ? '<span class="muted">-</span>' : (+r.rvol).toFixed(2)) + '</td>'
+          + '<td>' + cp + '</td>'
+          + '<td>' + (r.rvol == null ? '<span class="muted">-</span>' : (+r.rvol).toFixed(2) + 'x') + '</td>'
           + '<td>' + fmtDollar(r.dollar_traded) + '</td>'
+          + '<td>' + fmtCompact(r.contract_vol_candle) + '</td>'
           + '<td>' + (r.entry_iv == null ? '-' : (+r.entry_iv * 100).toFixed(1) + '%') + '</td>'
           + '<td>' + signedCell(r.iv_change == null ? null : +r.iv_change * 100, 1) + '</td>'
           + '<td>' + (r.has_signal ? '<span class="call">yes</span>'
@@ -434,8 +439,9 @@
         + premSection('By Hour of Day (NY)',
             'read the Open column first - late entries resolve less often because the '
             + 'session ends, not because the hour is bad', byHour)
-        + premSection('By Option Relative Volume',
-            'does heavier flow in the contract itself pay better?', byRvol)
+        + premSection('By Relative Volume (time of day)',
+            'does a busier-than-usual tape pay better? chain volume vs the same '
+            + 'minute in earlier sessions', byRvol)
         + premSection('By Put/Call Bias at Entry',
             'chain-wide positioning when the trade was taken', byBias)
         + premSection('By Direction', '', byDir)
@@ -447,11 +453,12 @@
         + '<th title="Sold at the quoted bid">Exit</th>'
         + '<th>Outcome</th><th>P&amp;L $</th><th>P&amp;L %</th><th>Min</th>'
         + '<th>MAE</th><th>MFE</th>'
-        + '<th title="Cumulative call volume at the POC strike">Call vol</th>'
-        + '<th title="Cumulative put volume at the POC strike">Put vol</th>'
-        + '<th title="Put volume / call volume at the POC strike">P/C</th>'
-        + '<th title="This candle\'s contract volume vs its average earlier in the session">RVOL</th>'
-        + '<th title="Premium traded in this candle - contract volume x mid x 100">$ traded</th>'
+        + '<th title="Call volume across the whole chain in this candle - the same figure the signal modal and the Option Volume tab show">Call vol</th>'
+        + '<th title="Put volume across the whole chain in this candle">Put vol</th>'
+        + '<th title="Call/put ratio across the chain. Above 1 is call-heavy. Same orientation as the signal modal.">C/P</th>'
+        + '<th title="Relative volume for this time of day - total chain volume vs the same minute in earlier sessions">RVOL</th>'
+        + '<th title="Total premium traded across the chain in this candle">$ traded</th>'
+        + '<th title="The POC contract\'s own volume in this candle - the liquidity you would actually have to fill, not the whole chain">POC vol</th>'
         + '<th>IV</th><th title="IV change from entry to exit">&Delta;IV</th>'
         + '<th>Alerted</th>'
         + '</tr></thead><tbody>' + ledger + '</tbody></table></div>';

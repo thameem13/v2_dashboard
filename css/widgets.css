@@ -360,7 +360,7 @@
     table.prem-ledger {
       font-size: var(--fs-cell);
       font-variant-numeric: tabular-nums;
-      min-width: 980px;
+      min-width: 1040px;
     }
 
     table.prem-ledger th,
