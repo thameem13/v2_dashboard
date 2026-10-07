@@ -11,7 +11,7 @@
       /* This array is matched against the .tab elements BY INDEX, so it has to
          stay in the same order as the markup in index.html. A tab added to one
          and not the other highlights the wrong heading, silently. */
-      const order = ['flow', 'vol', 'anomaly', 'perf', 'prem'];
+      const order = ['flow', 'vol', 'anomaly', 'prem'];
       document.querySelectorAll('.tab').forEach((t, i) => {
         t.classList.toggle('active', order[i] === name);
       });
@@ -21,7 +21,6 @@
       });
       // The Columns menu is per-tab, so close whichever one is open.
       closeColumnMenus();
-      if (name === 'perf') loadPerf();
       if (name === 'prem') loadPremium();
       updateRowCounts();
     }
@@ -243,15 +242,10 @@
       if (activeTab === 'prem') {
         const n = premRows ? premRows.length : 0;
         const d = premRows ? new Set(premRows.map(r => r.trade_date)).size : 0;
+        const sn = perfRows ? perfRows.length : 0;
         document.getElementById('row-counts').textContent =
-          `${n} backtested trade${n === 1 ? '' : 's'} over ${d} session${d === 1 ? '' : 's'}`;
-        return;
-      }
-      if (activeTab === 'perf') {
-        const n = perfRows ? perfRows.length : 0;
-        const days = perfRows ? new Set(perfRows.map(r => r.trade_date)).size : 0;
-        document.getElementById('row-counts').textContent =
-          `${n} alerted signal${n === 1 ? '' : 's'} over ${days} session${days === 1 ? '' : 's'}`;
+          `${n} priced trade${n === 1 ? '' : 's'} over ${d} session${d === 1 ? '' : 's'}`
+          + ` - ${sn} alerted signal${sn === 1 ? '' : 's'} for direction`;
         return;
       }
       const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');
@@ -336,22 +330,24 @@
        CSV EXPORT
        ══════════════════════════════════════════════════════ */
     function exportCurrentCSV() {
-      // On the performance tab, export the per-signal detail rather than the
-      // rendered summary tables — that's what's useful in a spreadsheet.
-      if (activeTab === 'perf') {
-        if (!perfRows || !perfRows.length) return alert('No signal history to export.');
-        const cols = ['trade_date', 'candle_time_ny', 'direction', 'grade', 'score',
-          'entry_price', 'atm_strike', 'flow', 'room',
-          'price_30m', 'price_60m', 'price_eod',
-          'move_30m', 'move_60m', 'move_eod', 'mfe_60m', 'mae_60m',
-          'win_30m', 'win_60m', 'win_eod'];
-        const lines = [cols.join(',')].concat(perfRows.map(r =>
+      // On the Performance tab, export the per-trade ledger rather than the
+      // rendered summary tables - that is what is useful in a spreadsheet.
+      if (activeTab === 'prem') {
+        if (!premRows || !premRows.length) return alert('No priced trades to export.');
+        const cols = ['trade_date', 'candle_time_ny', 'grade', 'score', 'direction',
+          'has_signal', 'underlying', 'poc', 'strike', 'expiry', 'contract',
+          'entry_px', 'exit_px', 'exit_time_ny', 'mins_held', 'outcome',
+          'pnl', 'pnl_pct', 'mfe', 'mae', 'bars_available',
+          'call_volume', 'put_volume', 'cp_ratio', 'side_bias',
+          'rvol', 'dollar_traded', 'contract_vol_candle',
+          'entry_iv', 'entry_delta', 'exit_iv', 'iv_change'];
+        const lines = [cols.join(',')].concat(premRows.map(r =>
           cols.map(c => `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',')));
         const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `signal_performance_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `performance_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         return;

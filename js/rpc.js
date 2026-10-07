@@ -210,15 +210,6 @@
         lastSyncTime = Date.now();
         updateSyncAge();
 
-        // Signal performance is loaded lazily — refresh it only if the range
-        // changed or the user is looking at that tab, so the 10s live poll
-        // doesn't re-run the history scan on every tick.
-        const pk = `${dateCtx.start || ''}|${dateCtx.end || ''}`;
-        if (perfKey !== null && perfKey !== pk) {
-          perfRows = null;
-          perfKey = null;
-        }
-        if (activeTab === 'perf') loadPerf();
 
         /* The premium backtest is keyed on the date range too, and nothing else
            reloads it: switchTab only fires when you arrive at the tab, so

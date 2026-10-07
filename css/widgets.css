@@ -236,9 +236,10 @@
       padding: 14px 2px;
     }
 
-    /* ── PREMIUM BACKTEST TAB ──────────────────────────────────────────────
+    /* ── PERFORMANCE TAB ─────────────────────────────────────
        Reuses .perf-wrap / .perf-tbl / .perf-section-title / .hitbar wholesale;
-       only the pieces that do not already exist are defined here. */
+       only what does not already exist is defined here. This file loads last,
+       so these rules win without !important. */
 
     .prem-toolbar {
       display: flex;
@@ -278,28 +279,31 @@
       letter-spacing: 0;
     }
 
-    .prem-ctrl input {
-      width: 68px;
-      text-align: right;
-    }
+    .prem-ctrl input { width: 68px; text-align: right; }
 
-    /* auto-fit rather than a fixed count, so this needs no media query to
-       reflow down to one column on a phone */
-    .prem-kpis {
+    /* ── Hero: four numbers beside the equity curve ── */
+    .hero {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-      gap: 8px;
+      grid-template-columns: minmax(260px, 340px) 1fr;
+      gap: 10px;
       margin: 10px 0 4px;
     }
 
-    .prem-kpi {
+    .hero-kpis {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .kpi {
       background: var(--panel);
       border-radius: var(--r-xl);
       box-shadow: var(--sh-card);
-      padding: 9px 11px;
+      padding: 10px 12px;
     }
 
-    .prem-kpi-label {
+    .kpi-label {
       font-family: var(--font-ui);
       font-size: var(--fs-micro);
       text-transform: uppercase;
@@ -307,24 +311,135 @@
       color: var(--dim);
     }
 
-    .prem-kpi-value {
+    .kpi-value {
       font-family: var(--font-data);
       font-variant-numeric: tabular-nums;
       font-size: var(--fs-3xl);
       font-weight: 700;
-      line-height: 1.15;
-      margin: 1px 0;
+      line-height: 1.2;
+      margin: 2px 0 1px;
     }
 
-    .prem-kpi-sub {
+    .kpi-sub {
       font-family: var(--font-ui);
       font-size: var(--fs-micro);
       color: var(--dim);
       line-height: 1.35;
     }
 
-    /* The sample-size warning. Amber rather than red: the numbers are not
-       wrong, they are just not yet conclusive. */
+    .hero-chart,
+    .chart-card {
+      background: var(--panel);
+      border-radius: var(--r-xl);
+      box-shadow: var(--sh-card);
+      padding: 10px 12px 8px;
+      min-width: 0;          /* so the SVG can shrink inside a grid track */
+    }
+
+    .chart-title {
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chart-title .hint {
+      font-size: var(--fs-micro);
+      font-weight: 400;
+      color: var(--dim);
+    }
+
+    svg.chart {
+      display: block;
+      width: 100%;
+      height: auto;
+      font-family: var(--font-ui);
+      font-variant-numeric: tabular-nums;
+      overflow: visible;
+    }
+
+    .chart-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0 4px;
+    }
+
+    /* ── Won / lost / open proportion bar ── */
+    .ob-wrap { margin-top: 6px; }
+
+    .ob-bar {
+      display: flex;
+      height: 8px;
+      border-radius: var(--r-sm);
+      overflow: hidden;
+      background: var(--track-bg);
+    }
+
+    .ob-seg { height: 100%; }
+
+    .ob-keys {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 5px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-micro);
+      color: var(--dim);
+    }
+
+    .ob-key { display: inline-flex; align-items: center; gap: 4px; }
+
+    .ob-key i {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* ── Grouped table headers ──
+       The two column groups cover different date ranges and different
+       universes, so the boundary is drawn rather than implied. */
+    table.perf-tbl tr.grp-row th {
+      text-align: left;
+      font-size: var(--fs-micro);
+      letter-spacing: .6px;
+      padding-top: 6px;
+      padding-bottom: 3px;
+      background: var(--panel);
+      border-bottom: none;
+      position: static;       /* only the lower header row sticks */
+    }
+
+    table.perf-tbl tr.grp-row th:first-child { background: var(--panel); }
+
+    .grp-sub {
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+      opacity: .75;
+    }
+
+    table.perf-tbl th.grp-start,
+    table.perf-tbl td.grp-start {
+      border-left: 2px solid var(--line);
+    }
+
+    /* ── Honesty markers ──
+       Amber, not red: the numbers are not wrong, they are not yet conclusive. */
     .prem-warn {
       font-family: var(--font-ui);
       font-size: var(--fs-sm);
@@ -344,12 +459,9 @@
       cursor: help;
     }
 
-    .prem-censor {
-      color: var(--amber);
-      font-weight: 700;
-    }
+    .prem-censor { color: var(--amber); font-weight: 700; }
 
-    /* The ledger is ~20 columns. It scrolls on its own rather than widening
+    /* The ledger is ~21 columns. It scrolls on its own rather than widening
        the page, which would put every other section into horizontal scroll. */
     .prem-ledger-wrap {
       overflow-x: auto;
@@ -364,8 +476,14 @@
     }
 
     table.prem-ledger th,
-    table.prem-ledger td {
-      padding: 4px 7px;
+    table.prem-ledger td { padding: 4px 7px; }
+
+    /* The bucket tables carry two column groups and do not fit a phone
+       either, so they scroll with the same affordance as the ledger. */
+    @media (max-width: 900px) {
+      .hero,
+      .chart-grid { grid-template-columns: 1fr; }
+      .hero-kpis { grid-template-columns: 1fr 1fr; }
     }
 
     /* ══════════════════════════════════════════════════════

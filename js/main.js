@@ -164,10 +164,6 @@
           break;
         case '4':
           e.preventDefault();
-          switchTab('perf');
-          break;
-        case '5':
-          e.preventDefault();
           switchTab('prem');
           break;
         case 'escape':

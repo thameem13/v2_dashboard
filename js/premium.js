@@ -1,27 +1,33 @@
-/* premium.js - premium backtest tab
+/* premium.js - the Performance tab
    Split from index.html. These are CLASSIC scripts, not modules:
    top-level let/const share one global lexical scope, so the
    mutable state variables and the inline onclick handlers keep
    working exactly as before. Load order is load-bearing. */
     /* ══════════════════════════════════════════════════════
-       PREMIUM BACKTEST TAB
+       PERFORMANCE TAB
 
-       The Signal Performance tab measures forward movement in UNDERLYING
-       points. This one measures the contract: buy the POC-strike next-day
-       expiry at the quoted ask on an A/B candle, walk the session forward
-       through the 5-minute chain snapshots, exit on the first touch of
-       +TP or -SL, and flatten anything still open at the close.
+       One tab, two measures of the same signals:
 
-       All of that happens in SQL (v2_premium_backtest_by_strategy), which
-       returns one row per trade. This file only aggregates and renders -
-       the same division of labour as perf.js, and for the same reason:
-       there is exactly one copy of the trade logic and it is not in the
-       browser.
+         PREMIUM P&L  what the contract actually paid. Buy the POC strike,
+                      next-day expiry, at the ask; walk the session forward
+                      through the 5-minute chain snapshots; exit on the first
+                      touch of the target or the stop, sold at the bid.
+                      Real money - but only as far back as premium collection.
+
+         DIRECTION    whether the underlying went the way the signal called,
+                      in SPY points, over the FULL signal history. A much
+                      bigger sample, but it does not know about spread,
+                      theta, or what you would actually have been filled at.
+
+       They are shown side by side rather than merged into one number,
+       because they cover different date ranges and different universes
+       (direction is ALERTED-only; premium is every graded candle). Each
+       group carries its own N so the two can never be read as one sample.
        ══════════════════════════════════════════════════════ */
 
     /* Below this many RESOLVED trades a bucket is marked as too small to read.
-       At today's sample (44 trades over 3 sessions) that is every bucket,
-       which is the correct and intended result - not a bug to tune away. */
+       At today's sample that is every bucket, which is the correct and
+       intended result - not a bug to tune away. */
     const PREM_MIN_N = 20;
 
     /* Shrinkage strength for the win-probability estimate. With k=10 a 2-trade
@@ -31,8 +37,8 @@
 
     /* The first session with option premium snapshots. A fixed historical fact
        - the day collection started - not a value that moves. The signal history
-       reaches back to 2026-09-08, so any range before this returns nothing, and
-       the empty state has to say why rather than implying no signals fired. */
+       reaches back further, so any range before this has direction data but no
+       premium, and the empty state has to say which is missing. */
     const PREM_FIRST_DAY = '2026-10-02';
 
     function premKeyFor(ctx) {
@@ -44,7 +50,7 @@
       const ctx = getDateContext();
       const key = premKeyFor(ctx);
       if (!force && premRows && premKey === key) {
-        renderPremium(premRows);
+        renderPerformance();
         return;
       }
       if (premLoading) return;
@@ -63,34 +69,26 @@
           premSources = await rpcWithRetry('v2_premium_sources', null, {}, 2) || [];
         }
         const src = premSources.find(s => s.strategy_id === currentStrategy);
-        if (src && src.available === false) {
-          /* premRows stays null deliberately. Caching [] here would be truthy
-             on the next visit, short-circuit to renderPremium([]) and claim
-             "no trades in range" - the right emptiness for the wrong reason.
-             premKey IS set, so loadAll's range check sees this range as
-             already handled and does not re-enter on every live poll. */
-          premRows = null;
-          premKey = key;
-          if (bodyEl) {
-            bodyEl.innerHTML = '<div class="perf-empty"><b>' + escapeHtml(src.reason) + '.</b><br>'
-              + 'The backtest prices every trade from an option chain snapshot, so it '
-              + 'needs a premium feed for this symbol before it can show anything. '
-              + 'Nothing else about this strategy is affected.</div>';
-          }
-          updateRowCounts();
-          return;
-        }
+        const hasPremium = !(src && src.available === false);
 
-        const rows = await rpcWithRetry('v2_premium_backtest_by_strategy', null, {
-          p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy,
-          p_tp: premTP, p_sl: premSL, p_grades: premGrades
-        }, 2);
-        premRows = rows || [];
+        /* Both halves in parallel - they are independent RPCs and the tab
+           cannot render until it has both. */
+        const [pr, pf] = await Promise.all([
+          hasPremium
+            ? rpcWithRetry('v2_premium_backtest_by_strategy', null, {
+                p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy,
+                p_tp: premTP, p_sl: premSL, p_grades: premGrades
+              }, 2)
+            : Promise.resolve([]),
+          loadPerfRows(ctx, force)
+        ]);
+
+        premRows = pr || [];
         premKey = key;
-        renderPremium(premRows);
+        renderPerformance(hasPremium ? null : (src && src.reason));
       } catch (e) {
         if (bodyEl) {
-          bodyEl.innerHTML = '<div class="err">Could not run the premium backtest: '
+          bodyEl.innerHTML = '<div class="err">Could not load performance: '
             + escapeHtml(e.message) + '</div>';
         }
       } finally {
@@ -137,7 +135,7 @@
     /* ══════════════════════════════════════════════════════
        SMALL-SAMPLE STATISTICS
 
-       At n=44 a fitted model over grade x hour x volume would be pure
+       At this sample size a fitted model over grade x hour x volume would be
        overfitting, and presenting its output as a probability would be the
        most harmful thing this tab could do. So: empirical base rates, a
        Wilson interval, and shrinkage toward the overall rate.
@@ -177,7 +175,7 @@
       const a = {
         n: rows.length, tp: 0, sl: 0, un: 0,
         pnl: 0, gain: 0, loss: 0,
-        pcts: [], maes: [], mfes: [], mins: [], ivs: [], rvols: []
+        pcts: [], maes: [], mfes: [], mins: [], ivs: []
       };
       rows.forEach(r => {
         if (r.outcome === 'TP') a.tp++;
@@ -193,7 +191,6 @@
         if (r.mfe != null) a.mfes.push(+r.mfe);
         if (r.mins_held != null) a.mins.push(+r.mins_held);
         if (r.entry_iv != null) a.ivs.push(+r.entry_iv);
-        if (r.rvol != null) a.rvols.push(+r.rvol);
       });
       /* Resolved is the honest win-rate denominator; UNRESOLVED is neither a
          win nor a loss, and folding it into either would be a thumb on the
@@ -210,15 +207,129 @@
       a.avgMfe = mean(a.mfes);
       a.medMins = median(a.mins);
       a.avgIv = mean(a.ivs);
-      a.avgRvol = mean(a.rvols);
-      /* Censoring rate: the share that simply ran out of session. Without this
-         the late buckets read as "bad" when they are mostly "unfinished". */
       a.censored = a.n ? a.un / a.n : null;
       return a;
     }
 
+    /* ══════════════════════════════════════════════════════
+       CHARTS — inline SVG
+
+       SVG rather than the <canvas> sparklines in charts.js: these are built
+       inside an innerHTML string, and a canvas would need a second pass to
+       find the element and draw after insertion. SVG composes into the same
+       string and needs no follow-up call, so it cannot silently render blank
+       if the ordering ever changes. Colours come through style="fill:var(..)"
+       so they follow the theme without a redraw.
+       ══════════════════════════════════════════════════════ */
+
+    function svgEmpty(h, msg) {
+      return `<div class="chart-empty" style="height:${h}px">${escapeHtml(msg)}</div>`;
+    }
+
+    /* Cumulative P&L, trade by trade. The one chart that answers "is this
+       actually making money" without needing any other number on the page. */
+    function svgEquity(rows) {
+      if (!rows.length) return svgEmpty(150, 'No trades in range');
+      const W = 620, H = 150, PL = 44, PR = 10, PT = 12, PB = 20;
+      let cum = 0;
+      const pts = rows.map(r => (cum += (+r.pnl || 0)));
+      const lo = Math.min(0, ...pts), hi = Math.max(0, ...pts);
+      const range = (hi - lo) || 1;
+      const x = i => PL + (pts.length === 1 ? (W - PL - PR) / 2
+                     : (i / (pts.length - 1)) * (W - PL - PR));
+      const y = v => PT + (1 - (v - lo) / range) * (H - PT - PB);
+      const zeroY = y(0);
+      const line = pts.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const area = `${x(0).toFixed(1)},${zeroY.toFixed(1)} ${line} ${x(pts.length - 1).toFixed(1)},${zeroY.toFixed(1)}`;
+      const end = pts[pts.length - 1];
+      const up = end >= 0;
+      const col = up ? 'var(--green)' : 'var(--red)';
+      // y-axis labels: just the extremes and zero - three numbers, not a grid
+      const ticks = [hi, 0, lo].filter((v, i, arr) => arr.indexOf(v) === i);
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+        aria-label="Cumulative profit and loss across ${rows.length} trades, ending ${end.toFixed(2)} dollars">
+        ${ticks.map(t => `<line x1="${PL}" x2="${W - PR}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"
+            style="stroke:var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 3"'}/>
+          <text x="${PL - 6}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end"
+            style="fill:var(--dim)" font-size="9">${t > 0 ? '+' : ''}${t.toFixed(2)}</text>`).join('')}
+        <polygon points="${area}" style="fill:${col}" opacity="0.12"/>
+        <polyline points="${line}" fill="none" style="stroke:${col}" stroke-width="2"
+          stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(end).toFixed(1)}" r="3" style="fill:${col}"/>
+        <text x="${PL}" y="${H - 6}" style="fill:var(--dim)" font-size="9">trade 1</text>
+        <text x="${W - PR}" y="${H - 6}" text-anchor="end" style="fill:var(--dim)" font-size="9">trade ${pts.length}</text>
+      </svg>`;
+    }
+
+    /* Stacked proportion bar: won / lost / still open. */
+    function svgOutcomeBar(a) {
+      if (!a.n) return '';
+      const seg = [
+        [a.tp, 'var(--green)', 'Won'],
+        [a.sl, 'var(--red)', 'Lost'],
+        [a.un, 'var(--dim)', 'Open']
+      ].filter(s => s[0] > 0);
+      let off = 0;
+      const bars = seg.map(s => {
+        const wpc = (s[0] / a.n) * 100;
+        const r = `<div class="ob-seg" style="width:${wpc}%;background:${s[1]}"
+          title="${s[2]}: ${s[0]} of ${a.n}"></div>`;
+        off += wpc;
+        return r;
+      }).join('');
+      const key = seg.map(s =>
+        `<span class="ob-key"><i style="background:${s[1]}"></i>${s[2]} ${s[0]}</span>`).join('');
+      return `<div class="ob-wrap"><div class="ob-bar">${bars}</div><div class="ob-keys">${key}</div></div>`;
+    }
+
+    /* Vertical bars with a zero baseline - used for average P&L per hour,
+       where the sign is the whole point. */
+    function svgSignedBars(items, unit) {
+      const vals = items.filter(i => i.v != null);
+      if (!vals.length) return svgEmpty(140, 'Not enough data');
+      const W = 620, H = 140, PL = 40, PR = 8, PT = 10, PB = 26;
+      const lo = Math.min(0, ...vals.map(i => i.v));
+      const hi = Math.max(0, ...vals.map(i => i.v));
+      const range = (hi - lo) || 1;
+      const y = v => PT + (1 - (v - lo) / range) * (H - PT - PB);
+      const zeroY = y(0);
+      const slot = (W - PL - PR) / items.length;
+      const bw = Math.min(42, slot * 0.62);
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+        aria-label="Average ${escapeHtml(unit)} by bucket">
+        <line x1="${PL}" x2="${W - PR}" y1="${zeroY.toFixed(1)}" y2="${zeroY.toFixed(1)}"
+          style="stroke:var(--line)" stroke-width="1"/>
+        <text x="${PL - 6}" y="${(y(hi) + 3.5).toFixed(1)}" text-anchor="end"
+          style="fill:var(--dim)" font-size="9">${hi > 0 ? '+' : ''}${hi.toFixed(2)}</text>
+        <text x="${PL - 6}" y="${(y(lo) + 3.5).toFixed(1)}" text-anchor="end"
+          style="fill:var(--dim)" font-size="9">${lo.toFixed(2)}</text>
+        ${items.map((it, i) => {
+          const cx = PL + slot * i + slot / 2;
+          if (it.v == null) {
+            return `<text x="${cx.toFixed(1)}" y="${H - 14}" text-anchor="middle"
+              style="fill:var(--dim)" font-size="9">${escapeHtml(it.label)}</text>`;
+          }
+          const yv = y(it.v);
+          const top = Math.min(yv, zeroY), hgt = Math.max(1, Math.abs(zeroY - yv));
+          const col = it.v >= 0 ? 'var(--green)' : 'var(--red)';
+          return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${top.toFixed(1)}"
+              width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="2" style="fill:${col}"
+              opacity="0.85"><title>${escapeHtml(it.label)}: ${it.v > 0 ? '+' : ''}${it.v.toFixed(2)}${
+              it.n != null ? ' over ' + it.n + ' trades' : ''}</title></rect>
+            <text x="${cx.toFixed(1)}" y="${H - 14}" text-anchor="middle"
+              style="fill:var(--dim)" font-size="9">${escapeHtml(it.label)}</text>
+            <text x="${cx.toFixed(1)}" y="${H - 4}" text-anchor="middle"
+              style="fill:var(--dim)" font-size="8">${it.n == null ? '' : 'n=' + it.n}</text>`;
+        }).join('')}
+      </svg>`;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CELLS
+       ══════════════════════════════════════════════════════ */
+
     function premPctCell(a) {
-      if (!a.resolved) return '<span class="muted">-</span> <span class="muted">(0 resolved)</span>';
+      if (!a.resolved) return '<span class="muted">-</span>';
       const pct = a.winRate * 100;
       const cls = pct >= 55 ? 'call' : (pct >= 45 ? '' : 'put');
       const ci = a.ci
@@ -255,46 +366,65 @@
         + 'out of session rather than hitting a target">' + a.un + '</span>';
     }
 
-    function premRowHtml(label, rows, base, isTotal) {
-      const a = aggPrem(rows);
+    /* One bucket row. Premium group on the left, direction group on the right,
+       each with its OWN n - they cover different ranges and universes. */
+    function bucketRow(label, pRows, dRows, base, isTotal, withDirection) {
+      const a = aggPrem(pRows);
+      let dir = '';
+      if (withDirection) {
+        const d = aggPerf(dRows || []);
+        dir = '<td class="grp-start">' + (d.n || '<span class="muted">0</span>') + '</td>'
+          + '<td>' + (d.n60 ? pctCell(d.w60, d.n60) : '<span class="muted">-</span>') + '</td>'
+          + '<td>' + signedCell(d.avg60) + '</td>'
+          + '<td>' + (d.edge == null ? '<span class="muted">-</span>'
+                      : '<span class="' + (d.edge >= 1.5 ? 'call' : (d.edge >= 1 ? '' : 'put'))
+                        + '">' + d.edge.toFixed(2) + '</span>') + '</td>';
+      }
       return '<tr class="' + (isTotal ? 'perf-total' : '') + '">'
         + '<td>' + escapeHtml(label) + '</td>'
         + '<td>' + a.n + '</td>'
         + '<td>' + premPctCell(a) + '</td>'
         + '<td>' + probCell(a, base) + '</td>'
-        + '<td><span class="call">' + a.tp + '</span></td>'
-        + '<td><span class="put">' + a.sl + '</span></td>'
         + '<td>' + censorCell(a) + '</td>'
         + '<td>' + signedCell(a.avgPnl) + '</td>'
-        + '<td>' + signedCell(a.avgPct, 1) + '</td>'
         + '<td>' + pfCell(a.pf) + '</td>'
         + '<td><span class="put">' + (a.avgMae == null ? '-' : a.avgMae.toFixed(2)) + '</span></td>'
-        + '<td><span class="call">' + (a.avgMfe == null ? '-' : a.avgMfe.toFixed(2)) + '</span></td>'
-        + '<td>' + (a.medMins == null ? '<span class="muted">-</span>' : a.medMins.toFixed(0)) + '</td>'
-        + '<td>' + (a.avgIv == null ? '<span class="muted">-</span>' : (a.avgIv * 100).toFixed(1) + '%') + '</td>'
+        + dir
         + '</tr>';
     }
 
-    const PREM_HEAD =
-      '<thead><tr>'
-      + '<th>Bucket</th>'
-      + '<th title="Trades taken in this bucket">N</th>'
-      + '<th title="Wins as a share of RESOLVED trades, with a 95% Wilson interval. '
-      + '* marks a bucket with fewer than ' + PREM_MIN_N + ' resolved trades.">Win %</th>'
-      + '<th title="Win rate shrunk toward the overall base rate, so a tiny bucket cannot '
-      + 'read 0% or 100%. A base rate from history, not a forecast.">P(win)</th>'
-      + '<th title="Hit the profit target first">TP</th>'
-      + '<th title="Hit the stop first">SL</th>'
-      + '<th title="Still open at the close - ran out of session rather than resolving. '
-      + 'Highlighted above 40%.">Open</th>'
-      + '<th title="Average profit per trade in premium dollars, unresolved marked at the close">Avg $</th>'
-      + '<th title="Average return on the premium paid">Avg %</th>'
-      + '<th title="Gross profit divided by gross loss. Below 1 loses money.">PF</th>'
-      + '<th title="Average max adverse excursion - the heat endured before the exit">MAE</th>'
-      + '<th title="Average max favourable excursion reached before the exit">MFE</th>'
-      + '<th title="Median minutes from entry to exit">Min</th>'
-      + '<th title="Average implied volatility at entry">IV</th>'
-      + '</tr></thead>';
+    function tableHead(withDirection) {
+      const prem =
+          '<th title="Trades taken in this bucket">N</th>'
+        + '<th title="Wins as a share of RESOLVED trades, with a 95% Wilson interval. '
+        + '* marks a bucket with fewer than ' + PREM_MIN_N + ' resolved trades.">Win %</th>'
+        + '<th title="Win rate shrunk toward the overall base rate, so a tiny bucket cannot '
+        + 'read 0% or 100%. A base rate from history, not a forecast.">P(win)</th>'
+        + '<th title="Still open at the close - ran out of session rather than resolving">Open</th>'
+        + '<th title="Average profit per trade, in premium dollars per contract">Avg $</th>'
+        + '<th title="Gross profit divided by gross loss. Below 1 loses money.">PF</th>'
+        + '<th title="Average max adverse excursion - the heat endured before the exit">MAE</th>';
+      const dir = withDirection
+        ? '<th class="grp-start" title="ALERTED signals in this bucket over the full signal history">N</th>'
+          + '<th title="Share where the underlying was on the signal\'s side 60 minutes later">Hit 60m</th>'
+          + '<th title="Average direction-adjusted move in points at +60m">Avg move</th>'
+          + '<th title="Max favourable over max adverse excursion. Above 1.5 means the move paid for the drawdown.">MFE:MAE</th>'
+        : '';
+      const groups = '<tr class="grp-row"><th></th>'
+        + '<th colspan="7">Premium P&amp;L <span class="grp-sub">what the contract paid</span></th>'
+        + (withDirection
+            ? '<th colspan="4" class="grp-start">Direction <span class="grp-sub">where the underlying went</span></th>'
+            : '')
+        + '</tr>';
+      return '<thead>' + groups + '<tr><th>Bucket</th>' + prem + dir + '</tr></thead>';
+    }
+
+    function section(title, hint, body, withDirection) {
+      if (!body) return '';
+      return '<div class="perf-section-title">' + title
+        + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</div>'
+        + '<table class="perf-tbl">' + tableHead(withDirection) + '<tbody>' + body + '</tbody></table>';
+    }
 
     /* Buckets rvol_tod - chain volume against the same minute in earlier
        sessions, which is the dashboard's one definition of RVOL. */
@@ -310,34 +440,38 @@
     const PREM_RVOL_ORDER = ['Quiet (RVOL < 0.75)', 'Normal (0.75 - 1.25)',
                              'Elevated (1.25 - 2)', 'Surge (RVOL 2+)', 'Unknown'];
 
-    function premSection(title, hint, bodyHtml) {
-      if (!bodyHtml) return '';
-      return '<div class="perf-section-title">' + title
-        + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</div>'
-        + '<table class="perf-tbl">' + PREM_HEAD + '<tbody>' + bodyHtml + '</tbody></table>';
-    }
+    function hourOf(r) { return tsKey(r.candle_time_ny).slice(11, 13); }
 
-    function renderPremium(rows) {
+    /* ══════════════════════════════════════════════════════
+       RENDER
+       ══════════════════════════════════════════════════════ */
+
+    function renderPerformance(noFeedReason) {
       const el = document.getElementById('prem-body');
       if (!el) return;
+      const rows = premRows || [];
+      const dRows = perfRows || [];
 
-      if (!rows || !rows.length) {
-        /* Name the range that was actually queried. "No trades" has two very
-           different causes - a range with no A/B signals, and a range with no
-           premium snapshots at all - and they need different reactions. */
+      if (noFeedReason) {
+        el.innerHTML = '<div class="perf-empty"><b>' + escapeHtml(noFeedReason) + '.</b><br>'
+          + 'Premium P&amp;L prices every trade from an option chain snapshot, so it needs a '
+          + 'premium feed for this symbol. Direction stats below still work.</div>'
+          + (dRows.length ? directionOnlyBlock(dRows) : '');
+        updateRowCounts();
+        return;
+      }
+
+      if (!rows.length && !dRows.length) {
         const c = getDateContext();
         const span = (c.start || c.end)
           ? `<b>${escapeHtml(c.start || '...')}</b> to <b>${escapeHtml(c.end || '...')}</b>`
           : 'all available history';
-        const beforeCoverage = c.end && c.end < PREM_FIRST_DAY;
-        el.innerHTML = '<div class="perf-empty">No backtested trades for ' + span + '.<br>'
-          + (beforeCoverage
+        const before = c.end && c.end < PREM_FIRST_DAY;
+        el.innerHTML = '<div class="perf-empty">Nothing to show for ' + span + '.<br>'
+          + (before
               ? 'That range ends before option premium collection started on <b>'
-                + PREM_FIRST_DAY + '</b>. The signal history goes back further, but a trade '
-                + 'cannot be priced without a chain snapshot, so the backtest cannot reach it.'
-              : 'Either there were no ' + premGrades.join('/') + ' candles with a tradeable '
-                + 'direction in that range, or premium snapshots are missing for it - '
-                + 'collection begins <b>' + PREM_FIRST_DAY + '</b>.')
+                + PREM_FIRST_DAY + '</b>.'
+              : 'No ' + premGrades.join('/') + ' candles with a tradeable direction in that range.')
           + '</div>';
         updateRowCounts();
         return;
@@ -345,72 +479,155 @@
 
       const all = aggPrem(rows);
       const base = all.resolved ? all.tp / all.resolved : 0.5;
+      const dAll = aggPerf(dRows);
       const days = new Set(rows.map(r => r.trade_date)).size;
-      const sess = days === 1 ? '' : 's';
+      const dDays = new Set(dRows.map(r => r.trade_date)).size;
 
-      /* ── Summary KPIs ── */
-      const ciTxt = all.ci
-        ? (all.ci[0] * 100).toFixed(0) + '-' + (all.ci[1] * 100).toFixed(0) + '%'
-        : '-';
-      const kpiDefs = [
-        ['Trades', String(all.n), 'over ' + days + ' session' + sess],
-        ['Win rate', all.resolved ? (all.winRate * 100).toFixed(0) + '%' : '-',
-          all.tp + '/' + all.resolved + ' resolved - 95% CI ' + ciTxt],
-        ['Expectancy', all.avgPnl == null ? '-' : (all.avgPnl > 0 ? '+' : '') + all.avgPnl.toFixed(3),
-          'premium $ per trade, per contract'],
-        ['Avg return', all.avgPct == null ? '-' : (all.avgPct > 0 ? '+' : '') + all.avgPct.toFixed(1) + '%',
-          'on the premium paid'],
+      /* ── Hero: four plain-language numbers, then the equity curve ── */
+      const money = v => (v == null ? '-' : (v > 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2).replace('-', ''));
+      const net = all.pnl;
+      const kpis = [
+        ['Net P&L', (net > 0 ? '+' : net < 0 ? '-' : '') + '$' + Math.abs(net).toFixed(2),
+         `across ${all.n} trade${all.n === 1 ? '' : 's'}, holding 1 contract each`],
+        ['Win rate', all.resolved ? Math.round(all.winRate * 100) + '%' : '-',
+         `${all.tp} won, ${all.sl} lost, ${all.un} still open at the close`],
+        ['Average trade', (all.avgPnl == null ? '-'
+            : (all.avgPnl > 0 ? '+' : all.avgPnl < 0 ? '-' : '') + '$' + Math.abs(all.avgPnl).toFixed(2)),
+         'what one trade is worth on average'],
         ['Profit factor', all.pf == null ? '-' : (isFinite(all.pf) ? all.pf.toFixed(2) : '∞'),
-          'gross profit / gross loss'],
-        ['Avg MAE', all.avgMae == null ? '-' : all.avgMae.toFixed(2),
-          'heat endured before the exit'],
-        ['Still open', String(all.un),
-          ((all.censored || 0) * 100).toFixed(0) + '% ran out of session']
-      ];
-      const kpis = kpiDefs.map(k => {
+         all.pf == null ? 'no resolved trades yet'
+           : (isFinite(all.pf) ? '$' + all.pf.toFixed(2) + ' won for every $1.00 lost'
+                               : 'no losing trades yet')]
+      ].map(k => {
         const v = k[1];
-        const cls = v.charAt(0) === '+' ? 'call' : ((v.charAt(0) === '-' && v.length > 1) ? 'put' : '');
-        return '<div class="prem-kpi"><div class="prem-kpi-label">' + k[0] + '</div>'
-          + '<div class="prem-kpi-value ' + cls + '">' + v + '</div>'
-          + '<div class="prem-kpi-sub">' + k[2] + '</div></div>';
+        const cls = v.indexOf('+') === 0 ? 'call' : (v.indexOf('-') === 0 ? 'put' : '');
+        return '<div class="kpi"><div class="kpi-label">' + k[0] + '</div>'
+          + '<div class="kpi-value ' + cls + '">' + v + '</div>'
+          + '<div class="kpi-sub">' + k[2] + '</div></div>';
       }).join('');
 
-      /* ── Buckets ── */
+      /* ── Charts ── */
+      const hours = {};
+      rows.forEach(r => { (hours[hourOf(r)] = hours[hourOf(r)] || []).push(r); });
+      const hourItems = Object.keys(hours).sort().map(h => {
+        const a = aggPrem(hours[h]);
+        return { label: h + ':00', v: a.avgPnl, n: a.n };
+      });
+
+      const gradeItems = ['A', 'B', 'C', 'D'].map(g => {
+        const set = rows.filter(r => r.grade === g);
+        if (!set.length) return null;
+        const a = aggPrem(set);
+        return { label: 'Grade ' + g, v: a.avgPnl, n: a.n };
+      }).filter(Boolean);
+
+      const smallAll = all.resolved < PREM_MIN_N;
+
+      /* ── Bucket tables ── */
       const byGrade = ['A', 'B', 'C', 'D'].map(g => {
         const set = rows.filter(r => r.grade === g);
-        return set.length ? premRowHtml('Grade ' + g, set, base, false) : '';
-      }).join('') + premRowHtml('All trades', rows, base, true);
+        const dset = dRows.filter(r => r.grade === g);
+        return (set.length || dset.length)
+          ? bucketRow('Grade ' + g, set, dset, base, false, true) : '';
+      }).join('') + bucketRow('All', rows, dRows, base, true, true);
+
+      const byDir = ['CALL', 'PUT'].map(d => {
+        const set = rows.filter(r => r.direction === d);
+        const dset = dRows.filter(r => r.direction === d);
+        return (set.length || dset.length)
+          ? bucketRow(d, set, dset, base, false, true) : '';
+      }).join('');
+
+      const hourKeys = Array.from(new Set(
+        Object.keys(hours).concat(dRows.map(hourOf)))).sort();
+      const byHour = hourKeys.map(h =>
+        bucketRow(h + ':00 - ' + h + ':59', hours[h] || [],
+                  dRows.filter(r => hourOf(r) === h), base, false, true)).join('');
 
       const byAlert = [['Alerted', true], ['Near-miss (never alerted)', false]].map(p => {
         const set = rows.filter(r => !!r.has_signal === p[1]);
-        return set.length ? premRowHtml(p[0], set, base, false) : '';
+        // every row in the direction set is by definition an alerted signal
+        const dset = p[1] ? dRows : [];
+        return set.length ? bucketRow(p[0], set, dset, base, false, true) : '';
       }).join('');
-
-      const hours = {};
-      rows.forEach(r => {
-        const h = tsKey(r.candle_time_ny).slice(11, 13);
-        (hours[h] = hours[h] || []).push(r);
-      });
-      const byHour = Object.keys(hours).sort().map(h =>
-        premRowHtml(h + ':00 - ' + h + ':59', hours[h], base, false)).join('');
 
       const rv = {};
       rows.forEach(r => { const b = rvolBucket(r); (rv[b] = rv[b] || []).push(r); });
       const byRvol = PREM_RVOL_ORDER.filter(k => rv[k]).map(k =>
-        premRowHtml(k, rv[k], base, false)).join('');
+        bucketRow(k, rv[k], null, base, false, false)).join('');
 
       const byBias = ['CALL-HEAVY', 'BALANCED', 'PUT-HEAVY'].map(b => {
         const set = rows.filter(r => r.side_bias === b);
-        return set.length ? premRowHtml(b, set, base, false) : '';
+        return set.length ? bucketRow(b, set, null, base, false, false) : '';
       }).join('');
 
-      const byDir = ['CALL', 'PUT'].map(d => {
-        const set = rows.filter(r => r.direction === d);
-        return set.length ? premRowHtml(d, set, base, false) : '';
-      }).join('');
+      el.innerHTML =
+        (smallAll
+          ? '<div class="prem-warn"><b>Small sample.</b> ' + all.resolved + ' resolved trade'
+            + (all.resolved === 1 ? '' : 's') + ' over ' + days + ' session' + (days === 1 ? '' : 's')
+            + '. Every bucket is under the ' + PREM_MIN_N + '-trade threshold and marked '
+            + '<span class="prem-small">*</span>. Directional, not conclusive.</div>'
+          : '')
 
-      /* ── Ledger ── */
-      const ledger = rows.slice().reverse().map(r => {
+        + '<div class="hero">'
+        +   '<div class="hero-kpis">' + kpis + '</div>'
+        +   '<div class="hero-chart">'
+        +     '<div class="chart-title">Cumulative P&amp;L'
+        +       '<span class="hint">every trade in order, 1 contract each</span></div>'
+        +     svgEquity(rows)
+        +     svgOutcomeBar(all)
+        +   '</div>'
+        + '</div>'
+
+        + '<div class="chart-grid">'
+        +   '<div class="chart-card"><div class="chart-title">Average P&amp;L by hour'
+        +     '<span class="hint">when the signal fired (NY)</span></div>'
+        +     svgSignedBars(hourItems, 'dollars') + '</div>'
+        +   '<div class="chart-card"><div class="chart-title">Average P&amp;L by grade'
+        +     '<span class="hint">is the score ranking your trades?</span></div>'
+        +     svgSignedBars(gradeItems, 'dollars') + '</div>'
+        + '</div>'
+
+        + '<div class="perf-note">'
+        +   '<b>Two measures, two sample sizes.</b> <b>Premium P&amp;L</b> is what the contract '
+        +   'paid - real money, over ' + days + ' session' + (days === 1 ? '' : 's') + ' of premium '
+        +   'history (from ' + PREM_FIRST_DAY + '). <b>Direction</b> is whether the underlying went '
+        +   'the way the signal called, in points, over ' + dDays + ' session' + (dDays === 1 ? '' : 's')
+        +   ' of ALERTED signals. The direction sample is bigger; only the premium side knows about '
+        +   'spread, theta and what you would actually have been filled at. Each group carries its '
+        +   'own N - do not read them as one sample.'
+        + '</div>'
+
+        + section('By Grade', 'does a higher score earn more?', byGrade, true)
+        + section('Alerted vs Near-miss', 'is the alert filter adding anything over the grade alone?',
+                  byAlert, true)
+        + section('By Hour of Day (NY)',
+                  'read Open first - late entries resolve less often because the session ends, '
+                  + 'not because the hour is bad', byHour, true)
+        + section('By Direction', '', byDir, true)
+        + section('By Relative Volume (time of day)',
+                  'chain volume vs the same minute in earlier sessions', byRvol, false)
+        + section('By Put/Call Bias at Entry', 'chain-wide positioning when the trade was taken',
+                  byBias, false)
+        + ledgerHtml(rows);
+
+      updateRowCounts();
+    }
+
+    /* Shown when a strategy has no premium feed - the direction half still
+       works, so the tab is not empty. */
+    function directionOnlyBlock(dRows) {
+      const byGrade = ['A', 'B', 'C', 'D'].map(g => {
+        const set = dRows.filter(r => r.grade === g);
+        return set.length ? bucketRow('Grade ' + g, [], set, 0.5, false, true) : '';
+      }).join('') + bucketRow('All', [], dRows, 0.5, true, true);
+      return section('By Grade', 'direction only - no premium feed for this symbol',
+                     byGrade, true);
+    }
+
+    function ledgerHtml(rows) {
+      if (!rows.length) return '';
+      const body = rows.slice().reverse().map(r => {
         const oCls = r.outcome === 'TP' ? 'call' : (r.outcome === 'SL' ? 'put' : 'muted');
         /* C/P, not P/C: the signal modal and the Option Volume tab both show
            call/put, and the same number under an inverted label in a third
@@ -442,31 +659,7 @@
                                    : '<span class="muted">near-miss</span>') + '</td>'
           + '</tr>';
       }).join('');
-
-      const warn = all.resolved < PREM_MIN_N
-        ? '<div class="prem-warn"><b>Small sample.</b> ' + all.resolved + ' resolved trade'
-          + (all.resolved === 1 ? '' : 's') + ' over ' + days + ' session' + sess
-          + '. Every bucket below is under the ' + PREM_MIN_N + '-trade threshold and marked '
-          + '<span class="prem-small">*</span>. Treat all of it as directional, not '
-          + 'conclusive - these numbers become meaningful as premium history accumulates.</div>'
-        : '';
-
-      el.innerHTML = warn
-        + '<div class="prem-kpis">' + kpis + '</div>'
-        + premSection('By Grade',
-            'is the score ranking your trades, in actual premium?', byGrade)
-        + premSection('Alerted vs Near-miss',
-            'is the alert filter adding anything over the grade alone?', byAlert)
-        + premSection('By Hour of Day (NY)',
-            'read the Open column first - late entries resolve less often because the '
-            + 'session ends, not because the hour is bad', byHour)
-        + premSection('By Relative Volume (time of day)',
-            'does a busier-than-usual tape pay better? chain volume vs the same '
-            + 'minute in earlier sessions', byRvol)
-        + premSection('By Put/Call Bias at Entry',
-            'chain-wide positioning when the trade was taken', byBias)
-        + premSection('By Direction', '', byDir)
-        + '<div class="perf-section-title">Trade Ledger <span class="hint">newest first - '
+      return '<div class="perf-section-title">Trade Ledger <span class="hint">newest first - '
         + 'every signal candle priced at the POC strike</span></div>'
         + '<div class="prem-ledger-wrap"><table class="perf-tbl prem-ledger"><thead><tr>'
         + '<th>Time</th><th>Gr</th><th>Dir</th><th>Strike</th>'
@@ -477,12 +670,10 @@
         + '<th title="Call volume across the whole chain in this candle - the same figure the signal modal and the Option Volume tab show">Call vol</th>'
         + '<th title="Put volume across the whole chain in this candle">Put vol</th>'
         + '<th title="Call/put ratio across the chain. Above 1 is call-heavy. Same orientation as the signal modal.">C/P</th>'
-        + '<th title="Relative volume for this time of day - total chain volume vs the same minute in earlier sessions">RVOL</th>'
+        + '<th title="Relative volume for this time of day - chain volume vs the same minute in earlier sessions">RVOL</th>'
         + '<th title="Total premium traded across the chain in this candle">$ traded</th>'
-        + '<th title="The POC contract\'s own volume in this candle - the liquidity you would actually have to fill, not the whole chain">POC vol</th>'
+        + '<th title="The POC contract\'s own volume in this candle - the liquidity you would actually have to fill">POC vol</th>'
         + '<th>IV</th><th title="IV change from entry to exit">&Delta;IV</th>'
         + '<th>Alerted</th>'
-        + '</tr></thead><tbody>' + ledger + '</tbody></table></div>';
-
-      updateRowCounts();
+        + '</tr></thead><tbody>' + body + '</tbody></table></div>';
     }

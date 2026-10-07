@@ -257,7 +257,6 @@
       lastAnomalyTimestamp = null;
 
       loadAll();
-      if (activeTab === 'perf') loadPerf(true);
       if (activeTab === 'prem') loadPremium(true);
     }
 

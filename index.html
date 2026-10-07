@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.1.2">
+  <meta name="build" content="2.2.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.1.2">
-  <link rel="stylesheet" href="css/base.css?v=2.1.2">
-  <link rel="stylesheet" href="css/cards.css?v=2.1.2">
-  <link rel="stylesheet" href="css/tables.css?v=2.1.2">
-  <link rel="stylesheet" href="css/layout.css?v=2.1.2">
-  <link rel="stylesheet" href="css/panels.css?v=2.1.2">
-  <link rel="stylesheet" href="css/overlays.css?v=2.1.2">
-  <link rel="stylesheet" href="css/widgets.css?v=2.1.2">
+  <link rel="stylesheet" href="css/tokens.css?v=2.2.0">
+  <link rel="stylesheet" href="css/base.css?v=2.2.0">
+  <link rel="stylesheet" href="css/cards.css?v=2.2.0">
+  <link rel="stylesheet" href="css/tables.css?v=2.2.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.2.0">
+  <link rel="stylesheet" href="css/panels.css?v=2.2.0">
+  <link rel="stylesheet" href="css/overlays.css?v=2.2.0">
+  <link rel="stylesheet" href="css/widgets.css?v=2.2.0">
 </head>
 
 <body>
@@ -315,8 +315,7 @@
       <div class="tab active" onclick="switchTab('flow')">Flow Signal</div>
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
       <div class="tab" onclick="switchTab('anomaly')">Anomalies</div>
-      <div class="tab" onclick="switchTab('perf')">Signal Performance</div>
-      <div class="tab" onclick="switchTab('prem')">Premium Backtest</div>
+      <div class="tab" onclick="switchTab('prem')">Performance</div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -535,21 +534,7 @@
     </div>
   </div>
 
-  <!-- TAB 4: SIGNAL PERFORMANCE -->
-  <div id="tab-perf" class="tab-content">
-    <div class="perf-wrap" id="perf-wrap">
-      <div class="perf-note">
-        Forward SPY move after every <b>ALERTED</b> signal in the selected date range, measured from the
-        signal candle's price. <b>Move</b> is direction-adjusted — positive means price went the way the
-        signal called. <b>MFE</b> / <b>MAE</b> are the best and worst excursions reached within 60 minutes;
-        for 0DTE premium, MFE is your realistic exit and MAE is the heat you must survive to get there.
-        Underlying points only — this does not model option premium, spread or theta.
-      </div>
-      <div id="perf-body"></div>
-    </div>
-  </div>
-
-  <!-- TAB 5: PREMIUM BACKTEST -->
+  <!-- TAB 4: PERFORMANCE (premium P&L + direction) -->
   <div id="tab-prem" class="tab-content">
     <div class="perf-wrap" id="prem-wrap">
       <div class="perf-note">
@@ -608,8 +593,7 @@
     <kbd>1</kbd> Flow tab &nbsp;
     <kbd>2</kbd> Volume tab &nbsp;
     <kbd>3</kbd> Anomalies tab &nbsp;
-    <kbd>4</kbd> Performance tab &nbsp;
-    <kbd>5</kbd> Premium backtest<br>
+    <kbd>4</kbd> Performance tab<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Dismiss alert / clear filters<br>
     <kbd>H</kbd> Compact header &nbsp;
@@ -650,19 +634,19 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.1.2"></script>
-  <script src="js/alerts.js?v=2.1.2"></script>
-  <script src="js/chrome.js?v=2.1.2"></script>
-  <script src="js/news.js?v=2.1.2"></script>
-  <script src="js/signal.js?v=2.1.2"></script>
-  <script src="js/format.js?v=2.1.2"></script>
-  <script src="js/filters.js?v=2.1.2"></script>
-  <script src="js/charts.js?v=2.1.2"></script>
-  <script src="js/perf.js?v=2.1.2"></script>
-  <script src="js/rpc.js?v=2.1.2"></script>
-  <script src="js/render.js?v=2.1.2"></script>
-  <script src="js/premium.js?v=2.1.2"></script>
-  <script src="js/main.js?v=2.1.2"></script>
+  <script src="js/config.js?v=2.2.0"></script>
+  <script src="js/alerts.js?v=2.2.0"></script>
+  <script src="js/chrome.js?v=2.2.0"></script>
+  <script src="js/news.js?v=2.2.0"></script>
+  <script src="js/signal.js?v=2.2.0"></script>
+  <script src="js/format.js?v=2.2.0"></script>
+  <script src="js/filters.js?v=2.2.0"></script>
+  <script src="js/charts.js?v=2.2.0"></script>
+  <script src="js/perf.js?v=2.2.0"></script>
+  <script src="js/rpc.js?v=2.2.0"></script>
+  <script src="js/render.js?v=2.2.0"></script>
+  <script src="js/premium.js?v=2.2.0"></script>
+  <script src="js/main.js?v=2.2.0"></script>
 </body>
 
 </html>
