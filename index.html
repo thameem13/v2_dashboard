@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.0.0">
+  <meta name="build" content="2.1.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.0.0">
-  <link rel="stylesheet" href="css/base.css?v=2.0.0">
-  <link rel="stylesheet" href="css/cards.css?v=2.0.0">
-  <link rel="stylesheet" href="css/tables.css?v=2.0.0">
-  <link rel="stylesheet" href="css/layout.css?v=2.0.0">
-  <link rel="stylesheet" href="css/panels.css?v=2.0.0">
-  <link rel="stylesheet" href="css/overlays.css?v=2.0.0">
-  <link rel="stylesheet" href="css/widgets.css?v=2.0.0">
+  <link rel="stylesheet" href="css/tokens.css?v=2.1.0">
+  <link rel="stylesheet" href="css/base.css?v=2.1.0">
+  <link rel="stylesheet" href="css/cards.css?v=2.1.0">
+  <link rel="stylesheet" href="css/tables.css?v=2.1.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.1.0">
+  <link rel="stylesheet" href="css/panels.css?v=2.1.0">
+  <link rel="stylesheet" href="css/overlays.css?v=2.1.0">
+  <link rel="stylesheet" href="css/widgets.css?v=2.1.0">
 </head>
 
 <body>
@@ -316,6 +316,7 @@
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
       <div class="tab" onclick="switchTab('anomaly')">Anomalies</div>
       <div class="tab" onclick="switchTab('perf')">Signal Performance</div>
+      <div class="tab" onclick="switchTab('prem')">Premium Backtest</div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -548,6 +549,44 @@
     </div>
   </div>
 
+  <!-- TAB 5: PREMIUM BACKTEST -->
+  <div id="tab-prem" class="tab-content">
+    <div class="perf-wrap" id="prem-wrap">
+      <div class="perf-note">
+        What the signal was actually worth <b>as a contract</b>. Every graded candle buys the
+        <b>POC strike</b>, <b>next-day expiry</b>, at the quoted <b>ask</b>; the session is then
+        walked forward through the 5-minute chain snapshots and the trade exits on the first
+        touch of the target or the stop, sold at the <b>bid</b>. Anything still open at the
+        last snapshot is <b>flattened at the close</b> and counted as neither a win nor a loss.
+        <br>
+        Exits are <b>same-session only</b> - the feed snapshots just the next-day chain, so a
+        contract bought today is never quoted again tomorrow and an overnight hold cannot be
+        measured at all. Premium history begins <b>2026-10-02</b>.
+      </div>
+      <div class="prem-toolbar">
+        <span class="panel-title">Rules</span>
+        <label class="prem-ctrl">Take profit
+          <input type="number" id="prem-tp" step="0.05" min="0.05" value="0.50"
+                 onchange="changePremParams()" title="Profit target in premium dollars">
+        </label>
+        <label class="prem-ctrl">Stop loss
+          <input type="number" id="prem-sl" step="0.05" min="0.05" value="0.50"
+                 onchange="changePremParams()" title="Stop in premium dollars">
+        </label>
+        <label class="prem-ctrl">Grades
+          <select id="prem-grades" onchange="changePremParams()"
+                  title="Which graded candles to treat as entries">
+            <option value="ab">A + B</option>
+            <option value="a">A only</option>
+            <option value="all">A to D</option>
+          </select>
+        </label>
+        <button class="preset-btn" onclick="loadPremium(true)" title="Re-run the backtest">Re-run</button>
+      </div>
+      <div id="prem-body"></div>
+    </div>
+  </div>
+
   <div id="foot">
     <span id="foot-status">observe &amp; log - polarity unconfirmed</span>
     <span id="foot-build" title="Deployed build. If this does not match the version you just pushed, you are on a cached copy - hard reload with Ctrl+Shift+R.">build -</span>
@@ -564,7 +603,8 @@
     <kbd>1</kbd> Flow tab &nbsp;
     <kbd>2</kbd> Volume tab &nbsp;
     <kbd>3</kbd> Anomalies tab &nbsp;
-    <kbd>4</kbd> Performance tab<br>
+    <kbd>4</kbd> Performance tab &nbsp;
+    <kbd>5</kbd> Premium backtest<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Dismiss alert / clear filters<br>
     <kbd>H</kbd> Compact header &nbsp;
@@ -605,18 +645,19 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.0.0"></script>
-  <script src="js/alerts.js?v=2.0.0"></script>
-  <script src="js/chrome.js?v=2.0.0"></script>
-  <script src="js/news.js?v=2.0.0"></script>
-  <script src="js/signal.js?v=2.0.0"></script>
-  <script src="js/format.js?v=2.0.0"></script>
-  <script src="js/filters.js?v=2.0.0"></script>
-  <script src="js/charts.js?v=2.0.0"></script>
-  <script src="js/perf.js?v=2.0.0"></script>
-  <script src="js/rpc.js?v=2.0.0"></script>
-  <script src="js/render.js?v=2.0.0"></script>
-  <script src="js/main.js?v=2.0.0"></script>
+  <script src="js/config.js?v=2.1.0"></script>
+  <script src="js/alerts.js?v=2.1.0"></script>
+  <script src="js/chrome.js?v=2.1.0"></script>
+  <script src="js/news.js?v=2.1.0"></script>
+  <script src="js/signal.js?v=2.1.0"></script>
+  <script src="js/format.js?v=2.1.0"></script>
+  <script src="js/filters.js?v=2.1.0"></script>
+  <script src="js/charts.js?v=2.1.0"></script>
+  <script src="js/perf.js?v=2.1.0"></script>
+  <script src="js/rpc.js?v=2.1.0"></script>
+  <script src="js/render.js?v=2.1.0"></script>
+  <script src="js/premium.js?v=2.1.0"></script>
+  <script src="js/main.js?v=2.1.0"></script>
 </body>
 
 </html>

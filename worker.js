@@ -25,6 +25,11 @@ const ALLOWED = new Set([
   'v2_anomalies_range_by_strategy',
   'v2_regime_context_by_strategy',
   'v2_signal_performance_by_strategy',
+  // Premium backtest tab. v2_premium_sources reports which strategies have an
+  // option-premium feed, so the tab can say "no feed yet" rather than render
+  // an empty table that reads as "no trades won".
+  'v2_premium_sources',
+  'v2_premium_backtest_by_strategy',
   // The original SPY-only set. Kept callable so a cached page from before the
   // switch keeps working, and so there is something to fall back to.
   'v2_dashboard_today',

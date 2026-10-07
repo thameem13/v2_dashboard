@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.0.0';
-    const BUILD_TS = '2026-10-04T17:18Z';
+    const BUILD = '2.1.0';
+    const BUILD_TS = '2026-10-06T00:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -49,6 +49,20 @@
     let perfRows = null;           // Rows from v2_signal_performance
     let perfKey = null;            // Date-range key the perfRows were loaded for
     let perfLoading = false;
+
+    /* Premium backtest tab. premTP/premSL are RPC parameters rather than a
+       browser-side filter: they decide which bar a trade exits on, which
+       cannot be recovered from an already-resolved row set. premSources is
+       the per-strategy premium-feed registry, fetched once - it is a property
+       of the strategy list, not of the selected strategy, so it survives a
+       strategy switch. */
+    let premRows = null;
+    let premKey = null;
+    let premLoading = false;
+    let premSources = null;
+    let premTP = 0.50;
+    let premSL = 0.50;
+    let premGrades = ['A', 'B'];
 
     /* The strategy the dashboard is showing. Every RPC takes it and resolves
        it to a symbol in SQL, so the browser never needs to know which table a

@@ -8,17 +8,21 @@
        ══════════════════════════════════════════════════════ */
     function switchTab(name) {
       activeTab = name;
-      const order = ['flow', 'vol', 'anomaly', 'perf'];
+      /* This array is matched against the .tab elements BY INDEX, so it has to
+         stay in the same order as the markup in index.html. A tab added to one
+         and not the other highlights the wrong heading, silently. */
+      const order = ['flow', 'vol', 'anomaly', 'perf', 'prem'];
       document.querySelectorAll('.tab').forEach((t, i) => {
         t.classList.toggle('active', order[i] === name);
       });
-      document.getElementById('tab-flow').classList.toggle('active', name === 'flow');
-      document.getElementById('tab-vol').classList.toggle('active', name === 'vol');
-      document.getElementById('tab-anomaly').classList.toggle('active', name === 'anomaly');
-      document.getElementById('tab-perf').classList.toggle('active', name === 'perf');
+      order.forEach(id => {
+        const el = document.getElementById('tab-' + id);
+        if (el) el.classList.toggle('active', id === name);
+      });
       // The Columns menu is per-tab, so close whichever one is open.
       closeColumnMenus();
       if (name === 'perf') loadPerf();
+      if (name === 'prem') loadPremium();
       updateRowCounts();
     }
 
@@ -236,6 +240,13 @@
     }
 
     function updateRowCounts() {
+      if (activeTab === 'prem') {
+        const n = premRows ? premRows.length : 0;
+        const d = premRows ? new Set(premRows.map(r => r.trade_date)).size : 0;
+        document.getElementById('row-counts').textContent =
+          `${n} backtested trade${n === 1 ? '' : 's'} over ${d} session${d === 1 ? '' : 's'}`;
+        return;
+      }
       if (activeTab === 'perf') {
         const n = perfRows ? perfRows.length : 0;
         const days = perfRows ? new Set(perfRows.map(r => r.trade_date)).size : 0;

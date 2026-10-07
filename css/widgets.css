@@ -236,6 +236,138 @@
       padding: 14px 2px;
     }
 
+    /* ── PREMIUM BACKTEST TAB ──────────────────────────────────────────────
+       Reuses .perf-wrap / .perf-tbl / .perf-section-title / .hitbar wholesale;
+       only the pieces that do not already exist are defined here. */
+
+    .prem-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      margin: 8px 0;
+      background: var(--panel);
+      border-radius: var(--r-lg);
+      box-shadow: var(--sh-card);
+    }
+
+    .prem-ctrl {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+
+    .prem-ctrl input,
+    .prem-ctrl select {
+      font-family: var(--font-data);
+      font-size: var(--fs-base);
+      font-variant-numeric: tabular-nums;
+      color: var(--txt);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 3px 6px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .prem-ctrl input {
+      width: 68px;
+      text-align: right;
+    }
+
+    /* auto-fit rather than a fixed count, so this needs no media query to
+       reflow down to one column on a phone */
+    .prem-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+      gap: 8px;
+      margin: 10px 0 4px;
+    }
+
+    .prem-kpi {
+      background: var(--panel);
+      border-radius: var(--r-xl);
+      box-shadow: var(--sh-card);
+      padding: 9px 11px;
+    }
+
+    .prem-kpi-label {
+      font-family: var(--font-ui);
+      font-size: var(--fs-micro);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--dim);
+    }
+
+    .prem-kpi-value {
+      font-family: var(--font-data);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--fs-3xl);
+      font-weight: 700;
+      line-height: 1.15;
+      margin: 1px 0;
+    }
+
+    .prem-kpi-sub {
+      font-family: var(--font-ui);
+      font-size: var(--fs-micro);
+      color: var(--dim);
+      line-height: 1.35;
+    }
+
+    /* The sample-size warning. Amber rather than red: the numbers are not
+       wrong, they are just not yet conclusive. */
+    .prem-warn {
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      color: var(--txt);
+      background: var(--panel);
+      border-left: 3px solid var(--amber);
+      border-radius: var(--r-lg);
+      padding: 7px 10px;
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    .prem-small {
+      color: var(--amber);
+      font-weight: 700;
+      margin-left: 2px;
+      cursor: help;
+    }
+
+    .prem-censor {
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    /* The ledger is ~20 columns. It scrolls on its own rather than widening
+       the page, which would put every other section into horizontal scroll. */
+    .prem-ledger-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: var(--r-lg);
+    }
+
+    table.prem-ledger {
+      font-size: var(--fs-cell);
+      font-variant-numeric: tabular-nums;
+      min-width: 980px;
+    }
+
+    table.prem-ledger th,
+    table.prem-ledger td {
+      padding: 4px 7px;
+    }
+
     /* ══════════════════════════════════════════════════════
        OPTION VOLUME TAB — TIER 1 + 2
        ══════════════════════════════════════════════════════ */

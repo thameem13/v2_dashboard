@@ -248,6 +248,8 @@
       anomalyMap = {};
       perfRows = null;
       perfKey = null;
+      premRows = null;
+      premKey = null;
       priceHistory = [];
       flowHistory = [];
       regimeCtx = null;
@@ -256,6 +258,7 @@
 
       loadAll();
       if (activeTab === 'perf') loadPerf(true);
+      if (activeTab === 'prem') loadPremium(true);
     }
 
     function currentStrategyLabel() {

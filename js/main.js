@@ -166,6 +166,10 @@
           e.preventDefault();
           switchTab('perf');
           break;
+        case '5':
+          e.preventDefault();
+          switchTab('prem');
+          break;
         case 'escape':
           e.preventDefault();
           clearFilters();
@@ -219,6 +223,7 @@
     initPinnedRows();
     initHiddenCols();
     initStickyAlerts();
+    initPremParams();
     initPush();
     initSound();
     loadAll();
