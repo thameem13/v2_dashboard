@@ -64,8 +64,14 @@
       try {
         /* Which strategies have a premium feed is data, not a hardcoded symbol
            check - so a strategy without one says so instead of rendering an
-           empty table that reads as "no trades won". */
-        if (premSources === null) {
+           empty table that reads as "no trades won".
+
+           Re-fetched on an explicit refresh, not just once per page load: a
+           feed can be switched on mid-session (QQQ was), and without this an
+           already-open tab would keep insisting there is no feed until a full
+           page reload. Re-run and the strategy switch are both force=true, so
+           either recovers it. */
+        if (premSources === null || force) {
           premSources = await rpcWithRetry('v2_premium_sources', null, {}, 2) || [];
         }
         const src = premSources.find(s => s.strategy_id === currentStrategy);
