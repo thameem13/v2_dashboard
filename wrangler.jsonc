@@ -29,8 +29,10 @@
     "crons": ["*/1 13-21 * * 1-5"]
   },
 
-  // Holds lastAlertedCandle so a cron that re-reads the same candle does not
-  // re-send. Declared here rather than bound in the dashboard because a
+  // Holds lastAlertedCandle:<strategy-id> - one cursor per strategy - so a
+  // cron that re-reads the same candle does not re-send, and so the symbols
+  // cannot move each other's cursor past unsent candles.
+  // Declared here rather than bound in the dashboard because a
   // Git-deployed Worker treats this file as the source of truth - a binding
   // added through the UI would be dropped by the next push.
   //

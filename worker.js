@@ -109,7 +109,22 @@ async function proxyRpc(request, env, fn) {
    the gate we just finished closing.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* ONE CURSOR PER STRATEGY. A single shared cursor would let whichever symbol
+   ran first move it past the other's candles, and the loser would simply go
+   quiet - no error, no gap in the logs, just an alert that never arrives.
+   Keyed by strategy id, so the symbols cannot interfere. */
 const KV_LAST_ALERT = 'lastAlertedCandle';
+const kvCursorKey = id => KV_LAST_ALERT + ':' + id;
+
+/* Before the per-strategy split there was one unsuffixed key, holding SPY's
+   position. Read it once as a fallback so the first tick after this deploy
+   does not look like a fresh session and re-send SPY's newest candle. Writes
+   always go to the suffixed key, so the legacy value simply falls out of use. */
+const LEGACY_CURSOR_STRATEGY = 'two_tier_divergence_spy';
+
+/* If the registry cannot be read, alerting falls back to this rather than
+   stopping: losing QQQ's alerts is bad, losing both is worse. */
+const FALLBACK_STRATEGIES = [{ id: 'two_tier_divergence_spy', symbol: 'SPY' }];
 
 /* Grades worth hearing about even when the strategy did not fire. A high-grade
    candle blocked only by the time window is useful to see; C and D are the bulk
@@ -156,9 +171,10 @@ function compact(n) {
    normalised candle time exactly as the dashboard's modal does. Fetched only
    when there is something to send, and never allowed to block a send: volume
    is context, and a missing row must not cost you the alert itself. */
-async function fetchVolumeMap(env) {
+async function fetchVolumeMap(env, strategyId) {
   try {
-    const res = await callSupabase(env, 'v2_volume_enriched_today', '', '{}');
+    const res = await callSupabase(env, 'v2_volume_enriched_today_by_strategy', '',
+      JSON.stringify({ p_strategy: strategyId }));
     if (!res.ok) { console.log('alerts: volume upstream', res.status); return null; }
     const rows = await res.json();
     if (!Array.isArray(rows)) return null;
@@ -227,7 +243,10 @@ function dirLabel(d) {
   return '⚪ NO SIDE';
 }
 
-function alertText(sig, vol) {
+function alertText(sig, vol, symbol) {
+  // Symbol is passed in, not assumed: with more than one strategy running, an
+  // alert that does not name its instrument is worse than no alert.
+  const sym = tgEscape(symbol || 'SPY');
   const sided = sig.direction === 'CALL' || sig.direction === 'PUT';
   const dir = dirLabel(sig.direction);
   const time = String(sig.candle_time_ny || '').slice(11, 16);
@@ -243,7 +262,7 @@ function alertText(sig, vol) {
   // an otherwise high-grade candle.
   const why = sig.has_signal ? '' : `
 Why      ${tgEscape(String(sig.reason || '-').replace(/^no signal - /i, ''))}`;
-  return `${head} · SPY ${dir} · ${gradeTxt} · Score ${tgEscape(sig.score)}
+  return `${head} · ${sym} ${dir} · ${gradeTxt} · Score ${tgEscape(sig.score)}
 
 Strike   <b>${tgEscape(sig.atm_strike)}</b>
 Price    <b>${tgEscape(sig.price)}</b>
@@ -287,12 +306,26 @@ async function sendTelegram(env, text) {
    selection finds nothing, and those two look identical from the outside -
    silence. This reports the counts without sending, so "no alert today" can
    be answered rather than guessed at. */
-async function scanState(env) {
+/* One scan per strategy. A diagnostic that reported only SPY while QQQ was
+   also alerting would be consulted precisely when QQQ had gone quiet, and
+   would say everything was fine. */
+async function scanAll(env) {
+  const strategies = (await fetchStrategies(env)) || FALLBACK_STRATEGIES;
+  const out = [];
+  for (const strat of strategies) {
+    out.push(Object.assign({ strategy: strat.id, symbol: strat.symbol },
+                           await scanState(env, strat)));
+  }
+  return out;
+}
+
+async function scanState(env, strat) {
   const out = { upstream: null, rows: 0, candidates: 0, pending: 0,
                 cursor: null, newest_candle: null, grades: {},
                 today_ny: null, session_date: null, stale: false };
   try {
-    const res = await callSupabase(env, 'v2_dashboard_today', '', '{}');
+    const res = await callSupabase(env, 'v2_dashboard_by_strategy', '',
+      JSON.stringify({ p_strategy: strat.id }));
     out.upstream = res.status;
     if (!res.ok) return out;
 
@@ -319,7 +352,10 @@ async function scanState(env) {
     const candidates = out.stale ? [] : rows.filter(qualifies);
     out.candidates = candidates.length;
 
-    const raw = env.ALERTS ? await env.ALERTS.get(KV_LAST_ALERT) : null;
+    let raw = env.ALERTS ? await env.ALERTS.get(kvCursorKey(strat.id)) : null;
+    if (!raw && env.ALERTS && strat.id === LEGACY_CURSOR_STRATEGY) {
+      raw = await env.ALERTS.get(KV_LAST_ALERT);
+    }
     out.cursor = raw;
     const last = raw ? candleKey(raw) : null;
     out.pending = last
@@ -340,7 +376,7 @@ async function testAlert(env, quiet) {
     telegram_chat_id: Boolean(env.TELEGRAM_CHAT_ID),
   };
 
-  const scan = await scanState(env);
+  const scan = await scanAll(env);
 
   if (!state.telegram_token || !state.telegram_chat_id) {
     return json({ sent: false, reason: 'Telegram not configured', state, scan }, 200);
@@ -370,10 +406,28 @@ async function testAlert(env, quiet) {
     // Telegram's own wording is the useful part - "chat not found" means the
     // bot has never been messaged; "Unauthorized" means a bad token.
     telegram_error: body && body.ok ? null : (body && body.description) || ('HTTP ' + res.status),
-    last_alerted_candle: state.kv_bound ? await env.ALERTS.get(KV_LAST_ALERT) : null,
+    // per-strategy cursors, so a stuck symbol is visible at a glance
+    cursors: state.kv_bound ? scan.reduce((m, x) => {
+      m[x.strategy] = x.cursor; return m;
+    }, {}) : null,
     state,
     scan,
   }, 200);
+}
+
+/* The live strategy list, so a third symbol needs a registry row and nothing
+   here. Falls back rather than throwing - see FALLBACK_STRATEGIES. */
+async function fetchStrategies(env) {
+  try {
+    const res = await callSupabase(env, 'list_strategies', '', '{}');
+    if (!res.ok) { console.log('alerts: list_strategies', res.status); return null; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return rows.filter(s => s && s.id && s.status !== 'retired');
+  } catch (err) {
+    console.log('alerts: list_strategies failed, falling back to SPY');
+    return null;
+  }
 }
 
 async function checkAndAlert(env) {
@@ -385,14 +439,30 @@ async function checkAndAlert(env) {
   }
   if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) return;
 
-  const res = await callSupabase(env, 'v2_dashboard_today', '', '{}');
-  if (!res.ok) { console.log('alerts: upstream', res.status); return; }
+  const strategies = (await fetchStrategies(env)) || FALLBACK_STRATEGIES;
+  /* Sequential and individually guarded: one symbol's upstream failure, bad
+     row or Telegram error must not take the others down with it. Sequential
+     also keeps the chat in a sane order and the Supabase load flat. */
+  for (const strat of strategies) {
+    try {
+      await alertForStrategy(env, strat);
+    } catch (err) {
+      console.log('alerts[' + strat.id + ']: ' + String((err && err.message) || err));
+    }
+  }
+}
+
+async function alertForStrategy(env, strat) {
+  const res = await callSupabase(env, 'v2_dashboard_by_strategy', '',
+    JSON.stringify({ p_strategy: strat.id }));
+  if (!res.ok) { console.log('alerts[' + strat.id + ']: upstream', res.status); return; }
 
   const rows = await res.json();
   if (!Array.isArray(rows) || !rows.length) return;
 
-  /* v2_dashboard_today does not mean "today". When the session has no candles
-     yet it returns the LAST session instead, which is why the dashboard carries
+  /* v2_dashboard_by_strategy does not mean "today" either - it shares the body
+     of v2_dashboard_today, including this behaviour. When the session has no
+     candles yet it returns the LAST session instead, which is why the dashboard carries
      a "Showing last session" banner for exactly this case (render.js). This
      path used to take those rows at face value, and that is how a cron tick at
      13:00 UTC on Sunday 2026-10-04 replayed five of Friday afternoon's Grade B
@@ -411,11 +481,16 @@ async function checkAndAlert(env) {
     .filter(r => candleKey(r.candle_time_ny).slice(0, 10) === today);
   if (!candidates.length) {
     const newest = candleKey(rows[rows.length - 1].candle_time_ny).slice(0, 10);
-    if (newest !== today) console.log(`alerts: newest session is ${newest}, not ${today} - stale, skipping`);
+    if (newest !== today) console.log(`alerts[${strat.id}]: newest session is ${newest}, not ${today} - stale, skipping`);
     return;
   }
 
-  const raw = await env.ALERTS.get(KV_LAST_ALERT);
+  let raw = await env.ALERTS.get(kvCursorKey(strat.id));
+  // One-time carry-over from the single-cursor era, so this deploy does not
+  // look like a fresh session and replay SPY's newest candle.
+  if (!raw && strat.id === LEGACY_CURSOR_STRATEGY) {
+    raw = await env.ALERTS.get(KV_LAST_ALERT);
+  }
   const last = raw ? candleKey(raw) : null;    // normalised, so an old-format value still compares
 
   let pending;
@@ -429,8 +504,9 @@ async function checkAndAlert(env) {
   }
   if (!pending.length) return;
 
+  // Per strategy, so a backlog on one symbol cannot starve the other.
   if (pending.length > MAX_PER_TICK) {
-    console.log('alerts: ' + pending.length + ' pending, sending newest ' + MAX_PER_TICK);
+    console.log('alerts[' + strat.id + ']: ' + pending.length + ' pending, sending newest ' + MAX_PER_TICK);
     pending = pending.slice(-MAX_PER_TICK);
   }
 
@@ -438,16 +514,16 @@ async function checkAndAlert(env) {
      cursor advances only past candles that actually sent, so a Telegram
      outage mid-batch is retried next tick instead of being swallowed. */
   // Only now that we know something is going out.
-  const volMap = await fetchVolumeMap(env);
+  const volMap = await fetchVolumeMap(env, strat.id);
 
   let lastOk = null;
   for (const sig of pending) {
     const vol = volMap ? volMap.get(candleKey(sig.candle_time_ny)) : null;
-    const ok = await sendTelegram(env, alertText(sig, vol));
-    if (!ok) { console.log('alerts: telegram send failed, will retry next tick'); break; }
+    const ok = await sendTelegram(env, alertText(sig, vol, strat.symbol));
+    if (!ok) { console.log('alerts[' + strat.id + ']: telegram send failed, will retry next tick'); break; }
     lastOk = candleKey(sig.candle_time_ny);
   }
-  if (lastOk) await env.ALERTS.put(KV_LAST_ALERT, lastOk);
+  if (lastOk) await env.ALERTS.put(kvCursorKey(strat.id), lastOk);
 }
 
 export default {
