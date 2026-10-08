@@ -216,15 +216,34 @@ function tgEscape(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/* direction is THREE-valued - 'CALL', 'PUT' or 'none' - and this used to be a
+   two-way ternary that tested only for PUT, so every directionless candle was
+   announced as a CALL. On 2026-10-08 that was 6 of 16 grade A/B candles, two of
+   them carrying positive flow, i.e. leaning PUT while being reported as CALL.
+   Kept as its own function so the three-way check lives in one place. */
+function dirLabel(d) {
+  if (d === 'PUT') return '🔴 PUT';
+  if (d === 'CALL') return '🟢 CALL';
+  return '⚪ NO SIDE';
+}
+
 function alertText(sig, vol) {
-  const dir = sig.direction === 'PUT' ? '🔴 PUT' : '🟢 CALL';
+  const sided = sig.direction === 'CALL' || sig.direction === 'PUT';
+  const dir = dirLabel(sig.direction);
   const time = String(sig.candle_time_ny || '').slice(11, 16);
   const head = sig.has_signal ? '🚨 <b>ALERTED</b>' : '👀 <b>Near miss</b>';
+  /* Without a direction the score is still computed, but with the CALL-shaped
+     formulas - the institutional and room sub-scores both fall to their else
+     branch, and room is vah-price. So the grade is real but conditional, and
+     saying so is the difference between information and a trade suggestion.
+     A signal that ALERTED always has a real direction, so this never fires on
+     the messages that matter. */
+  const gradeTxt = `Grade ${tgEscape(sig.grade)}${sided ? '' : ' (if CALL)'}`;
   // On a near miss the reason IS the message: it names the gate that blocked
   // an otherwise high-grade candle.
   const why = sig.has_signal ? '' : `
 Why      ${tgEscape(String(sig.reason || '-').replace(/^no signal - /i, ''))}`;
-  return `${head} · SPY ${dir} · Grade ${tgEscape(sig.grade)} · Score ${tgEscape(sig.score)}
+  return `${head} · SPY ${dir} · ${gradeTxt} · Score ${tgEscape(sig.score)}
 
 Strike   <b>${tgEscape(sig.atm_strike)}</b>
 Price    <b>${tgEscape(sig.price)}</b>
