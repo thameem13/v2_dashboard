@@ -218,7 +218,7 @@
       if (!strategyList.length) {
         /* The registry is unreachable. Rather than an empty dropdown that
            looks broken, show the strategy we are actually running. */
-        sel.innerHTML = `<option value="${escapeHtml(currentStrategy)}">Two-Tier Divergence - SPY</option>`;
+        sel.innerHTML = `<option value="${escapeHtml(currentStrategy)}">${escapeHtml(currentStrategyLabel())}</option>`;
         return;
       }
 
@@ -262,6 +262,23 @@
 
       loadAll();
       if (activeTab === 'prem') loadPremium(true);
+    }
+
+    /* The instrument the selected strategy trades. Everything user-facing that
+       names a symbol must come through here: the modal, the KPI label, the
+       exports and the browser notifications all used to say "SPY" literally,
+       so switching to QQQ relabelled the page but left every one of them
+       asserting the wrong instrument over QQQ's numbers.
+
+       The regex is a fallback for the window before list_strategies() returns -
+       strategy ids end with their symbol. If even that does not match it
+       returns '', because a missing symbol is recoverable and a wrong one is
+       what this is fixing. */
+    function currentSymbol() {
+      const s = strategyList.find(x => x.id === currentStrategy);
+      if (s && s.symbol) return s.symbol;
+      const m = /_([a-z]{1,6})$/.exec(currentStrategy || '');
+      return m ? m[1].toUpperCase() : '';
     }
 
     function currentStrategyLabel() {

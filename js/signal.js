@@ -195,11 +195,11 @@
       const isCall = sig.direction === 'CALL';
       const dirCls = isCall ? 'call' : (sig.direction === 'PUT' ? 'put' : 'muted');
 
-      titleEl.innerHTML = `SPY $${sig.atm_strike} ${sig.direction || ''} Signal &nbsp; ${gradePill(sig.grade)}`;
+      titleEl.innerHTML = `${escapeHtml(currentSymbol())} $${sig.atm_strike} ${sig.direction || ''} Signal &nbsp; ${gradePill(sig.grade)}`;
       bodyEl.innerHTML = `
         <div class="modal-grid">
           <div><div class="modal-item-label">Timestamp</div><div class="modal-item-val">${fmtTime(sig.candle_time_ny)}</div></div>
-          <div><div class="modal-item-label">SPY Price</div><div class="modal-item-val">$${sig.price ?? '-'}</div></div>
+          <div><div class="modal-item-label">${escapeHtml(currentSymbol())} Price</div><div class="modal-item-val">$${sig.price ?? '-'}</div></div>
           <div><div class="modal-item-label">ATM Strike</div><div class="modal-item-val">$${sig.atm_strike ?? '-'}</div></div>
           <div><div class="modal-item-label">Divergence Flow</div><div class="modal-item-val ${sig.flow >= 0 ? 'flowpos' : 'flowneg'}">${sig.flow ?? 0}</div></div>
           <div><div class="modal-item-label">Direction</div><div class="modal-item-val ${dirCls}">${sig.direction ?? '-'}</div></div>
@@ -229,8 +229,9 @@
     function copyTradeLog() {
       if (!currentJournalSignal) return;
       const sig = currentJournalSignal;
-      const text = `🚨 **SPY Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
-- **Direction**: ${sig.direction} ($${sig.atm_strike} Strike @ SPY $${sig.price})
+      const sym = currentSymbol();
+      const text = `🚨 **${sym} Options Flow Alert** | ${fmtTime(sig.candle_time_ny)}
+- **Direction**: ${sig.direction} ($${sig.atm_strike} Strike @ ${sym} $${sig.price})
 - **Net Flow**: ${sig.flow} | **Score**: ${sig.score}/10 (Grade ${sig.grade || 'N/A'})
 - **POC / Room**: ${sig.poc ?? '-'} / ${sig.room ?? '-'}
 - **Status**: ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}`;
@@ -243,11 +244,12 @@
     function exportSignalSnapshot() {
       if (!currentJournalSignal) return;
       const sig = currentJournalSignal;
-      const text = `SPY SIGNAL SNAPSHOT — ${fmtTime(sig.candle_time_ny)}
+      const sym = currentSymbol();
+      const text = `${sym} SIGNAL SNAPSHOT — ${fmtTime(sig.candle_time_ny)}
 ==========================================
 Direction: ${sig.direction}
 Strike:    $${sig.atm_strike}
-SPY Price: $${sig.price}
+${sym} Price: $${sig.price}
 Net Flow:  ${sig.flow}
 Score:     ${sig.score}/10
 Grade:     ${sig.grade || 'N/A'}
@@ -258,7 +260,7 @@ Status:    ${sig.has_signal ? 'ALERTED' : (sig.reason || 'None')}
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `SPY_Signal_${(sig.candle_time_ny || 'date').slice(0, 10)}_${sig.atm_strike}.txt`;
+      a.download = `${sym || 'signal'}_Signal_${(sig.candle_time_ny || 'date').slice(0, 10)}_${sig.atm_strike}.txt`;
       a.click();
       URL.revokeObjectURL(url);
     }

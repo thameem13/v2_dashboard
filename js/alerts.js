@@ -176,7 +176,7 @@
 
     function sendPushNotification(sig) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
-      const title = `🚨 SPY ${sig.direction} Alert (Score ${sig.score})`;
+      const title = `🚨 ${currentSymbol()} ${sig.direction} Alert (Score ${sig.score})`;
       const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: ${sig.flow} | Grade: ${sig.grade}`;
       try {
         // requireInteraction: the signal you missed while away from the desk is
@@ -190,7 +190,7 @@
 
     function sendAnomalyPushNotification(anom) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
-      const title = `⚠️ SPY ${anom.anomaly_type} Detected`;
+      const title = `⚠️ ${currentSymbol()} ${anom.anomaly_type} Detected`;
       const body = `${anom.vol_multiple}x avg vol | Calls: ${anom.total_calls} | Puts: ${anom.total_puts} | C/P ${anom.cp_ratio}`;
       try {
         new Notification(title, { body, requireInteraction: true });
@@ -214,7 +214,7 @@
       playChime(dir);
       pushStickyAlert({
         kind: 'anomaly',
-        title: `SPY ${latest.anomaly_type} Detected`,
+        title: `${currentSymbol()} ${latest.anomaly_type} Detected`,
         icon: 'ic-alert',
         rows: [
           ['Vol', `${latest.vol_multiple}x avg`],

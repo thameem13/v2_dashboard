@@ -22,7 +22,7 @@
       if (!rows || !rows.length) {
         document.getElementById('cards').innerHTML = `
           <div class="status quiet">No session data recorded for selected date.</div>
-          <div class="card"><div class="label">SPY Last</div><div class="val">-</div></div>
+          <div class="card"><div class="label">${escapeHtml(currentSymbol())} Last</div><div class="val">-</div></div>
           <div class="card"><div class="label">Session Trend</div><div class="val muted">FLAT</div></div>
           <div class="card"><div class="label">Signals Today</div><div class="val">0</div></div>
           <div class="card"><div class="label">POC / VAL / VAH</div><div class="val" style="font-size:13px">- / - / -</div></div>
@@ -89,7 +89,7 @@
           // card has to show up regardless of that.
           pushStickyAlert({
             kind: last.direction === 'PUT' ? 'put' : 'call',
-            title: `SPY ${last.direction} Signal · Score ${last.score}`,
+            title: `${currentSymbol()} ${last.direction} Signal · Score ${last.score}`,
             icon: 'ic-alert',
             rows: [
               ['Strike', last.atm_strike],
@@ -162,7 +162,7 @@
       document.getElementById('cards').innerHTML = `
     ${statusHtml}
     <div class="card">
-      <div class="label">SPY Last</div>
+      <div class="label">${escapeHtml(currentSymbol())} Last</div>
       <div class="val">${escapeHtml(close)}</div>
       <div class="sparkline-wrap"><canvas id="spark-price"></canvas></div>
     </div>

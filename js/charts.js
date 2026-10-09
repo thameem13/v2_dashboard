@@ -150,7 +150,7 @@
            <div class="rg-sub">iv skew ${num(r.iv_skew, 1)}</div>
          </div>`,
 
-        `<div class="rg-item" title="Call wall above / put wall below — the gamma levels that tend to pin or repel price. Distance in SPY points.">
+        `<div class="rg-item" title="Call wall above / put wall below — the gamma levels that tend to pin or repel price. Distance in points.">
            <div class="rg-label">Walls</div>
            <div class="rg-val"><span class="call">${num(r.call_wall, 0)}</span>
              <span class="muted">/</span>

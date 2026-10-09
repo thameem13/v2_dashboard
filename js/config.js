@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.3.0';
-    const BUILD_TS = '2026-10-07T06:00Z';
+    const BUILD = '2.3.1';
+    const BUILD_TS = '2026-10-08T22:30Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
