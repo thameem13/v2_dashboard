@@ -227,5 +227,16 @@
     changeInterval();
     loadNews();
     setInterval(() => loadNews(), 5 * 60 * 1000);
+
+    /* Build-staleness check. Deliberately not on the 10s data poll: a deploy
+       is a rare event and one small HTML fetch every 5 minutes is enough.
+       The first check is delayed so it never competes with the initial load,
+       and visibilitychange covers the tab that was left open overnight and
+       came back to a session that shipped twice while it slept. */
+    setTimeout(checkForNewBuild, 30 * 1000);
+    setInterval(checkForNewBuild, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForNewBuild();
+    });
     window.addEventListener('resize', () => { syncNewsPanelHeight(); syncStickyHeaderOffsets(); });
   

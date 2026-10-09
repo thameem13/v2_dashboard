@@ -264,6 +264,80 @@
       if (activeTab === 'prem') loadPremium(true);
     }
 
+    /* ══════════════════════════════════════════════════════
+       BUILD STALENESS
+
+       This page is left open for a whole session. It polls data every 10s but
+       never re-fetches its own HTML or JS, so a tab opened before a deploy
+       keeps running that older build indefinitely - and the only clue is a
+       build number in the footer that nobody reads. That is exactly how a
+       shipped fix looked like it had not worked: the modal kept saying SPY
+       over QQQ's numbers because the tab was still running the old signal.js.
+
+       Cloudflare already serves assets with max-age=0, must-revalidate, so a
+       reload genuinely does pick up a new build. The missing part is knowing
+       that a reload is needed.
+       ══════════════════════════════════════════════════════ */
+
+    async function checkForNewBuild() {
+      // Nothing to learn while the tab is in the background, and no reason to
+      // spend a request on it.
+      if (typeof document.visibilityState === 'string'
+          && document.visibilityState !== 'visible') return;
+      try {
+        const res = await fetch('/index.html', {
+          cache: 'no-store',          // the whole point: ask the server, every time
+          credentials: 'same-origin'
+        });
+        if (!res.ok) return;
+        const html = await res.text();
+        const m = /<meta\s+name="build"\s+content="([^"]+)"/.exec(html);
+        /* The meta match IS the auth guard. isAuthChallenge() cannot be reused
+           here: it treats "ok + text/html" as a login redirect, which is what
+           our own index.html is, so it would suppress every check. Access's
+           login page simply has no build meta, so it falls out here with no
+           notice and no error. */
+        if (!m) return;
+        latestBuildSeen = m[1];
+        if (latestBuildSeen !== BUILD && latestBuildSeen !== buildNoticeDismissed) {
+          showBuildNotice(latestBuildSeen);
+        }
+        markBuildStale(latestBuildSeen !== BUILD);
+      } catch (e) {
+        // Offline, or the request was blocked. Silence is correct: this is a
+        // convenience, and a failed check must never look like a real error.
+      }
+    }
+
+    function markBuildStale(stale) {
+      const el = document.getElementById('foot-build');
+      if (!el) return;
+      el.classList.toggle('build-stale', !!stale);
+      el.title = stale
+        ? `You are running build ${BUILD}; ${latestBuildSeen} is deployed. Reload to update.`
+        : 'Deployed build. This tab is running the current version.';
+    }
+
+    function showBuildNotice(newBuild) {
+      const el = document.getElementById('build-notice');
+      if (!el) return;
+      const v = document.getElementById('build-notice-ver');
+      if (v) v.textContent = newBuild;
+      el.classList.add('visible');
+    }
+
+    function dismissBuildNotice() {
+      // Remembers the BUILD waved away, not a boolean, so the next deploy
+      // after this one still gets to speak up.
+      buildNoticeDismissed = latestBuildSeen;
+      const el = document.getElementById('build-notice');
+      if (el) el.classList.remove('visible');
+    }
+
+    function reloadForNewBuild() {
+      window.location.reload();
+    }
+
     /* The instrument the selected strategy trades. Everything user-facing that
        names a symbol must come through here: the modal, the KPI label, the
        exports and the browser notifications all used to say "SPY" literally,

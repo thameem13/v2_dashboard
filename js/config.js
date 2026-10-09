@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.3.1';
-    const BUILD_TS = '2026-10-08T22:30Z';
+    const BUILD = '2.3.2';
+    const BUILD_TS = '2026-10-08T23:15Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -68,6 +68,12 @@
        it to a symbol in SQL, so the browser never needs to know which table a
        strategy reads. Seeded with the SPY default so the first render before
        list_strategies() returns is still correct rather than blank. */
+    /* The newest build seen on the server, and the one the user has waved away.
+       Deliberately NOT persisted: a dismissal should not outlive the problem,
+       and the next build must be able to speak up again. */
+    let latestBuildSeen = null;
+    let buildNoticeDismissed = null;
+
     const DEFAULT_STRATEGY = 'two_tier_divergence_spy';
     let currentStrategy = DEFAULT_STRATEGY;
     let strategyList = [];
