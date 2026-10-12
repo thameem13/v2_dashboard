@@ -24,9 +24,22 @@
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
 
-    function offsetDate(days) {
+    /* Sessions back, not calendar days back. "Yesterday" on a Monday resolved
+       to Sunday - a date that can never hold a candle - which is exactly what
+       made the Option Volume tab look broken. "Last 3d" on a Monday was
+       Sat-Mon: one session, not three.
+
+       Weekends only. Market holidays are not knowable in the browser, and
+       guessing them wrongly is worse than the empty state that now explains a
+       genuinely empty range. */
+    function prevSessionDate(sessions) {
       const d = new Date();
-      d.setDate(d.getDate() - days);
+      let left = sessions;
+      while (left > 0) {
+        d.setDate(d.getDate() - 1);
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) left--;
+      }
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
 
@@ -42,16 +55,16 @@
           endEl.value = today;
           break;
         case 'yesterday':
-          const yd = offsetDate(1);
+          const yd = prevSessionDate(1);
           startEl.value = yd;
           endEl.value = yd;
           break;
         case '3d':
-          startEl.value = offsetDate(2);
+          startEl.value = prevSessionDate(2);
           endEl.value = today;
           break;
         case '5d':
-          startEl.value = offsetDate(4);
+          startEl.value = prevSessionDate(4);
           endEl.value = today;
           break;
         case 'all':

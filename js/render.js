@@ -241,6 +241,38 @@
       if (panel && panel.style.height) panel.style.height = '';
     }
 
+    /* What an empty table should say about the range it is empty for. The
+       Volume tab used to render nothing at all, which reads as a broken page -
+       and the case that actually turns up is the Yesterday preset landing on a
+       weekend, where the right answer is "the market was closed", not "no
+       data". Holidays cannot be detected here, so they fall back to the plain
+       wording. */
+    function emptyRangeNote() {
+      const start = (document.getElementById('date-start') || {}).value || '';
+      const end = (document.getElementById('date-end') || {}).value || '';
+
+      let when = 'the selected range';
+      if (start && end) when = start === end ? start : `${start} - ${end}`;
+      else if (start || end) when = start || end;
+
+      return escapeHtml(when) +
+        (start && end && allWeekend(start, end) ? ' &mdash; market closed.' : '.');
+    }
+
+    /* Every date from start to end inclusive falls on a weekend. Bails on the
+       first weekday, so a long range costs at most a few iterations. A date
+       string is parsed as UTC, so the day of week is read in UTC to match. */
+    function allWeekend(start, end) {
+      const d = new Date(start + 'T00:00:00Z');
+      const last = new Date(end + 'T00:00:00Z');
+      while (d <= last) {
+        const dow = d.getUTCDay();
+        if (dow !== 0 && dow !== 6) return false;
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      return true;
+    }
+
     /* The three per-strategy tabs cannot be merged across symbols, so they say
        so rather than showing another scope's rows. */
     const AGG_TAB_NOTICE =
@@ -495,11 +527,12 @@
       (rows || []).forEach(r => { volMap[tsKey(r.candle_time_ny)] = r; });
 
       if (!rows || !rows.length) {
-        /* Blank would read as "no volume today". Volume is captured per
-           symbol, so there is nothing to show for a view spanning several. */
-        document.getElementById('tbody-vol').innerHTML = isAggregate()
-          ? `<tr><td colspan="21" style="text-align:center;color:var(--dim);padding:24px">${AGG_TAB_NOTICE}</td></tr>`
-          : '';
+        /* Volume is captured per symbol, so the aggregate view says so; a
+           single strategy with an empty range names the range instead of
+           rendering a blank tab. */
+        document.getElementById('tbody-vol').innerHTML =
+          `<tr><td colspan="21" style="text-align:center;color:var(--dim);padding:24px">${
+            isAggregate() ? AGG_TAB_NOTICE : 'No option volume for ' + emptyRangeNote()}</td></tr>`;
         return;
       }
 
@@ -648,7 +681,7 @@
       const tbody = document.getElementById('tbody-anomaly');
       if (!rows || !rows.length) {
         tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--dim);padding:24px">${
-          isAggregate() ? AGG_TAB_NOTICE : 'No anomalies detected in this range'}</td></tr>`;
+          isAggregate() ? AGG_TAB_NOTICE : 'No anomalies detected for ' + emptyRangeNote()}</td></tr>`;
         return;
       }
 
