@@ -371,9 +371,10 @@
     }
 
     function _renderFlowInner(rows) {
-      // Ahead of the empty-table return: the header cell has to appear and
-      // disappear with the view even when there are no rows under it.
+      // Ahead of the empty-table return: the header cell and its symbol picker
+      // have to follow the view even when there are no rows under them.
       syncStrategyCol();
+      syncStrategyFilter(rows);
 
       if (!rows || !rows.length) {
         document.getElementById('tbody-flow').innerHTML = '';
@@ -443,6 +444,31 @@
       applyFlowFilters();
       applyHiddenCols();
       syncStrategyCol();
+    }
+
+    /* The symbols offered by the Strategy column's filter. Built from the rows
+       on screen rather than from strategyList, so it never offers a symbol with
+       no graded candle in the current range.
+
+       Rebuilt only when the set of symbols actually changes: the 10s poll calls
+       this every tick, and replacing the options wholesale would silently reset
+       the user's choice to All - and applyFlowFilters() runs right after, so the
+       filtered-away rows would reappear under them mid-session. */
+    function syncStrategyFilter(rows) {
+      const sel = document.getElementById('f-strat');
+      if (!sel || !isAggregate()) return;
+
+      const syms = [...new Set((rows || []).map(r => r._sym).filter(Boolean))].sort();
+      const stamp = syms.join('|');
+      if (sel.dataset.syms === stamp) return;
+
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">All</option>' +
+        syms.map(sy => `<option value="${escapeHtml(sy)}">${escapeHtml(sy)}</option>`).join('');
+      // A symbol that stopped reporting falls back to All rather than leaving a
+      // selection that matches nothing and an apparently empty table.
+      sel.value = syms.includes(prev) ? prev : '';
+      sel.dataset.syms = stamp;
     }
 
     /* ══════════════════════════════════════════════════════

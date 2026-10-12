@@ -49,6 +49,9 @@
       const fsc = (document.getElementById('f-score').value || '').trim();
       const fg = (document.getElementById('f-grade').value || '').toLowerCase();
       const frs = (document.getElementById('f-status').value || '').toLowerCase();
+      // Aggregate view only; the select is hidden and empty everywhere else.
+      const fstEl = document.getElementById('f-strat');
+      const fsy = (fstEl && fstEl.value || '').toLowerCase();
 
       document.querySelectorAll('#tbody-flow tr').forEach(row => {
         const c = row.querySelectorAll('td');
@@ -71,6 +74,10 @@
         if (fsc && !matchNumericOrText(fsc, c[13].textContent)) show = false;
         if (fg && c[14].textContent.toLowerCase().indexOf(fg) < 0) show = false;
         if (frs && c[15].textContent.toLowerCase().indexOf(frs) < 0) show = false;
+        /* The Strategy cell ends in the symbol ("Two-Tier Divergence - QQQ"),
+           so a substring match needs no extra data attribute. Guarded: the
+           skeleton and empty-state rows have fewer cells than this. */
+        if (fsy && (!c[16] || c[16].textContent.toLowerCase().indexOf(fsy) < 0)) show = false;
 
         row.classList.toggle('hidden', !show);
       });
