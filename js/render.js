@@ -17,6 +17,11 @@
     }
 
     function _renderCardsInner(rows, volRows) {
+      /* The aggregate view hides this card; a switch back to one strategy has
+         to put it back, and only this path knows it is single-strategy again. */
+      const senti = document.getElementById('sentiment-card');
+      if (senti) senti.style.display = '';
+
       updateSentimentBar(rows, volRows);
 
       if (!rows || !rows.length) {
@@ -236,6 +241,123 @@
       if (panel && panel.style.height) panel.style.height = '';
     }
 
+    /* The three per-strategy tabs cannot be merged across symbols, so they say
+       so rather than showing another scope's rows. */
+    const AGG_TAB_NOTICE =
+      "Today's Alerts spans every strategy. Pick a single strategy to see this tab.";
+
+    /* ══════════════════════════════════════════════════════
+       RENDER: CARDS — AGGREGATE VIEW
+
+       A sibling of _renderCardsInner() rather than a branch inside it. Nearly
+       everything that one computes is single-session and single-symbol: open
+       vs close price, the POC/value-area gauge, the stale-session banner, the
+       sparklines. Across symbols those are not merely unhelpful, they are
+       plausible-looking and wrong - a price sparkline drawn through SPY and
+       QQQ alike still draws a line.
+       ══════════════════════════════════════════════════════ */
+    function renderAggCards(rows) {
+      try {
+        _renderAggCardsInner(rows);
+      } catch (e) {
+        console.error('renderAggCards error:', e);
+        document.getElementById('err').innerHTML += `<div class="err">Card render error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    function _renderAggCardsInner(rows) {
+      rows = rows || [];
+
+      // Neither panel has a cross-symbol meaning: regime is per instrument and
+      // the sentiment bar sums signed flow, which does not add up across them.
+      const regime = document.getElementById('regime-strip');
+      if (regime) regime.style.display = 'none';
+      const senti = document.getElementById('sentiment-card');
+      if (senti) senti.style.display = 'none';
+
+      const liveDot = document.getElementById('live-dot');
+
+      if (!rows.length) {
+        document.getElementById('cards').innerHTML =
+          '<div class="status quiet">No graded candles from any strategy in this range.</div>';
+        document.getElementById('sub').textContent = 'No graded candles';
+        if (liveDot) liveDot.style.display = 'none';
+        requestAnimationFrame(syncNewsPanelHeight);
+        return;
+      }
+
+      // Newest row per strategy, which is both the breakdown and what the
+      // LIVE dot is about.
+      const byStrat = new Map();
+      rows.forEach(r => {
+        let g = byStrat.get(r._sid);
+        if (!g) { g = { label: r._slabel, sym: r._sym, graded: 0, alerted: 0, last: null }; byStrat.set(r._sid, g); }
+        g.graded++;
+        if (r.has_signal) g.alerted++;
+        g.last = r;   // rows arrive oldest-first, so the last write wins
+      });
+
+      const alerted = rows.filter(r => r.has_signal);
+      const gradeA = rows.filter(r => r.grade === 'A');
+      const last = rows[rows.length - 1];
+      const liveStrats = [...byStrat.values()].filter(g => g.last && g.last.has_signal);
+
+      document.getElementById('sub').textContent =
+        `${rows.length} graded candle${rows.length === 1 ? '' : 's'} across ` +
+        `${byStrat.size} strateg${byStrat.size === 1 ? 'y' : 'ies'} | latest ${fmtTime(last.candle_time_ny)}`;
+
+      let statusHtml;
+      if (liveStrats.length) {
+        if (liveDot) liveDot.style.display = 'inline-block';
+        statusHtml = `
+      <div class="status live">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="dot pulse"></span>
+          <span>LIVE SIGNAL</span>
+          <span class="muted">${liveStrats.length} strateg${liveStrats.length === 1 ? 'y' : 'ies'}</span>
+        </div>
+        <div style="font-size:12px;font-weight:500;display:flex;flex-wrap:wrap;gap:10px">
+          ${liveStrats.map(g => `<span>${gradePill(g.last.grade)}
+             <b>${escapeHtml(g.sym || g.label)}</b>
+             <span class="${g.last.direction === 'PUT' ? 'put' : 'call'}">${escapeHtml(g.last.direction)}</span>
+             <span class="muted">${fmtTime(g.last.candle_time_ny)}</span></span>`).join('')}
+        </div>
+      </div>`;
+      } else {
+        if (liveDot) liveDot.style.display = 'none';
+        statusHtml = `<div class="status quiet">No active signal on the latest candle of any strategy (${fmtTime(last.candle_time_ny)}).</div>`;
+      }
+
+      const breakdown = [...byStrat.values()]
+        .sort((a, b) => b.alerted - a.alerted || b.graded - a.graded)
+        .map(g => `<div style="display:flex;justify-content:space-between;gap:10px">
+            <span class="muted">${escapeHtml(g.label || g.sym || '')}</span>
+            <span><b>${g.alerted}</b><span class="muted"> / ${g.graded}</span></span>
+          </div>`).join('');
+
+      document.getElementById('cards').innerHTML = `
+    ${statusHtml}
+    <div class="card">
+      <div class="label">Graded Candles</div>
+      <div class="val">${rows.length}</div>
+    </div>
+    <div class="card">
+      <div class="label">Alerted</div>
+      <div class="val ${alerted.length ? '' : 'muted'}">${alerted.length}</div>
+    </div>
+    <div class="card">
+      <div class="label">Grade A</div>
+      <div class="val ${gradeA.length ? '' : 'muted'}">${gradeA.length}</div>
+    </div>
+    <div class="card" title="Alerted / graded candles per strategy">
+      <div class="label">By Strategy</div>
+      <div class="val" style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:2px">${breakdown}</div>
+    </div>
+  `;
+
+      requestAnimationFrame(syncNewsPanelHeight);
+    }
+
     /* ══════════════════════════════════════════════════════
        RENDER: FLOW TABLE (with error boundary #18)
        ══════════════════════════════════════════════════════ */
@@ -249,22 +371,33 @@
     }
 
     function _renderFlowInner(rows) {
+      // Ahead of the empty-table return: the header cell has to appear and
+      // disappear with the view even when there are no rows under it.
+      syncStrategyCol();
+
       if (!rows || !rows.length) {
         document.getElementById('tbody-flow').innerHTML = '';
         return;
       }
 
+      /* Time + strike alone is not unique once several strategies share the
+         table: two instruments can print the same strike in the same minute,
+         and pinning one row would pin the other. The strategy id is in the key
+         only for aggregate rows, so pins made before this keep working. */
+      const flowRowKey = (x) =>
+        (x._sid ? x._sid + '_' : '') + (x.candle_time_ny || '') + '_' + (x.atm_strike || '');
+
       // Sort pinned rows to the top
       const sortedRows = rows.slice().reverse().sort((a, b) => {
-        const keyA = (a.candle_time_ny || '') + '_' + (a.atm_strike || '');
-        const keyB = (b.candle_time_ny || '') + '_' + (b.atm_strike || '');
+        const keyA = flowRowKey(a);
+        const keyB = flowRowKey(b);
         const pinA = pinnedFlow.has(keyA) ? 1 : 0;
         const pinB = pinnedFlow.has(keyB) ? 1 : 0;
         return pinB - pinA;
       });
 
       const body = sortedRows.map(x => {
-        const rowKey = (x.candle_time_ny || '') + '_' + (x.atm_strike || '');
+        const rowKey = flowRowKey(x);
         const isPinned = pinnedFlow.has(rowKey);
         const dirCls = x.direction === 'PUT' ? 'put' : (x.direction === 'CALL' ? 'call' : 'muted');
         const flowCls = (x.direction === 'PUT' || (x.flow && x.flow < 0)) ? 'flowneg' : ((x.direction === 'CALL' || (x.flow && x.flow > 0)) ? 'flowpos' : 'muted');
@@ -302,12 +435,14 @@
         <td class="col-score">${x.direction === 'none' ? '' : escapeHtml(x.score)}</td>
         <td class="col-grade">${x.direction === 'none' ? '' : gradePill(x.grade)}</td>
         <td class="${statusClass}">${statusCell}</td>
+        <td class="col-strat">${escapeHtml(x._slabel || x._sym || '')}</td>
       </tr>`;
       }).join('');
 
       document.getElementById('tbody-flow').innerHTML = body;
       applyFlowFilters();
       applyHiddenCols();
+      syncStrategyCol();
     }
 
     /* ══════════════════════════════════════════════════════
@@ -334,7 +469,11 @@
       (rows || []).forEach(r => { volMap[tsKey(r.candle_time_ny)] = r; });
 
       if (!rows || !rows.length) {
-        document.getElementById('tbody-vol').innerHTML = '';
+        /* Blank would read as "no volume today". Volume is captured per
+           symbol, so there is nothing to show for a view spanning several. */
+        document.getElementById('tbody-vol').innerHTML = isAggregate()
+          ? `<tr><td colspan="21" style="text-align:center;color:var(--dim);padding:24px">${AGG_TAB_NOTICE}</td></tr>`
+          : '';
         return;
       }
 
@@ -482,7 +621,8 @@
     function _renderAnomaliesInner(rows) {
       const tbody = document.getElementById('tbody-anomaly');
       if (!rows || !rows.length) {
-        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--dim);padding:24px">No anomalies detected in this range</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--dim);padding:24px">${
+          isAggregate() ? AGG_TAB_NOTICE : 'No anomalies detected in this range'}</td></tr>`;
         return;
       }
 

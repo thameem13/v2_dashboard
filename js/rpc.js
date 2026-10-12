@@ -144,6 +144,20 @@
       try {
         // Determine which RPC functions + params to use based on date range
         const dateCtx = getDateContext();
+
+        /* "Today's Alerts" is a different shape of load: one flow call per
+           strategy instead of four calls for one strategy. Handled in its own
+           function rather than as a branch inside this one - the aggregate
+           view has no volume, no anomalies and no regime to join, so sharing
+           the tail below would mean guarding every line of it. */
+        if (isAggregate()) {
+          await loadAggregate(signal, dateCtx);
+          if (flowWrap) flowWrap.scrollTop = flowScroll;
+          lastSyncTime = Date.now();
+          updateSyncAge();
+          return;
+        }
+
         let flowPromise, volPromise, anomaliesPromise;
 
         // Anomalies are a non-critical enhancement — failures (e.g. missing
@@ -218,7 +232,7 @@
            rather than called unconditionally, so the 10s live poll does not
            re-run the backtest - and does not re-render the ledger out from
            under you while you are scrolled into it. */
-        if (activeTab === 'prem' && premKey !== premKeyFor(dateCtx)) loadPremium();
+        if (activeTab === 'prem' && !isAggregate() && premKey !== premKeyFor(dateCtx)) loadPremium();
 
       } catch (e) {
         if (e.name === 'AbortError') {
@@ -235,3 +249,95 @@
       }
     }
 
+    /* ══════════════════════════════════════════════════════
+       AGGREGATE LOAD — every strategy's graded candles at once
+
+       Fans out the existing per-strategy flow RPC over the registry. No new
+       endpoint and no worker change: v2_dashboard_by_strategy and its range
+       twin are already allowlisted, and the browser still never learns which
+       table a strategy reads.
+       ══════════════════════════════════════════════════════ */
+    async function loadAggregate(signal, dateCtx) {
+      /* main.js calls loadAll() before loadStrategies(), so on a reload with
+         this view saved the registry is not here yet - and without it there is
+         nothing to fan out over. */
+      if (!strategyList.length) await loadStrategies();
+
+      const strategies = strategyList.filter(s => s.status !== 'retired');
+      if (!strategies.length) {
+        document.getElementById('err').innerHTML =
+          '<div class="err">No strategies in the registry to aggregate.</div>';
+        renderAggCards([]);
+        renderFlow(null);
+        return;
+      }
+
+      /* retries = 1 on purpose. The default 3 tries back off 2s/4s/8s, and N
+         strategies doing that in parallel would stretch a 10s poll tick well
+         past the next one. A failed strategy is named below instead. */
+      const fn = dateCtx.isLive ? 'v2_dashboard_by_strategy' : 'v2_dashboard_range_by_strategy';
+      const settled = await Promise.allSettled(strategies.map(s => rpcWithRetry(fn, signal,
+        dateCtx.isLive
+          ? { p_strategy: s.id }
+          : { p_start: dateCtx.start, p_end: dateCtx.end, p_strategy: s.id },
+        1)));
+
+      // An abort means a newer load is already running; leave the screen alone.
+      if (signal.aborted) return;
+
+      const all = [];
+      const failed = [];
+      settled.forEach((res, i) => {
+        const s = strategies[i];
+        if (res.status !== 'fulfilled') {
+          if (res.reason && res.reason.name === 'AbortError') return;
+          failed.push(s.id);
+          return;
+        }
+        (res.value || []).forEach(r => {
+          // Only graded candles: a candle with no direction has no grade to
+          // compare across strategies, and N strategies' worth of
+          // below-threshold rows would bury the ones that matter.
+          if (!r.direction || r.direction === 'none') return;
+          r._sid = s.id;
+          r._sym = s.symbol;
+          r._slabel = s.label || s.name || s.id;
+          all.push(r);
+        });
+      });
+
+      /* Ascending by time, _sid breaking the tie so the order within one
+         candle is stable across polls. _renderFlowInner() reverses the array,
+         so this lands newest-first on screen exactly like a single strategy. */
+      all.sort((a, b) => {
+        // tsKey rather than the raw string: the v2_* RPCs disagree about
+        // whether candle_time_ny carries a zone suffix, and a mixed sort would
+        // interleave the sessions wrongly.
+        const ta = tsKey(a.candle_time_ny), tb = tsKey(b.candle_time_ny);
+        if (ta !== tb) return ta < tb ? -1 : 1;
+        return String(a._sid).localeCompare(String(b._sid));
+      });
+
+      document.getElementById('err').innerHTML = failed.length
+        ? `<div class="err">${iconMarkup('ic-alert')}Could not load ${failed.length} of ${strategies.length} strategies: ${escapeHtml(failed.join(', '))}</div>`
+        : '';
+
+      /* Both maps are keyed by bare candle time, with no strategy in the key.
+         Left populated they would hang one strategy's volume surge on another
+         strategy's candle of the same minute - in the table and in the modal. */
+      anomalyMap = {};
+      volMap = {};
+      volRowsCache = null;
+      regimeCtx = null;
+      priceHistory = [];
+      flowHistory = [];
+
+      renderAggCards(all);
+      renderFlow(all);
+      renderRegime(null);
+      renderVol(null);
+      renderAnomalies(null);
+      checkAggAlerts(all);
+      updateRowCounts();
+      applySort('flow');
+    }

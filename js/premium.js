@@ -47,6 +47,19 @@
     }
 
     async function loadPremium(force) {
+      /* No single strategy to back-test, and p_strategy: '__all__' is not a
+         registry id - the RPC would either error or answer for nothing. */
+      if (isAggregate()) {
+        const el = document.getElementById('prem-body');
+        if (el) el.innerHTML = `<div class="perf-empty">${AGG_TAB_NOTICE}</div>`;
+        premRows = null;
+        premKey = null;
+        perfRows = null;      // per strategy too; a stale count would be wrong
+        perfKey = null;
+        updateRowCounts();
+        return;
+      }
+
       const ctx = getDateContext();
       const key = premKeyFor(ctx);
       if (!force && premRows && premKey === key) {

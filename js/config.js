@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.3.2';
-    const BUILD_TS = '2026-10-08T23:15Z';
+    const BUILD = '2.4.0';
+    const BUILD_TS = '2026-10-12T00:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -31,6 +31,10 @@
     let isFetching = false;
     let activeTab = 'flow';
     let lastAlertTimestamp = null;
+    /* Aggregate view only: the newest alerted candle already announced, per
+       strategy. One scalar cursor cannot serve N strategies - the loudest
+       strategy would swallow every other one's alert. */
+    let lastAlertByStrategy = {};
     let lastSyncTime = null;
     let abortController = null;    // #16 AbortController
     let audioCtx = null;           // #19 Reused AudioContext
@@ -75,8 +79,16 @@
     let buildNoticeDismissed = null;
 
     const DEFAULT_STRATEGY = 'two_tier_divergence_spy';
+    /* Not a strategy id but a view: "Today's Alerts" fans out to every
+       registered strategy and shows their graded candles in one table. It
+       rides in currentStrategy so the dropdown, localStorage and every
+       isAggregate() branch stay on one piece of state. Double-underscored so
+       it can never collide with a real registry id. */
+    const ALL_STRATEGIES = '__all__';
     let currentStrategy = DEFAULT_STRATEGY;
     let strategyList = [];
+
+    function isAggregate() { return currentStrategy === ALL_STRATEGIES; }
 
     const sortConfig = {
       flow: { col: null, asc: true },

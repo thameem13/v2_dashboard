@@ -203,7 +203,19 @@
       } catch (e) { }
     }
 
-    async function loadStrategies() {
+    /* The aggregate load needs the registry before it can fan out, so it may
+       await loadStrategies() on boot - and main.js calls it too, one line
+       later. Sharing the in-flight promise keeps that a single request
+       instead of two racing ones rewriting the same <select>. */
+    let strategiesPromise = null;
+    function loadStrategies() {
+      if (!strategiesPromise) {
+        strategiesPromise = _loadStrategies().finally(() => { strategiesPromise = null; });
+      }
+      return strategiesPromise;
+    }
+
+    async function _loadStrategies() {
       try {
         const rows = await rpcWithRetry('list_strategies', null, {}, 1);
         strategyList = Array.isArray(rows) ? rows : [];
@@ -215,20 +227,26 @@
       const sel = document.getElementById('strategy-select');
       if (!sel) return;
 
+      /* First entry, always present: it is a view over the registry rather
+         than a row in it, so it survives a registry outage too. */
+      const aggOpt = `<option value="${ALL_STRATEGIES}"${isAggregate() ? ' selected' : ''}>` +
+        `Today's Alerts - all strategies</option>`;
+
       if (!strategyList.length) {
         /* The registry is unreachable. Rather than an empty dropdown that
            looks broken, show the strategy we are actually running. */
-        sel.innerHTML = `<option value="${escapeHtml(currentStrategy)}">${escapeHtml(currentStrategyLabel())}</option>`;
+        sel.innerHTML = aggOpt + (isAggregate() ? '' :
+          `<option value="${escapeHtml(currentStrategy)}" selected>${escapeHtml(currentStrategyLabel())}</option>`);
         return;
       }
 
       // A saved strategy that has since been retired would select nothing and
       // leave the dropdown blank while the page loaded that strategy's data.
-      if (!strategyList.some(s => s.id === currentStrategy)) {
+      if (!isAggregate() && !strategyList.some(s => s.id === currentStrategy)) {
         currentStrategy = strategyList[0].id;
       }
 
-      sel.innerHTML = strategyList.map(s =>
+      sel.innerHTML = aggOpt + strategyList.map(s =>
         `<option value="${escapeHtml(s.id)}"${s.id === currentStrategy ? ' selected' : ''}>` +
         `${escapeHtml(s.label || (s.name + ' - ' + s.symbol))}</option>`).join('');
     }
@@ -255,10 +273,14 @@
       regimeCtx = null;
       lastAlertTimestamp = null;     // do not re-chime the other symbol's last signal
       lastAnomalyTimestamp = null;
+      lastAlertByStrategy = {};
 
       /* Rules are per strategy, so the inputs have to follow the switch -
          otherwise QQQ would be backtested with SPY's targets still showing. */
-      initPremParams();
+      /* No premium params exist for the aggregate view - it has no single
+         strategy to look them up by, and the Performance tab is disabled
+         there anyway. */
+      if (!isAggregate()) initPremParams();
 
       loadAll();
       if (activeTab === 'prem') loadPremium(true);
@@ -356,6 +378,27 @@
     }
 
     function currentStrategyLabel() {
+      if (isAggregate()) return "Today's Alerts - all strategies";
       const s = strategyList.find(x => x.id === currentStrategy);
       return s ? (s.label || (s.name + ' - ' + s.symbol)) : currentStrategy;
+    }
+
+    /* The instrument of ONE row. In the aggregate view the rows on screen come
+       from several strategies at once, so currentSymbol() - which describes the
+       selection, not the row - would label every one of them ''. Aggregate rows
+       carry their own symbol in _sym; everywhere else this is currentSymbol(). */
+    function rowSymbol(x) {
+      return (x && x._sym) || currentSymbol();
+    }
+
+    /* The Strategy column only means something when more than one strategy is
+       on screen. Hidden the same way toggleCol()/applyHiddenCols() hide the
+       others - an inline display - so it needs no CSS and cannot fight them.
+       Deliberately not in the Columns menu or in hiddenCols: it is a property
+       of the view, not a user preference. */
+    function syncStrategyCol() {
+      const show = isAggregate();
+      document.querySelectorAll('.col-strat').forEach(el => {
+        el.style.display = show ? '' : 'none';
+      });
     }

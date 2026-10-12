@@ -384,8 +384,14 @@
       const rows = Array.from(table.querySelectorAll('tr:not(.hidden):not(.filter-row)'));
       if (!rows.length) return alert('No data to export.');
 
+      /* Skip hidden columns. Without this the flow export carried an empty
+         trailing Strategy field on every row outside the aggregate view - and
+         the columns switched off in the Columns menu came along too, which is
+         not what "export what I am looking at" means. */
       const csv = rows.map(r => {
-        const cells = Array.from(r.querySelectorAll('th, td')).map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
+        const cells = Array.from(r.querySelectorAll('th, td'))
+          .filter(c => c.style.display !== 'none')
+          .map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
         return cells.join(',');
       }).join('\n');
 

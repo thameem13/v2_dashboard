@@ -176,7 +176,7 @@
 
     function sendPushNotification(sig) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
-      const title = `🚨 ${currentSymbol()} ${sig.direction} Alert (Score ${sig.score})`;
+      const title = `🚨 ${rowSymbol(sig)} ${sig.direction} Alert (Score ${sig.score})`;
       const body = `Strike: $${sig.atm_strike} | Price: $${sig.price} | Flow: ${sig.flow} | Grade: ${sig.grade}`;
       try {
         // requireInteraction: the signal you missed while away from the desk is
@@ -190,13 +190,63 @@
 
     function sendAnomalyPushNotification(anom) {
       if (!pushEnabled || Notification.permission !== 'granted') return;
-      const title = `⚠️ ${currentSymbol()} ${anom.anomaly_type} Detected`;
+      const title = `⚠️ ${rowSymbol(anom)} ${anom.anomaly_type} Detected`;
       const body = `${anom.vol_multiple}x avg vol | Calls: ${anom.total_calls} | Puts: ${anom.total_puts} | C/P ${anom.cp_ratio}`;
       try {
         new Notification(title, { body, requireInteraction: true });
       } catch (e) {
         console.warn('Push notification failed:', e);
       }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       NEW ALERTS — AGGREGATE VIEW
+
+       The single-strategy path announces off the newest row of the only
+       session on screen (_renderCardsInner), dedup'd by one timestamp. Here
+       several strategies advance independently, so the cursor is per strategy:
+       with one shared cursor the busiest strategy's candles would keep moving
+       it forward and every other strategy's alert would be swallowed as
+       "already seen".
+       ══════════════════════════════════════════════════════ */
+    function checkAggAlerts(rows) {
+      if (!rows || !rows.length) return;
+
+      // Rows arrive oldest-first, so the last write per strategy is its newest.
+      const newest = new Map();
+      rows.forEach(r => { if (r._sid) newest.set(r._sid, r); });
+
+      const fresh = [];
+      newest.forEach((r, sid) => {
+        if (!r.has_signal) return;
+        if (lastAlertByStrategy[sid] === r.candle_time_ny) return;
+        lastAlertByStrategy[sid] = r.candle_time_ny;
+        fresh.push(r);
+      });
+      if (!fresh.length) return;
+
+      /* One chime for the tick, not one per strategy: three strategies firing
+         on the same candle is a reason to look, not to play three sounds over
+         each other. The cards below still name each one. */
+      playChime(fresh[0].direction);
+
+      fresh.forEach(r => {
+        pushStickyAlert({
+          kind: r.direction === 'PUT' ? 'put' : 'call',
+          title: `${rowSymbol(r)} ${r.direction} Signal · Score ${r.score}`,
+          icon: 'ic-alert',
+          rows: [
+            ['Strategy', r._slabel || r._sid],
+            ['Strike', r.atm_strike],
+            ['Price', r.price],
+            ['Flow', r.flow],
+            ['Room', r.room],
+            ['Grade', r.grade]
+          ],
+          ts: r.candle_time_ny
+        });
+        sendPushNotification(r);
+      });
     }
 
     /* ══════════════════════════════════════════════════════
@@ -214,7 +264,7 @@
       playChime(dir);
       pushStickyAlert({
         kind: 'anomaly',
-        title: `${currentSymbol()} ${latest.anomaly_type} Detected`,
+        title: `${rowSymbol(latest)} ${latest.anomaly_type} Detected`,
         icon: 'ic-alert',
         rows: [
           ['Vol', `${latest.vol_multiple}x avg`],
