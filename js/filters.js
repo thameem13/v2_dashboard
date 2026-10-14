@@ -38,6 +38,26 @@
       }, 120);
     }
 
+    /* The grade filter is a set, not a value: A+B is the pair worth watching
+       and a <select> can only hold one of them. Routed through debounceFilter()
+       like every other control here, so the row counts and the volume filters
+       stay in step with it. */
+    function toggleGradeChip(g) {
+      if (gradeFilter.has(g)) gradeFilter.delete(g);
+      else gradeFilter.add(g);
+      syncGradeChips();
+      debounceFilter();
+    }
+
+    /* Single writer for the chips' pressed state, so applyPreset() and
+       clearFilters() cannot leave a lit chip over a set that no longer
+       contains it. */
+    function syncGradeChips() {
+      document.querySelectorAll('#f-grade .gchip').forEach(b => {
+        b.setAttribute('aria-pressed', gradeFilter.has(b.dataset.grade) ? 'true' : 'false');
+      });
+    }
+
     function applyFlowFilters() {
       const ft = (document.getElementById('f-time').value || '').trim();
       const fp = (document.getElementById('f-price').value || '').trim();
@@ -47,7 +67,6 @@
       const fpc = (document.getElementById('f-poc').value || '').trim();
       const fr = (document.getElementById('f-room').value || '').trim();
       const fsc = (document.getElementById('f-score').value || '').trim();
-      const fg = (document.getElementById('f-grade').value || '').toLowerCase();
       const frs = (document.getElementById('f-status').value || '').toLowerCase();
       // Aggregate view only; the select is hidden and empty everywhere else.
       const fstEl = document.getElementById('f-strat');
@@ -72,7 +91,9 @@
         if (fpc && !matchNumericOrText(fpc, c[6].textContent)) show = false;
         if (fr && !matchNumericOrText(fr, c[7].textContent)) show = false;
         if (fsc && !matchNumericOrText(fsc, c[13].textContent)) show = false;
-        if (fg && c[14].textContent.toLowerCase().indexOf(fg) < 0) show = false;
+        /* Exact match on the cell's single letter, not indexOf: the cell holds
+           one grade pill, and a set membership test is what multi-select means. */
+        if (gradeFilter.size && !gradeFilter.has(c[14].textContent.trim())) show = false;
         if (frs && c[15].textContent.toLowerCase().indexOf(frs) < 0) show = false;
         /* The Strategy cell ends in the symbol ("Two-Tier Divergence - QQQ"),
            so a substring match needs no extra data attribute. Guarded: the
@@ -264,6 +285,9 @@
     function clearFilters() {
       document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
       document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
+      // Neither an input nor a select, so the two resets above miss it.
+      gradeFilter.clear();
+      syncGradeChips();
       // Reset both preset bars back to "All" so the highlight matches reality.
       volSurgeOnly = false;
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));

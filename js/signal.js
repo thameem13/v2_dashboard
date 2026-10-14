@@ -18,17 +18,17 @@
       document.getElementById('f-poc').value = '';
       document.getElementById('f-room').value = '';
       document.getElementById('f-score').value = '';
-      document.getElementById('f-grade').value = '';
+      gradeFilter.clear();
       document.getElementById('f-status').value = '';
 
       switch (preset) {
         case 'grade-a-calls':
           document.getElementById('f-dir').value = 'CALL';
-          document.getElementById('f-grade').value = 'A';
+          gradeFilter.add('A');
           break;
         case 'grade-a-puts':
           document.getElementById('f-dir').value = 'PUT';
-          document.getElementById('f-grade').value = 'A';
+          gradeFilter.add('A');
           break;
         case 'alerted':
           document.getElementById('f-status').value = 'ALERTED';
@@ -39,6 +39,7 @@
           document.getElementById('f-flow').value = 'abs>=0.9';
           break;
       }
+      syncGradeChips();
       applyFlowFilters();
     }
 

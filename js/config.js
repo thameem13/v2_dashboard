@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.4.2';
-    const BUILD_TS = '2026-10-12T14:00Z';
+    const BUILD = '2.4.3';
+    const BUILD_TS = '2026-10-14T10:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -48,6 +48,10 @@
     let volMap = {};               // Enriched volume rows keyed by candle_time_ny
     let lastAnomalyTimestamp = null;
     let volSurgeOnly = false;      // "Surge Only" preset on the volume tab
+    /* Grades lit in the flow filter row. Empty means no grade constraint, so
+       an untouched filter shows everything - the same default the single
+       <select> had with "All" selected. */
+    let gradeFilter = new Set();
     let volRowsCache = null;       // Raw enriched volume rows, for CSV export
     let regimeCtx = null;          // Latest row from v2_regime_context
     let perfRows = null;           // Rows from v2_signal_performance

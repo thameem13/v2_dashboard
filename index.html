@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.4.2">
+  <meta name="build" content="2.4.3">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.4.2">
-  <link rel="stylesheet" href="css/base.css?v=2.4.2">
-  <link rel="stylesheet" href="css/cards.css?v=2.4.2">
-  <link rel="stylesheet" href="css/tables.css?v=2.4.2">
-  <link rel="stylesheet" href="css/layout.css?v=2.4.2">
-  <link rel="stylesheet" href="css/panels.css?v=2.4.2">
-  <link rel="stylesheet" href="css/overlays.css?v=2.4.2">
-  <link rel="stylesheet" href="css/widgets.css?v=2.4.2">
+  <link rel="stylesheet" href="css/tokens.css?v=2.4.3">
+  <link rel="stylesheet" href="css/base.css?v=2.4.3">
+  <link rel="stylesheet" href="css/cards.css?v=2.4.3">
+  <link rel="stylesheet" href="css/tables.css?v=2.4.3">
+  <link rel="stylesheet" href="css/layout.css?v=2.4.3">
+  <link rel="stylesheet" href="css/panels.css?v=2.4.3">
+  <link rel="stylesheet" href="css/overlays.css?v=2.4.3">
+  <link rel="stylesheet" href="css/widgets.css?v=2.4.3">
 </head>
 
 <body>
@@ -374,13 +374,17 @@
             <th class="col-room"><input type="text" id="f-room" placeholder="room" oninput="debounceFilter()"></th>
             <th class="col-fl" colspan="5"></th>
             <th class="col-score"><input type="text" id="f-score" placeholder=">= 4" oninput="debounceFilter()"></th>
-            <th class="col-grade"><select id="f-grade" onchange="debounceFilter()">
-                <option value="">All</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-                <option value="D">D</option>
-              </select></th>
+            <!-- Chips rather than a <select>: A+B is the pair worth looking at
+                 (those are the grades that alert), and a select can only hold
+                 one. None lit means All, so the default is unchanged. Keeps the
+                 id f-grade, but it is a group now, not a form control - see
+                 toggleGradeChip(). -->
+            <th class="col-grade"><div class="grade-chips" id="f-grade" role="group" aria-label="Filter by grade">
+                <button type="button" class="gchip gA" data-grade="A" aria-pressed="false" onclick="toggleGradeChip('A')" title="Show grade A">A</button>
+                <button type="button" class="gchip gB" data-grade="B" aria-pressed="false" onclick="toggleGradeChip('B')" title="Show grade B">B</button>
+                <button type="button" class="gchip gC" data-grade="C" aria-pressed="false" onclick="toggleGradeChip('C')" title="Show grade C">C</button>
+                <button type="button" class="gchip gD" data-grade="D" aria-pressed="false" onclick="toggleGradeChip('D')" title="Show grade D">D</button>
+              </div></th>
             <th><select id="f-status" onchange="debounceFilter()">
                 <option value="">All</option>
                 <option value="ALERTED">Alerted</option>
@@ -657,19 +661,19 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.4.2"></script>
-  <script src="js/alerts.js?v=2.4.2"></script>
-  <script src="js/chrome.js?v=2.4.2"></script>
-  <script src="js/news.js?v=2.4.2"></script>
-  <script src="js/signal.js?v=2.4.2"></script>
-  <script src="js/format.js?v=2.4.2"></script>
-  <script src="js/filters.js?v=2.4.2"></script>
-  <script src="js/charts.js?v=2.4.2"></script>
-  <script src="js/perf.js?v=2.4.2"></script>
-  <script src="js/rpc.js?v=2.4.2"></script>
-  <script src="js/render.js?v=2.4.2"></script>
-  <script src="js/premium.js?v=2.4.2"></script>
-  <script src="js/main.js?v=2.4.2"></script>
+  <script src="js/config.js?v=2.4.3"></script>
+  <script src="js/alerts.js?v=2.4.3"></script>
+  <script src="js/chrome.js?v=2.4.3"></script>
+  <script src="js/news.js?v=2.4.3"></script>
+  <script src="js/signal.js?v=2.4.3"></script>
+  <script src="js/format.js?v=2.4.3"></script>
+  <script src="js/filters.js?v=2.4.3"></script>
+  <script src="js/charts.js?v=2.4.3"></script>
+  <script src="js/perf.js?v=2.4.3"></script>
+  <script src="js/rpc.js?v=2.4.3"></script>
+  <script src="js/render.js?v=2.4.3"></script>
+  <script src="js/premium.js?v=2.4.3"></script>
+  <script src="js/main.js?v=2.4.3"></script>
 </body>
 
 </html>

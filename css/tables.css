@@ -308,6 +308,49 @@
       color: var(--dim);
     }
 
+    /* The flow filter row's grade chips. Lit chips carry the same colours as
+       the pills in the column below, so the filter and the rows it is matching
+       read as one thing. */
+    .grade-chips {
+      display: flex;
+      gap: 2px;
+      justify-content: flex-end;
+    }
+
+    .gchip {
+      padding: 1px 5px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      background: transparent;
+      color: var(--dim);
+      font-family: inherit;
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .gchip:hover,
+    .gchip:focus-visible {
+      border-color: var(--blue);
+      outline: none;
+    }
+
+    .gchip[aria-pressed="true"] {
+      border-color: transparent;
+      color: var(--pill-fg);
+    }
+
+    .gchip.gA[aria-pressed="true"] { background: var(--a); }
+    .gchip.gB[aria-pressed="true"] { background: var(--b); }
+
+    /* C and D are muted as pills too - a lit C must not read as a good grade. */
+    .gchip.gC[aria-pressed="true"],
+    .gchip.gD[aria-pressed="true"] {
+      background: var(--pill-muted-bg);
+      color: var(--txt);
+    }
+
     .up {
       color: var(--green);
     }
