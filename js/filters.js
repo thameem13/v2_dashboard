@@ -51,10 +51,29 @@
 
     /* Single writer for the chips' pressed state, so applyPreset() and
        clearFilters() cannot leave a lit chip over a set that no longer
-       contains it. */
+       contains it. Matches every group, not just the one in the filter row:
+       the phone carries a second set in the Quick Filters bar, because that
+       row is display:none under 700px. */
     function syncGradeChips() {
-      document.querySelectorAll('#f-grade .gchip').forEach(b => {
+      document.querySelectorAll('.gchip[data-grade]').forEach(b => {
         b.setAttribute('aria-pressed', gradeFilter.has(b.dataset.grade) ? 'true' : 'false');
+      });
+    }
+
+    /* The one writer of the symbol filter. Reached from the desktop <select>'s
+       onchange and from the phone chips, and both views are repainted from the
+       variable rather than from each other. */
+    function setSymFilter(sym) {
+      symFilter = sym || '';
+      syncSymChips();
+      debounceFilter();
+    }
+
+    function syncSymChips() {
+      const sel = document.getElementById('f-strat');
+      if (sel && sel.value !== symFilter) sel.value = symFilter;
+      document.querySelectorAll('#m-sym-chips .gchip').forEach(b => {
+        b.setAttribute('aria-pressed', (b.dataset.sym || '') === symFilter ? 'true' : 'false');
       });
     }
 
@@ -68,9 +87,11 @@
       const fr = (document.getElementById('f-room').value || '').trim();
       const fsc = (document.getElementById('f-score').value || '').trim();
       const frs = (document.getElementById('f-status').value || '').toLowerCase();
-      // Aggregate view only; the select is hidden and empty everywhere else.
-      const fstEl = document.getElementById('f-strat');
-      const fsy = (fstEl && fstEl.value || '').toLowerCase();
+      /* Aggregate view only. Guarded on the mode, not just on the value: a
+         symbol left over from the merged view would otherwise be matched
+         against single-strategy rows, whose Strategy cell is empty - hiding
+         every row in the table. */
+      const fsy = isAggregate() ? symFilter.toLowerCase() : '';
 
       document.querySelectorAll('#tbody-flow tr').forEach(row => {
         const c = row.querySelectorAll('td');
@@ -285,9 +306,13 @@
     function clearFilters() {
       document.querySelectorAll('.filter-row input').forEach(el => el.value = '');
       document.querySelectorAll('.filter-row select').forEach(el => el.value = '');
-      // Neither an input nor a select, so the two resets above miss it.
+      /* The grade chips are neither an input nor a select, so the two resets
+         above miss them; the symbol filter is a variable now, so the select
+         reset above does not reach it either. */
       gradeFilter.clear();
       syncGradeChips();
+      symFilter = '';
+      syncSymChips();
       // Reset both preset bars back to "All" so the highlight matches reality.
       volSurgeOnly = false;
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));

@@ -274,6 +274,9 @@
       lastAlertTimestamp = null;     // do not re-chime the other symbol's last signal
       lastAnomalyTimestamp = null;
       lastAlertByStrategy = {};
+      // Scoped to the merged view, and meaningless in any other.
+      symFilter = '';
+      syncSymChips();
 
       /* Rules are per strategy, so the inputs have to follow the switch -
          otherwise QQQ would be backtested with SPY's targets still showing. */

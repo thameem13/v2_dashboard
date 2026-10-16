@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.4.3">
+  <meta name="build" content="2.5.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.4.3">
-  <link rel="stylesheet" href="css/base.css?v=2.4.3">
-  <link rel="stylesheet" href="css/cards.css?v=2.4.3">
-  <link rel="stylesheet" href="css/tables.css?v=2.4.3">
-  <link rel="stylesheet" href="css/layout.css?v=2.4.3">
-  <link rel="stylesheet" href="css/panels.css?v=2.4.3">
-  <link rel="stylesheet" href="css/overlays.css?v=2.4.3">
-  <link rel="stylesheet" href="css/widgets.css?v=2.4.3">
+  <link rel="stylesheet" href="css/tokens.css?v=2.5.0">
+  <link rel="stylesheet" href="css/base.css?v=2.5.0">
+  <link rel="stylesheet" href="css/cards.css?v=2.5.0">
+  <link rel="stylesheet" href="css/tables.css?v=2.5.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.5.0">
+  <link rel="stylesheet" href="css/panels.css?v=2.5.0">
+  <link rel="stylesheet" href="css/overlays.css?v=2.5.0">
+  <link rel="stylesheet" href="css/widgets.css?v=2.5.0">
 </head>
 
 <body>
@@ -331,6 +331,23 @@
       <button class="preset-btn" onclick="applyPreset('grade-a-puts')">Grade A Puts</button>
       <button class="preset-btn" onclick="applyPreset('alerted')">Alerted Only</button>
       <button class="preset-btn" onclick="applyPreset('high-flow')">Strong Flow (|flow| &ge; 0.9)</button>
+
+      <!-- Phone-only second view of the two filters that live in the table's
+           filter row, which is display:none under 700px. Same state, same
+           handlers - syncGradeChips() and syncStrategyFilter() paint both. -->
+      <span class="mobile-filter" id="m-grade-wrap">
+        <span class="mobile-filter-label">Grade</span>
+        <span class="grade-chips">
+          <button type="button" class="gchip gA" data-grade="A" aria-pressed="false" onclick="toggleGradeChip('A')">A</button>
+          <button type="button" class="gchip gB" data-grade="B" aria-pressed="false" onclick="toggleGradeChip('B')">B</button>
+          <button type="button" class="gchip gC" data-grade="C" aria-pressed="false" onclick="toggleGradeChip('C')">C</button>
+          <button type="button" class="gchip gD" data-grade="D" aria-pressed="false" onclick="toggleGradeChip('D')">D</button>
+        </span>
+      </span>
+      <span class="mobile-filter" id="m-sym-wrap" style="display:none">
+        <span class="mobile-filter-label">Symbol</span>
+        <span class="grade-chips" id="m-sym-chips"><!-- filled by syncStrategyFilter() --></span>
+      </span>
     </div>
     <div class="table-wrap" id="flow-wrap">
       <table id="tbl-flow">
@@ -398,7 +415,7 @@
             <!-- Options are filled in by syncStrategyFilter() from the symbols
                  actually on screen. Inside a .col-strat cell, so it appears and
                  disappears with the column. -->
-            <th class="col-strat"><select id="f-strat" onchange="debounceFilter()">
+            <th class="col-strat"><select id="f-strat" onchange="setSymFilter(this.value)">
                 <option value="">All</option>
               </select></th>
           </tr>
@@ -661,19 +678,19 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.4.3"></script>
-  <script src="js/alerts.js?v=2.4.3"></script>
-  <script src="js/chrome.js?v=2.4.3"></script>
-  <script src="js/news.js?v=2.4.3"></script>
-  <script src="js/signal.js?v=2.4.3"></script>
-  <script src="js/format.js?v=2.4.3"></script>
-  <script src="js/filters.js?v=2.4.3"></script>
-  <script src="js/charts.js?v=2.4.3"></script>
-  <script src="js/perf.js?v=2.4.3"></script>
-  <script src="js/rpc.js?v=2.4.3"></script>
-  <script src="js/render.js?v=2.4.3"></script>
-  <script src="js/premium.js?v=2.4.3"></script>
-  <script src="js/main.js?v=2.4.3"></script>
+  <script src="js/config.js?v=2.5.0"></script>
+  <script src="js/alerts.js?v=2.5.0"></script>
+  <script src="js/chrome.js?v=2.5.0"></script>
+  <script src="js/news.js?v=2.5.0"></script>
+  <script src="js/signal.js?v=2.5.0"></script>
+  <script src="js/format.js?v=2.5.0"></script>
+  <script src="js/filters.js?v=2.5.0"></script>
+  <script src="js/charts.js?v=2.5.0"></script>
+  <script src="js/perf.js?v=2.5.0"></script>
+  <script src="js/rpc.js?v=2.5.0"></script>
+  <script src="js/render.js?v=2.5.0"></script>
+  <script src="js/premium.js?v=2.5.0"></script>
+  <script src="js/main.js?v=2.5.0"></script>
 </body>
 
 </html>

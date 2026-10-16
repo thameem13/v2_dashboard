@@ -362,8 +362,11 @@
 
       const breakdown = [...byStrat.values()]
         .sort((a, b) => b.alerted - a.alerted || b.graded - a.graded)
-        .map(g => `<div style="display:flex;justify-content:space-between;gap:10px">
-            <span class="muted">${escapeHtml(g.label || g.sym || '')}</span>
+        /* The symbol, not the full label: this card is half a phone screen
+           wide at 2-up, where "Two-Tier Divergence - QQQ" wraps to three
+           lines. The label stays reachable as the tooltip. */
+        .map(g => `<div style="display:flex;justify-content:space-between;gap:10px" title="${escapeHtml(g.label || '')}">
+            <span class="muted">${escapeHtml(g.sym || g.label || '')}</span>
             <span><b>${g.alerted}</b><span class="muted"> / ${g.graded}</span></span>
           </div>`).join('');
 
@@ -488,19 +491,32 @@
        filtered-away rows would reappear under them mid-session. */
     function syncStrategyFilter(rows) {
       const sel = document.getElementById('f-strat');
+      const chips = document.getElementById('m-sym-chips');
+      const wrap = document.getElementById('m-sym-wrap');
+
+      /* The phone group is the only control for this filter under 700px, where
+         the table's filter row is display:none - so it follows the view the
+         same way the Strategy column does. */
+      if (wrap) wrap.style.display = isAggregate() ? '' : 'none';
       if (!sel || !isAggregate()) return;
 
       const syms = [...new Set((rows || []).map(r => r._sym).filter(Boolean))].sort();
       const stamp = syms.join('|');
       if (sel.dataset.syms === stamp) return;
 
-      const prev = sel.value;
       sel.innerHTML = '<option value="">All</option>' +
         syms.map(sy => `<option value="${escapeHtml(sy)}">${escapeHtml(sy)}</option>`).join('');
+      if (chips) {
+        chips.innerHTML = [''].concat(syms).map(sy =>
+          `<button type="button" class="gchip" data-sym="${escapeHtml(sy)}" aria-pressed="false"` +
+          ` onclick="setSymFilter('${escapeHtml(sy)}')">${sy ? escapeHtml(sy) : 'All'}</button>`).join('');
+      }
+      sel.dataset.syms = stamp;
+
       // A symbol that stopped reporting falls back to All rather than leaving a
       // selection that matches nothing and an apparently empty table.
-      sel.value = syms.includes(prev) ? prev : '';
-      sel.dataset.syms = stamp;
+      if (symFilter && !syms.includes(symFilter)) symFilter = '';
+      syncSymChips();
     }
 
     /* ══════════════════════════════════════════════════════
@@ -531,7 +547,7 @@
            single strategy with an empty range names the range instead of
            rendering a blank tab. */
         document.getElementById('tbody-vol').innerHTML =
-          `<tr><td colspan="21" style="text-align:center;color:var(--dim);padding:24px">${
+          `<tr class="empty-row"><td class="empty-note" colspan="21">${
             isAggregate() ? AGG_TAB_NOTICE : 'No option volume for ' + emptyRangeNote()}</td></tr>`;
         return;
       }
@@ -680,7 +696,7 @@
     function _renderAnomaliesInner(rows) {
       const tbody = document.getElementById('tbody-anomaly');
       if (!rows || !rows.length) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--dim);padding:24px">${
+        tbody.innerHTML = `<tr class="empty-row"><td class="empty-note" colspan="12">${
           isAggregate() ? AGG_TAB_NOTICE : 'No anomalies detected for ' + emptyRangeNote()}</td></tr>`;
         return;
       }

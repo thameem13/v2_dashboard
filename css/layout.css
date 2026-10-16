@@ -359,6 +359,20 @@
         padding: 6px 12px;
       }
 
+      /* The filters that live in the table's hidden filter row, surfaced in the
+         Quick Filters strip instead. .preset-bar is already a nowrap overflow-x
+         scroller with flex:0 0 auto children, so they just join the strip. */
+      .mobile-filter {
+        display: inline-flex;
+      }
+
+      /* 1px/5px is a mouse target. Match .preset-btn above it. */
+      .gchip {
+        min-height: 32px;
+        padding: 6px 12px;
+        font-size: var(--fs-base);
+      }
+
       .date-presets button {
         min-height: 32px;
         padding: 6px 10px;
@@ -672,6 +686,8 @@
       #tbl-flow .col-flow::before   { content: 'Flow'; }
       #tbl-flow .col-dir::before    { content: 'Direction'; }
       #tbl-flow .col-grade::before  { content: 'Grade'; }
+      /* Empty outside the aggregate view, where td:empty already hides it. */
+      #tbl-flow .col-strat::before  { content: 'Strategy'; }
       #tbl-vol .vcol-tvol::before   { content: 'Total Vol'; }
       #tbl-vol .vcol-rvol::before   { content: 'rVOL'; }
       #tbl-vol .vcol-cp::before     { content: 'C/P Ratio'; }
@@ -697,6 +713,21 @@
         justify-content: flex-end;
         padding: 0 0 0 10px;
         width: auto;
+      }
+
+      /* An empty table has nothing to make a card out of: drop the card chrome
+         and the label grid so the message reads as a plain centred note. */
+      #tbl-flow tr.empty-row, #tbl-vol tr.empty-row, #tbl-anomaly tr.empty-row {
+        display: block;
+        background: transparent;
+        box-shadow: none;
+        border-left: 0;
+        padding: 0;
+      }
+
+      #tbl-flow .empty-note, #tbl-vol .empty-note, #tbl-anomaly .empty-note {
+        display: block;
+        text-align: center;
       }
 
       /* Row state moves from the sticky first cell to the card edge. */

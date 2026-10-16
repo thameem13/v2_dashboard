@@ -317,6 +317,32 @@
       justify-content: flex-end;
     }
 
+    /* The phone's second view of the grade and symbol filters. Hidden here and
+       turned on inside the 700px block, where the table's filter row - the only
+       other home for these two - is display:none. */
+    .mobile-filter {
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mobile-filter-label {
+      color: var(--dim);
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-family: var(--font-ui);
+      font-weight: 600;
+    }
+
+    /* Empty-table messages. A class rather than the inline style it replaces,
+       so the phone card layout can restyle it. */
+    .empty-note {
+      text-align: center;
+      color: var(--dim);
+      padding: 24px;
+    }
+
     .gchip {
       padding: 1px 5px;
       border: 1px solid var(--line);
