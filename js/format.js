@@ -41,12 +41,13 @@
       h = h % 12 || 12;
       const time = `${h}:${mi} ${ap}`;
 
-      // In multi-day mode, prefix with date
+      /* Prefix the date whenever the rows on screen can span more than one
+         session. The All preset has no dates at all, so start === end === null
+         and the old comparison called it a single day - which is exactly the
+         range where a bare time is least readable. */
       const ctx = getDateContext();
-      if (!ctx.isLive && ctx.start !== ctx.end) {
-        return `${+m[2]}/${+m[3]} ${time}`;
-      }
-      return time;
+      const multiDay = !ctx.isLive && (!ctx.start || ctx.start !== ctx.end);
+      return multiDay ? `${+m[2]}/${+m[3]} ${time}` : time;
     }
 
     function fmtNum(n) {

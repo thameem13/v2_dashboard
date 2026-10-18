@@ -96,9 +96,14 @@
       const end = endEl.value;
       const today = todayStr();
 
-      // "Live" if both dates are today or both empty (defaults to today via RPC)
-      const isToday = (!start && !end) || (start === today && end === today);
-      const isLive = isToday || currentPreset === 'today';
+      /* "Live" is today's session, and nothing else. Both dates empty used to
+         count as live on the grounds that the RPC defaults to today - but that
+         is the All preset, and on All the range RPCs take nulls to mean the
+         whole history. So one preset meant "today" on Flow, Volume and
+         Anomalies and "all 29 sessions" on Performance, where the ledger then
+         printed 11 sessions of trades as bare repeating times because fmtTime
+         believed it was looking at one live day. */
+      const isLive = currentPreset === 'today' || (start === today && end === today);
 
       return {
         isLive,

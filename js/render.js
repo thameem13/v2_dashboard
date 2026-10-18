@@ -46,13 +46,21 @@
       const trend = close > open ? 'UP' : (close < open ? 'DOWN' : 'FLAT');
       const trendColor = trend === 'UP' ? 'call' : (trend === 'DOWN' ? 'put' : 'muted');
       const day = (last.candle_time_ny || '').slice(0, 10);
-      document.getElementById('sub').textContent =
-        `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
+
+      /* "Session <date>" is a lie over a range: the All preset carries 29 of
+         them. Count the sessions actually on screen and say which it is. */
+      const sessions = new Set(rows.map(r => (r.candle_time_ny || '').slice(0, 10))).size;
+      document.getElementById('sub').textContent = sessions > 1
+        ? `${sessions} sessions | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`
+        : `Session ${escapeHtml(day)} | ${rows.length} candles | latest ${fmtTime(last.candle_time_ny)}`;
 
       // ── STALE SESSION WARNING ──────────────────────────────────────────
+      /* Only in live mode. On a historical range the newest row is SUPPOSED to
+         predate today, and announcing that as "no data for today" made the
+         deliberate choice look like a fault. */
       const errEl = document.getElementById('err');
       const todayNY = todayStr();
-      if (day && day !== todayNY) {
+      if (getDateContext().isLive && day && day !== todayNY) {
         errEl.innerHTML = `<div class="err">${iconMarkup('ic-alert')}No data for today (${todayNY}). Showing last session: ${escapeHtml(day)} — market closed or weekend.</div>`;
       } else {
         if (errEl.innerHTML.includes('last session')) errEl.innerHTML = '';

@@ -300,7 +300,14 @@
       const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');
       const total = document.querySelectorAll(`${tbodyId} tr`).length;
       const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
-      document.getElementById('row-counts').textContent = `Showing ${visible} of ${total} records`;
+      /* The All preset now genuinely means all of it, which is thousands of
+         rows rather than one session's eighty. Nothing is truncated - sorting,
+         filtering and the CSV all still see every row - but a phone paints
+         that many cards slowly, so say where the cost is coming from rather
+         than letting it read as the page hanging. */
+      const heavy = total > LARGE_RANGE_ROWS ? ' - large range, narrow it if this feels slow' : '';
+      document.getElementById('row-counts').textContent =
+        `Showing ${visible} of ${total} records${heavy}`;
     }
 
     function clearFilters() {

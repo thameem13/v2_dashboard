@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.5.0';
-    const BUILD_TS = '2026-10-15T10:00Z';
+    const BUILD = '2.5.1';
+    const BUILD_TS = '2026-10-17T10:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -27,6 +27,10 @@
     let stickyAlertsEnabled = true;   // persisted as 'v2-sticky-alerts'
     let alertSeq = 0;
     const MAX_STICKY_ALERTS = 8;
+    /* Above this many rendered rows the row-count badge warns that the range,
+       not the page, is what is slow. A whole session is ~78 rows, so this is
+       about twenty of them. */
+    const LARGE_RANGE_ROWS = 1500;
     let pollTimer = null;
     let isFetching = false;
     let activeTab = 'flow';
