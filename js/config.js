@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.5.1';
-    const BUILD_TS = '2026-10-17T10:00Z';
+    const BUILD = '2.5.2';
+    const BUILD_TS = '2026-10-21T10:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -50,6 +50,11 @@
     let currentJournalSignal = null;
     let anomalyMap = {};           // Volume anomalies keyed by candle_time_ny
     let volMap = {};               // Enriched volume rows keyed by candle_time_ny
+    /* The merged view carries several symbols at once, and volMap's key has no
+       strategy in it - so volume for those rows lives here instead, one map per
+       strategy per range, fetched when a row is opened rather than on the poll.
+       '' means a fetch is in flight; null means it failed. */
+    let volByStrategy = {};
     let lastAnomalyTimestamp = null;
     let volSurgeOnly = false;      // "Surge Only" preset on the volume tab
     /* Grades lit in the flow filter row. Empty means no grade constraint, so

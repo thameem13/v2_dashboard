@@ -119,14 +119,88 @@
        fired; this says whether there was any size behind it. rVOL is the one
        that matters most -- a grade B on thin volume is a different trade from
        the same grade on 2x the usual flow for that time of day. */
+    /* One cache slot per strategy per range. The range is in the key because
+       the same candle time means a different session on a different range, and
+       a stale hit would caption the wrong day's volume. */
+    function volCacheKey(sid) {
+      const ctx = getDateContext();
+      return sid + '|' + (ctx.isLive ? 'live' : (ctx.start || '') + '..' + (ctx.end || ''));
+    }
+
+    /* Live data grows: a slot fetched at 10:05 has nothing for the 10:35
+       candle, and without an age check the modal would keep answering "no
+       volume row" from a cache that simply predates the row. A closed range
+       never changes, so it is cached for the session. */
+    const VOL_CACHE_TTL = 60000;
+
+    function volSlot(sig) {
+      const slot = volByStrategy[volCacheKey(sig._sid)];
+      if (!slot || slot.pending) return slot || null;
+      // A failure is cached only briefly, so reopening the row retries rather
+      // than repeating "could not load" for the rest of the session.
+      if (slot.failed) return Date.now() - slot.at > VOL_CACHE_TTL ? null : slot;
+      if (getDateContext().isLive && Date.now() - slot.at > VOL_CACHE_TTL) return null;
+      return slot;
+    }
+
+    /* Volume for ONE row of the merged view, fetched when that row is opened.
+       Not on the 10s poll: volume is the heavy half of a tick (~64 kB a
+       strategy) and in the merged view it would be fetched per strategy, every
+       tick, to answer a question nobody has asked yet. */
+    async function loadVolForSignal(sig) {
+      const key = volCacheKey(sig._sid);
+      if (volByStrategy[key] && volByStrategy[key].pending) return;
+      volByStrategy[key] = { pending: true };
+
+      const ctx = getDateContext();
+      try {
+        const rows = await rpcWithRetry(
+          ctx.isLive ? 'v2_volume_enriched_today_by_strategy' : 'v2_volume_enriched_range_by_strategy',
+          null,
+          ctx.isLive ? { p_strategy: sig._sid }
+                     : { p_start: ctx.start, p_end: ctx.end, p_strategy: sig._sid },
+          1);
+        const map = {};
+        (rows || []).forEach(r => { map[tsKey(r.candle_time_ny)] = r; });
+        volByStrategy[key] = { at: Date.now(), map: map };
+      } catch (e) {
+        volByStrategy[key] = { failed: true, at: Date.now() };
+        console.warn('Volume for ' + sig._sid + ' failed:', e);
+      }
+
+      /* Repaint only if this row is still the one on screen - the fetch can
+         outlive the modal, or land after another row was opened. */
+      const el = document.getElementById('modal-vol');
+      if (el && currentJournalSignal === sig) el.outerHTML = volPanelHtml(sig);
+    }
+
     function volPanelHtml(sig) {
       const wrap = (inner) =>
-        `<div style="background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--line);">
+        `<div id="modal-vol" style="background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--line);">
            <div style="font-size:11px;color:var(--dim);margin-bottom:6px;text-transform:uppercase">Option Volume &mdash; this candle</div>
            ${inner}
          </div>`;
 
-      const v = volMap[tsKey(sig.candle_time_ny)];
+      /* An aggregate row carries its strategy, and volMap does not: in the
+         merged view that map is empty precisely so one symbol's volume cannot
+         be captioned onto another's candle of the same minute. */
+      let v;
+      if (sig._sid) {
+        const slot = volSlot(sig);
+        if (slot && slot.failed) {
+          return wrap('<div class="muted" style="font-size:11px">Could not load volume for '
+            + escapeHtml(rowSymbol(sig)) + '.</div>');
+        }
+        if (!slot) loadVolForSignal(sig);        // absent, stale, or retryable
+        if (!slot || slot.pending) {
+          return wrap('<div class="muted" style="font-size:11px">Loading volume for '
+            + escapeHtml(rowSymbol(sig)) + '...</div>');
+        }
+        v = slot.map[tsKey(sig.candle_time_ny)];
+      } else {
+        v = volMap[tsKey(sig.candle_time_ny)];
+      }
+
       if (!v) {
         // Happens when the volume RPC failed, or the candle predates the
         // enriched volume data. Say so rather than rendering empty cells.
