@@ -2,3 +2,7 @@
 # account's display name, which is an email address - this repo is public.
 .wrangler/
 node_modules/
+
+# Supabase CLI local cache (the linked project ref and the CLI version it
+# last checked for). Regenerated on demand; nothing here belongs in the repo.
+supabase/.temp/
