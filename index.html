@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.5.2">
+  <meta name="build" content="2.6.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -572,8 +572,11 @@
     <div class="perf-wrap" id="prem-wrap">
       <div class="perf-note">
         What the signal was actually worth <b>as a contract</b>. Every graded candle buys the
-        <b>POC strike</b>, <b>next-day expiry</b>, at the quoted <b>ask</b>; the session is then
-        walked forward through the 5-minute chain snapshots and the trade exits on the first
+        <b>POC strike</b>, <b>next-day expiry</b>, at the quoted <b>ask</b> - priced at the
+        <b>first chain snapshot after the candle closes</b>, never at the close itself, because
+        the signal is not knowable until the candle is done. That lands the fill <b>1-2 minutes
+        later</b>; the <b>Fill</b> column shows when. The session is then walked forward through
+        the 2-minute chain snapshots and the trade exits on the first
         touch of the target or the stop, sold at the <b>bid</b>. Anything that reaches neither
         is <b>closed at the end-of-day mark</b> and shown as <b>TP (EOD)</b> or <b>SL (EOD)</b>
         by the sign of that exit - no trade is left open.

@@ -9,9 +9,12 @@
        One tab, two measures of the same signals:
 
          PREMIUM P&L  what the contract actually paid. Buy the POC strike,
-                      next-day expiry, at the ask; walk the session forward
-                      through the 5-minute chain snapshots; exit on the first
-                      touch of the target or the stop, sold at the bid.
+                      next-day expiry, at the ask on the FIRST chain snapshot
+                      after the signal candle closes - not at the close itself,
+                      which is a price nobody could have traded; walk the
+                      session forward through the 2-minute chain snapshots;
+                      exit on the first touch of the target or the stop, sold
+                      at the bid.
                       Real money - but only as far back as premium collection.
 
          DIRECTION    whether the underlying went the way the signal called,
@@ -813,8 +816,12 @@
            call/put, and the same number under an inverted label in a third
            place is how you end up comparing 2.21 against 0.45. */
         const cp = r.cp_ratio == null ? '-' : (+r.cp_ratio).toFixed(2);
+        /* The fill is a different instant from the signal - showing only one
+           of them is how the look-ahead went unnoticed for so long. */
         return '<tr>'
           + '<td>' + fmtTime(r.candle_time_ny) + '</td>'
+          + '<td>' + (r.entry_time_ny ? fmtTime(r.entry_time_ny)
+                                      : '<span class="muted">-</span>') + '</td>'
           + '<td>' + gradePill(r.grade) + '</td>'
           + '<td><span class="' + (r.direction === 'CALL' ? 'call' : 'put') + '">'
             + escapeHtml(r.direction || '') + '</span></td>'
@@ -840,12 +847,15 @@
           + '</tr>';
       }).join('');
       return '<div class="perf-section-title">Trade Ledger <span class="hint">newest first - '
-        + 'every signal candle priced at the POC strike</span></div>'
+        + 'every signal candle priced at the POC strike, filled after the close</span></div>'
         + '<div class="prem-ledger-wrap"><table class="perf-tbl prem-ledger"><thead><tr>'
-        + '<th>Time</th><th>Gr</th><th>Dir</th><th>Strike</th>'
+        + '<th title="When the signal candle closed">Time</th>'
+        + '<th title="The snapshot actually filled - the first one after the candle closed, so this is always later than Time">Fill</th>'
+        + '<th>Gr</th><th>Dir</th><th>Strike</th>'
         + '<th title="Paid at the quoted ask">Entry</th>'
         + '<th title="Sold at the quoted bid">Exit</th>'
-        + '<th>Outcome</th><th>P&amp;L $</th><th>P&amp;L %</th><th>Min</th>'
+        + '<th>Outcome</th><th>P&amp;L $</th><th>P&amp;L %</th>'
+        + '<th title="Minutes held, measured from the fill rather than the signal - the time you actually carried risk">Min</th>'
         + '<th>MAE</th><th>MFE</th>'
         + '<th title="Call volume across the whole chain in this candle - the same figure the signal modal and the Option Volume tab show">Call vol</th>'
         + '<th title="Put volume across the whole chain in this candle">Put vol</th>'

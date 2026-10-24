@@ -397,7 +397,8 @@
       // rendered summary tables - that is what is useful in a spreadsheet.
       if (activeTab === 'prem') {
         if (!premRows || !premRows.length) return alert('No priced trades to export.');
-        const cols = ['trade_date', 'candle_time_ny', 'grade', 'score', 'direction',
+        const cols = ['trade_date', 'candle_time_ny', 'entry_time_ny',
+          'signal_to_entry_min', 'grade', 'score', 'direction',
           'has_signal', 'underlying', 'poc', 'strike', 'expiry', 'contract',
           'entry_px', 'exit_px', 'exit_time_ny', 'mins_held', 'outcome',
           'pnl', 'pnl_pct', 'mfe', 'mae', 'bars_available',
