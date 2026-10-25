@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.6.0">
+  <meta name="build" content="2.6.1">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,17 +51,25 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.5.2">
-  <link rel="stylesheet" href="css/base.css?v=2.5.2">
-  <link rel="stylesheet" href="css/cards.css?v=2.5.2">
-  <link rel="stylesheet" href="css/tables.css?v=2.5.2">
-  <link rel="stylesheet" href="css/layout.css?v=2.5.2">
-  <link rel="stylesheet" href="css/panels.css?v=2.5.2">
-  <link rel="stylesheet" href="css/overlays.css?v=2.5.2">
-  <link rel="stylesheet" href="css/widgets.css?v=2.5.2">
+  <link rel="stylesheet" href="css/tokens.css?v=2.6.1">
+  <link rel="stylesheet" href="css/base.css?v=2.6.1">
+  <link rel="stylesheet" href="css/cards.css?v=2.6.1">
+  <link rel="stylesheet" href="css/tables.css?v=2.6.1">
+  <link rel="stylesheet" href="css/layout.css?v=2.6.1">
+  <link rel="stylesheet" href="css/panels.css?v=2.6.1">
+  <link rel="stylesheet" href="css/overlays.css?v=2.6.1">
+  <link rel="stylesheet" href="css/widgets.css?v=2.6.1">
 </head>
 
 <body>
+
+  <!-- Indeterminate progress bar, pinned to the top of the viewport while a
+       fetch is in flight. The spinning refresh icon is the only other cue and
+       it is easy to miss at 20px in the toolbar - and because the previous
+       range's rows stay on screen during the fetch, a slow load (the All
+       preset over every session) otherwise looks like a finished one.
+       aria-hidden because #sub carries the same state as text. -->
+  <div id="load-bar" class="load-bar" aria-hidden="true"></div>
 
   <!-- ICON SPRITE — the single source for every glyph in the chrome.
        Replaces the emoji this page used to label its controls with: emoji are
@@ -688,19 +696,19 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.6.0"></script>
-  <script src="js/alerts.js?v=2.6.0"></script>
-  <script src="js/chrome.js?v=2.6.0"></script>
-  <script src="js/news.js?v=2.6.0"></script>
-  <script src="js/signal.js?v=2.6.0"></script>
-  <script src="js/format.js?v=2.6.0"></script>
-  <script src="js/filters.js?v=2.6.0"></script>
-  <script src="js/charts.js?v=2.6.0"></script>
-  <script src="js/perf.js?v=2.6.0"></script>
-  <script src="js/rpc.js?v=2.6.0"></script>
-  <script src="js/render.js?v=2.6.0"></script>
-  <script src="js/premium.js?v=2.6.0"></script>
-  <script src="js/main.js?v=2.6.0"></script>
+  <script src="js/config.js?v=2.6.1"></script>
+  <script src="js/alerts.js?v=2.6.1"></script>
+  <script src="js/chrome.js?v=2.6.1"></script>
+  <script src="js/news.js?v=2.6.1"></script>
+  <script src="js/signal.js?v=2.6.1"></script>
+  <script src="js/format.js?v=2.6.1"></script>
+  <script src="js/filters.js?v=2.6.1"></script>
+  <script src="js/charts.js?v=2.6.1"></script>
+  <script src="js/perf.js?v=2.6.1"></script>
+  <script src="js/rpc.js?v=2.6.1"></script>
+  <script src="js/render.js?v=2.6.1"></script>
+  <script src="js/premium.js?v=2.6.1"></script>
+  <script src="js/main.js?v=2.6.1"></script>
 </body>
 
 </html>

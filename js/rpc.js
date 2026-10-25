@@ -133,6 +133,7 @@
       // adding a null check here would change how this path fails.
       refBtn.classList.add('is-loading');
       refBtn.setAttribute('aria-busy', 'true');
+      setBusy(true, loadingLabel());
       document.getElementById('err').innerHTML = '';
 
       // (#6) Save scroll positions before re-render
@@ -244,6 +245,7 @@
         }
       } finally {
         isFetching = false;
+        setBusy(false);
         refBtn.classList.remove('is-loading');
         refBtn.removeAttribute('aria-busy');
       }

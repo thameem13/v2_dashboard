@@ -191,6 +191,45 @@
       transform-origin: 50% 50%;
     }
 
+    /* Indeterminate top progress bar. Fixed rather than in flow so showing it
+       cannot shift the layout underneath - the whole point is to signal a
+       fetch without disturbing what is already on screen. Zero height when
+       idle, so it occupies nothing and needs no display toggle. */
+    .load-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 0;
+      z-index: 999;
+      overflow: hidden;
+      background: var(--line);
+      transition: height 0.12s ease;
+    }
+
+    .load-bar.active { height: 2px; }
+
+    .load-bar.active::after {
+      content: '';
+      display: block;
+      height: 100%;
+      width: 35%;
+      background: var(--blue);
+      animation: load-slide 1.1s ease-in-out infinite;
+    }
+
+    @keyframes load-slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(386%); }
+    }
+
+    /* The bar is motion in the corner of the eye. Anyone who has asked for
+       less of that still gets the state from #sub and from aria-busy. */
+    @media (prefers-reduced-motion: reduce) {
+      .load-bar.active::after { animation: none; width: 100%; opacity: 0.5; }
+      .icon-btn.is-loading .ico { animation: none; }
+    }
+
     @keyframes spin {
       to {
         transform: rotate(360deg);

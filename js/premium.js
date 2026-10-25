@@ -71,6 +71,12 @@
       }
       if (premLoading) return;
       premLoading = true;
+      /* No label: #sub belongs to the flow summary, and a backtest re-run
+         would leave "Running backtest..." sitting there after it finished.
+         The bar is the signal here - it is also the only one on a re-run,
+         since the body message below is deliberately skipped when there are
+         already results on screen rather than wiping them. */
+      setBusy(true);
 
       const bodyEl = document.getElementById('prem-body');
       if (bodyEl && !premRows) {
@@ -115,6 +121,7 @@
         }
       } finally {
         premLoading = false;
+        setBusy(false);
       }
     }
 

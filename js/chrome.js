@@ -138,6 +138,42 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       BUSY STATE
+
+       A fetch leaves the previous range's rows on screen until it returns, so
+       without this a slow load (All, over every session) is indistinguishable
+       from a finished one. The spinning refresh icon was the only cue and it
+       is 20px of chrome in the corner.
+
+       Counted rather than a boolean: loadPremium() can be in flight at the
+       same time as loadAll(), and whichever finished first would otherwise
+       clear the bar while the other was still running.
+       ══════════════════════════════════════════════════════ */
+    let busyCount = 0;
+
+    function setBusy(on, label) {
+      busyCount = Math.max(0, busyCount + (on ? 1 : -1));
+      const bar = document.getElementById('load-bar');
+      if (bar) bar.classList.toggle('active', busyCount > 0);
+
+      /* Only ever written on the way in. The renderers own this line and put
+         the real summary back when the data lands; on failure rpc.js writes
+         'Load failed' there instead. */
+      const sub = document.getElementById('sub');
+      if (on && label && sub) sub.textContent = label;
+    }
+
+    /* "Loading..." alone does not say how much is coming, and the difference
+       between one session and every session is the difference between
+       instant and several seconds. */
+    function loadingLabel() {
+      const c = getDateContext();
+      if (!c.start && !c.end) return 'Loading all sessions...';
+      if (c.start && c.end && c.start === c.end) return `Loading ${c.start}...`;
+      return `Loading ${c.start || '...'} to ${c.end || '...'}...`;
+    }
+
+    /* ══════════════════════════════════════════════════════
        COLUMN VISIBILITY MANAGEMENT
        ══════════════════════════════════════════════════════ */
     // The Columns button opens whichever menu belongs to the active tab.
