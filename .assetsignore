@@ -1,0 +1,27 @@
+# wrangler.jsonc serves the repo ROOT as the static site ("assets.directory":
+# "."), so anything sitting here at build time is uploaded and published.
+#
+# That was harmless until package.json arrived: Cloudflare's build then runs
+# npm install, which creates node_modules/ inside the directory being
+# uploaded. The supabase dev-dependency carries a large platform binary, and
+# the asset upload blows past the file-count and size limits - so the deploy
+# fails and the site silently keeps serving the previous version.
+#
+# .gitignore cannot cover this. The build container creates node_modules/
+# itself, long after git is done.
+node_modules/
+package.json
+package-lock.json
+
+# Local tooling state, not part of the site.
+.wrangler/
+supabase/
+
+# Internal notes. They are in a public repo, but there is still no reason to
+# serve them from the dashboard's own origin.
+RELEASE.md
+FEASIBILITY_REVIEW.md
+
+# The pre-split original, kept for reference only - 122KB nobody should be
+# able to load from the live site.
+index_old_main.html
