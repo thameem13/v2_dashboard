@@ -429,7 +429,8 @@
       #tbl-flow .col-inst,
       #tbl-flow .col-rm,
       #tbl-flow .col-cln,
-      #tbl-flow .col-score {
+      #tbl-flow .col-score,
+      #tbl-flow .col-tick {
         display: none;
       }
 

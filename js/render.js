@@ -478,6 +478,7 @@
         <td class="col-cln">${gate(x.s_clean > 0)}</td>
         <td class="col-score">${x.direction === 'none' ? '' : escapeHtml(x.score)}</td>
         <td class="col-grade">${x.direction === 'none' ? '' : gradePill(x.grade)}</td>
+        <td class="col-tick ${signedCls(x.tick)}" data-sortval="${x.tick == null ? '' : +x.tick}">${x.tick == null ? '-' : (x.tick > 0 ? '+' : '') + Math.round(x.tick)}</td>
         <td class="${statusClass}">${statusCell}</td>
         <td class="col-strat">${escapeHtml(x._slabel || x._sym || '')}</td>
       </tr>`;

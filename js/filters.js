@@ -86,6 +86,7 @@
       const fpc = (document.getElementById('f-poc').value || '').trim();
       const fr = (document.getElementById('f-room').value || '').trim();
       const fsc = (document.getElementById('f-score').value || '').trim();
+      const ftk = (document.getElementById('f-tick').value || '').trim();
       const frs = (document.getElementById('f-status').value || '').toLowerCase();
       /* Aggregate view only. Guarded on the mode, not just on the value: a
          symbol left over from the merged view would otherwise be matched
@@ -115,11 +116,14 @@
         /* Exact match on the cell's single letter, not indexOf: the cell holds
            one grade pill, and a set membership test is what multi-select means. */
         if (gradeFilter.size && !gradeFilter.has(c[14].textContent.trim())) show = false;
-        if (frs && c[15].textContent.toLowerCase().indexOf(frs) < 0) show = false;
+        /* Tick carries a leading "+" for readability, which matchNumericOrText
+           would compare as text - strip it so "> 500" means what it says. */
+        if (ftk && !matchNumericOrText(ftk, c[15].textContent.replace('+', ''))) show = false;
+        if (frs && c[16].textContent.toLowerCase().indexOf(frs) < 0) show = false;
         /* The Strategy cell ends in the symbol ("Two-Tier Divergence - QQQ"),
            so a substring match needs no extra data attribute. Guarded: the
            skeleton and empty-state rows have fewer cells than this. */
-        if (fsy && (!c[16] || c[16].textContent.toLowerCase().indexOf(fsy) < 0)) show = false;
+        if (fsy && (!c[17] || c[17].textContent.toLowerCase().indexOf(fsy) < 0)) show = false;
 
         row.classList.toggle('hidden', !show);
       });

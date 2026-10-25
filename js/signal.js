@@ -18,6 +18,7 @@
       document.getElementById('f-poc').value = '';
       document.getElementById('f-room').value = '';
       document.getElementById('f-score').value = '';
+      document.getElementById('f-tick').value = '';
       gradeFilter.clear();
       document.getElementById('f-status').value = '';
 
