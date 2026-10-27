@@ -348,8 +348,10 @@
         padding: 8px 12px;
       }
 
-      /* The select above is pinned to 16px by the anti-zoom rule; 12px buttons
-         next to it looked mismatched in the controls strip. */
+      /* 12px buttons looked mismatched beside the 16px controls in the
+         strip. The selects get there from the override block at the end of
+         widgets.css, not from the bare `select` rule above - every real
+         control on the page is styled by a more specific selector. */
       button {
         font-size: var(--fs-lg);
       }

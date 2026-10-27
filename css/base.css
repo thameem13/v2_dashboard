@@ -194,10 +194,15 @@
     /* Indeterminate top progress bar. Fixed rather than in flow so showing it
        cannot shift the layout underneath - the whole point is to signal a
        fetch without disturbing what is already on screen. Zero height when
-       idle, so it occupies nothing and needs no display toggle. */
+       idle, so it occupies nothing and needs no display toggle.
+
+       top is inset rather than 0: viewport-fit=cover runs the page under the
+       status bar, which #top already pads for, so a bar at 0 would be drawn
+       behind the clock in the installed app - invisible on the one device
+       where a 2px cue is the whole signal. env() is 0 everywhere else. */
     .load-bar {
       position: fixed;
-      top: 0;
+      top: env(safe-area-inset-top, 0px);
       left: 0;
       right: 0;
       height: 0;

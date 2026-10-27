@@ -337,4 +337,12 @@
         bottom: max(10px, env(safe-area-inset-bottom));
       }
       .build-notice.visible { transform: translate(0, 0); }
+
+      /* .build-notice .bn-reload outranks the `button` tap-target rule in
+         layout.css, and overlays.css loads after it, so the 36px minimum has
+         to be restated here. */
+      .build-notice .bn-reload {
+        min-height: 36px;
+        padding: 8px 14px;
+      }
     }

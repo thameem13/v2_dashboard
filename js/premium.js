@@ -537,9 +537,21 @@
 
     function section(title, hint, body, mode) {
       if (!body) return '';
+      /* Wrapped in the ledger's scroller. These tables are width:100% with
+         white-space:nowrap cells and up to twelve columns across two groups,
+         so on a phone they are wider than the viewport - and .perf-wrap is
+         overflow:auto, so without a wrapper of their own they put the whole
+         tab into horizontal scroll and drag the note, the toolbar and the
+         charts sideways with them.
+
+         Costs the sticky header: overflow-x:auto forces overflow-y to auto
+         too, so the wrapper becomes the scroll container and the th stops
+         sticking to the tab. These tables are six or seven rows, so there
+         is nothing to scroll past - the ledger already made the same trade. */
       return '<div class="perf-section-title">' + title
         + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</div>'
-        + '<table class="perf-tbl">' + tableHead(mode) + '<tbody>' + body + '</tbody></table>';
+        + '<div class="prem-ledger-wrap"><table class="perf-tbl">'
+        + tableHead(mode) + '<tbody>' + body + '</tbody></table></div>';
     }
 
     /* Buckets rvol_tod - chain volume against the same minute in earlier

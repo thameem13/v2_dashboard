@@ -461,8 +461,9 @@
 
     .prem-censor { color: var(--amber); font-weight: 700; }
 
-    /* The ledger is ~21 columns. It scrolls on its own rather than widening
-       the page, which would put every other section into horizontal scroll. */
+    /* The ledger is 22 columns, and the bucket tables carry two column
+       groups. Both scroll on their own rather than widening the page, which
+       would put every other section of the tab into horizontal scroll. */
     .prem-ledger-wrap {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -472,14 +473,14 @@
     table.prem-ledger {
       font-size: var(--fs-cell);
       font-variant-numeric: tabular-nums;
-      min-width: 1040px;
+      /* 22 columns. Below this the headers wrap and the figures stop lining
+         up; it was 1040 for 21, before Fill. */
+      min-width: 1090px;
     }
 
     table.prem-ledger th,
     table.prem-ledger td { padding: 4px 7px; }
 
-    /* The bucket tables carry two column groups and do not fit a phone
-       either, so they scroll with the same affordance as the ledger. */
     @media (max-width: 900px) {
       .hero,
       .chart-grid { grid-template-columns: 1fr; }
@@ -643,4 +644,33 @@
     [data-theme="dark"] .sticky-alert,
     [data-theme="dark"] .perf-note {
       border-color: var(--line);
+    }
+
+    /* ── Phone: the anti-zoom rule, restated ─────────────────────────────
+       layout.css sets `input, select, textarea { font-size: 16px }` under
+       700px because iOS Safari zooms the viewport on focusing anything
+       smaller and never zooms back out. Every control on this page is
+       styled by a selector that outranks a bare type selector, so that rule
+       reached none of them:
+
+         select.ctrl-select            base.css    (type + class)
+         .date-bar input[type="date"]  layout.css  (class + attr + type)
+         .prem-ctrl input / select     widgets.css (class + type)
+         .news-key-form input          panels.css  (class + type)
+
+       Raising the specificity in layout.css would still lose to widgets.css
+       on load order, so the override lives here, in the last file - the same
+       reason the dark-theme borders above are here. The flow filter row is
+       display:none on a phone, so tables.css needs no entry. */
+    @media (max-width: 700px) {
+      select.ctrl-select,
+      .date-bar input[type="date"],
+      .prem-ctrl input,
+      .prem-ctrl select,
+      .news-key-form input {
+        font-size: var(--fs-2xl);
+      }
+
+      /* The width was set for a 12px figure. */
+      .prem-ctrl input { width: 84px; }
     }
