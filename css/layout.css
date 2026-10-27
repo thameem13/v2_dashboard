@@ -431,8 +431,7 @@
       #tbl-flow .col-inst,
       #tbl-flow .col-rm,
       #tbl-flow .col-cln,
-      #tbl-flow .col-score,
-      #tbl-flow .col-tick {
+      #tbl-flow .col-score {
         display: none;
       }
 
@@ -689,6 +688,10 @@
       #tbl-flow .col-flow::before   { content: 'Flow'; }
       #tbl-flow .col-dir::before    { content: 'Direction'; }
       #tbl-flow .col-grade::before  { content: 'Grade'; }
+      /* Spelled out: the th carries a title explaining that TICK is
+         exchange-wide breadth rather than a per-symbol figure, and there is
+         no hover on a phone to read it with. */
+      #tbl-flow .col-tick::before   { content: 'NYSE Tick'; }
       /* Empty outside the aggregate view, where td:empty already hides it. */
       #tbl-flow .col-strat::before  { content: 'Strategy'; }
       #tbl-vol .vcol-tvol::before   { content: 'Total Vol'; }
