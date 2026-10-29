@@ -756,3 +756,53 @@
 
     }
 
+
+    /* ── PIN / CHOP STRIP, NARROW ──
+       Appended after the phone block on purpose: media queries add no
+       specificity, so these sit where the file's later-rule-wins ordering is
+       already established. See the note at the top of index.html. */
+    @media (max-width: 1000px) {
+      /* Facts drop under the levels and chart before anything has to shrink
+         below readable - the chart is the first thing to become useless when
+         squeezed sideways. */
+      .pin-strip {
+        grid-template-columns: minmax(180px, 1fr) minmax(200px, 1.4fr);
+        grid-template-areas:
+          "head  head"
+          "lv    chart"
+          "facts facts"
+          "hist  hist";
+      }
+
+      .pin-fact { justify-content: flex-start; }
+    }
+
+    @media (max-width: 700px) {
+      .pin-strip {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "head"
+          "lv"
+          "chart"
+          "facts"
+          "hist";
+        gap: 8px;
+      }
+
+      /* Four levels across a phone leaves each about 70px, which fits a
+         6-character price but not its label - two rows of two instead. */
+      .pin-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      .pin-chart svg { max-height: 84px; }
+
+      /* The facts are the detector's reasoning and worth keeping legible, so
+         they wrap rather than truncate. */
+      .pin-fact {
+        white-space: normal;
+        flex-wrap: wrap;
+      }
+
+      /* The history table is wider than a phone; let it scroll on its own
+         rather than widening the page. */
+      .pin-hist-wrap { overflow-x: auto; }
+    }

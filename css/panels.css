@@ -313,3 +313,34 @@
       border-left: 3px solid var(--blue);
     }
 
+
+    /* ── WALL BADGES ──
+       Shown inside the flow table's status cell, beside the grade pill and any
+       surge pill. Dormant while PIN_BADGES_ENABLED is false in js/pin.js, so
+       these rules normally match nothing - kept here, next to .surge-pill they
+       sit alongside, so turning the flag on needs no CSS change. */
+    .wall-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: var(--r-lg);
+      font-size: var(--fs-micro);
+      font-weight: 700;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+
+    /* Red for into-a-wall: it is the one that means stand aside. */
+    .wall-into {
+      background: rgba(248, 81, 73, .18);
+      color: var(--red);
+    }
+
+    .wall-away {
+      background: rgba(63, 185, 80, .16);
+      color: var(--green);
+    }
+
+    .pin-pill {
+      background: rgba(255, 165, 0, .20);
+      color: var(--amber);
+    }

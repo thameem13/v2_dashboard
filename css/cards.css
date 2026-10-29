@@ -195,3 +195,190 @@
       font-size: var(--fs-base);
     }
 
+
+    /* ── PIN / CHOP DETECTOR STRIP ──
+       Full-width, above .top-row. Note these .pin-* classes are the pin/chop
+       DETECTOR; .pin-btn and .pinned elsewhere are the unrelated row-pinning
+       control, and --pin-w is that button's width. Nothing is shared. */
+    .pin-strip {
+      background: var(--panel);
+      border: 1px solid transparent;
+      box-shadow: var(--sh-card);
+      border-radius: var(--r-xl);
+      padding: 9px 11px;
+      margin-bottom: 8px;
+      display: grid;
+      /* levels | chart | facts. The chart takes the slack because it is the
+         only part that reads better wider. */
+      grid-template-columns: minmax(200px, auto) minmax(220px, 1fr) minmax(240px, auto);
+      grid-template-areas:
+        "head  head   head"
+        "lv    chart  facts"
+        "hist  hist   hist";
+      gap: 6px 14px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    [data-theme="dark"] .pin-strip {
+      border-color: var(--line);
+    }
+
+    .pin-head {
+      grid-area: head;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pin-asof {
+      color: var(--dim);
+      font-size: var(--fs-xs);
+      font-family: var(--font-data);
+    }
+
+    /* STATUS PILL — green/amber/red, matching the order the statuses escalate
+       in. The same three classes colour the history table's cells. */
+    .pin-state {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: var(--r-lg);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
+
+    .pin-state-none      { background: rgba(63, 185, 80, .18);  color: var(--green); }
+    .pin-state-forming   { background: rgba(255, 165, 0, .22);  color: var(--amber); }
+    .pin-state-confirmed { background: rgba(248, 81, 73, .20);  color: var(--red); }
+
+    .pin-levels {
+      grid-area: lv;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .pin-lv .label {
+      color: var(--dim);
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pin-lv .val {
+      font-size: var(--fs-lg);
+      font-weight: 650;
+      font-family: var(--font-data);
+      letter-spacing: -0.01em;
+    }
+
+    .pin-lv .pin-cw { color: var(--red); }
+    .pin-lv .pin-pw { color: var(--green); }
+
+    /* The SVG scales uniformly, so width alone sizes it and the viewBox's
+       620x120 sets the height - see the note in pinChartSvg(). max-height
+       keeps a wide desktop column from making the strip tall. */
+    .pin-chart {
+      grid-area: chart;
+      min-width: 0;
+    }
+
+    .pin-chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 104px;
+    }
+
+    .pin-nochart {
+      font-size: var(--fs-xs);
+      padding: 8px 0;
+    }
+
+    .pin-facts {
+      grid-area: facts;
+      display: grid;
+      gap: 2px;
+      font-size: var(--fs-xs);
+      min-width: 0;
+    }
+
+    .pin-fact {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+      white-space: nowrap;
+    }
+
+    .pin-fact .label {
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      font-weight: 600;
+    }
+
+    .pin-fact > span:last-child {
+      font-family: var(--font-data);
+    }
+
+    /* HISTORY TABLE — collapsed by default; the toggle fetches it. */
+    .pin-hist-wrap {
+      grid-area: hist;
+      min-width: 0;
+    }
+
+    .pin-hist-toggle {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      cursor: pointer;
+      padding: 2px 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .pin-hist-toggle:hover { color: var(--txt); }
+
+    .pin-hist {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-xs);
+      font-family: var(--font-data);
+      margin-top: 4px;
+    }
+
+    /* tables.css makes every thead row sticky at z-index 10, with top:0 on the
+       first one, for the three scrolling data tables. This table is ten rows
+       inside a card and never scrolls vertically, so the sticky context buys
+       nothing and the z-index would let the header paint over the strip above
+       it. Opted out rather than worked around. */
+    .pin-hist thead tr {
+      position: static;
+      z-index: auto;
+      background: none;
+    }
+
+    .pin-hist th,
+    .pin-hist td {
+      padding: 3px 6px;
+      text-align: right;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .pin-hist th:first-child,
+    .pin-hist td:first-child { text-align: left; }
+
+    .pin-hist th {
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      font-weight: 600;
+    }

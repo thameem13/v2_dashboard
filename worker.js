@@ -25,6 +25,11 @@ const ALLOWED = new Set([
   'v2_anomalies_range_by_strategy',
   'v2_regime_context_by_strategy',
   'v2_signal_performance_by_strategy',
+  // Pin / Chop detector. The only RPC that exposes call_wall and put_wall per
+  // candle - the dashboard one carries poc/val/vah only, and the regime one
+  // returns a single latest row, so neither can answer "did the walls hold
+  // still all session". See sql/v2_pin_series_by_strategy.sql.
+  'v2_pin_series_by_strategy',
   // Premium backtest tab. v2_premium_sources reports which strategies have an
   // option-premium feed, so the tab can say "no feed yet" rather than render
   // an empty table that reads as "no trades won".

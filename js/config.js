@@ -18,8 +18,8 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.6.3';
-    const BUILD_TS = '2026-10-26T22:30Z';
+    const BUILD = '2.7.0';
+    const BUILD_TS = '2026-10-29T00:00Z';
 
     /* ── STATE ── */
     let soundEnabled = true;
@@ -68,6 +68,14 @@
     let symFilter = '';
     let volRowsCache = null;       // Raw enriched volume rows, for CSV export
     let regimeCtx = null;          // Latest row from v2_regime_context
+
+    /* Pin / Chop detector. pinSeries is the selected strategy's per-candle
+       wall series for the loaded range, refreshed by the poll like the other
+       panels. pinHistory is the ten-session lookback behind the collapsed
+       table - null means "not open", and it is fetched on demand rather than
+       on the poll because it cannot change during a session. */
+    let pinSeries = null;
+    let pinHistory = null;
     let perfRows = null;           // Rows from v2_signal_performance
     let perfKey = null;            // Date-range key the perfRows were loaded for
     let perfLoading = false;

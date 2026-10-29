@@ -25,3 +25,8 @@ FEASIBILITY_REVIEW.md
 # The pre-split original, kept for reference only - 122KB nobody should be
 # able to load from the live site.
 index_old_main.html
+
+# Database source. These run against Supabase via the CLI; they are not part
+# of the site, and the detector's SQL names the tables and columns the browser
+# is deliberately never told about.
+sql/

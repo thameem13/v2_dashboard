@@ -182,6 +182,31 @@
           dateCtx.isLive ? strat : { p_date: dateCtx.end || dateCtx.start, ...strat }, 1)
           .catch(regimeOnFail);
 
+        /* The pin detector's wall series. Non-critical like the anomalies: an
+           empty series hides the card, which is the right failure - a pin
+           card with no walls in it would read as "no pin today" and that is
+           exactly the claim it must never make by accident. */
+        const pinOnFail = (err) => {
+          if (err.name !== 'AbortError') console.warn('Pin series load failed:', err);
+          return [];
+        };
+        /* One function for live and range: p_start = p_end is today. It takes
+           dates in both modes, unlike the pairs above, so there is no branch
+           on dateCtx.isLive here - see the header of
+           sql/v2_pin_series_by_strategy.sql.
+
+           On the All preset both dates are null, and this RPC reads that as
+           the latest session rather than all of history the way the other
+           range RPCs do. Deliberate: the card reports on one session, so
+           fetching every session to display the newest would be the
+           dashboard's largest request in service of nothing. The history
+           table is the place that looks back, and it fetches its own range. */
+        const pinPromise = rpcWithRetry('v2_pin_series_by_strategy', signal,
+          dateCtx.isLive
+            ? { p_strategy: currentStrategy }
+            : { p_start: dateCtx.start, p_end: dateCtx.end, ...strat }, 1)
+          .catch(pinOnFail);
+
         if (dateCtx.isLive) {
           // Live mode: today's session
           flowPromise = rpcWithRetry('v2_dashboard_by_strategy', signal, strat);
@@ -195,8 +220,8 @@
           anomaliesPromise = rpcWithRetry('v2_anomalies_range_by_strategy', signal, params, 1).catch(anomaliesOnFail);
         }
 
-        const [flow, vol, anomalies, regime] = await Promise.all([
-          flowPromise, volPromise, anomaliesPromise, regimePromise
+        const [flow, vol, anomalies, regime, pin] = await Promise.all([
+          flowPromise, volPromise, anomaliesPromise, regimePromise, pinPromise
         ]);
 
         // v2_regime_context returns at most one row.
@@ -205,6 +230,14 @@
 
         anomalyMap = {};
         (anomalies || []).forEach(a => { anomalyMap[tsKey(a.candle_time_ny)] = a; });
+
+        /* Indexed before renderFlow, not after: signalWallFlag() reads both
+           maps while the rows are being built, so a later refresh would badge
+           every row against the previous poll's walls. */
+        pinSeries = pin || [];
+        pinIndexSeries(pinSeries);
+        pinIndexStatus(pinSeries);
+        renderPinCard();
 
         renderCards(flow, vol);
         renderFlow(flow);
@@ -333,8 +366,16 @@
       regimeCtx = null;
       priceHistory = [];
       flowHistory = [];
+      /* Same reasoning one step further: the wall levels belong to one symbol,
+         so across a merged table they would badge QQQ candles against SPY's
+         walls. Cleared before renderFlow so signalWallFlag() finds nothing. */
+      pinSeries = null;
+      pinIndexSeries(null);
+      pinIndexStatus(null);
+      pinHistory = null;
 
       renderAggCards(all);
+      renderPinCard();
       renderFlow(all);
       renderRegime(null);
       renderVol(null);

@@ -459,6 +459,12 @@
         const anom = anomalyMap[tsKey(x.candle_time_ny)];
         if (anom) statusCell += ' ' + surgePill(anom.anomaly_type);
 
+        /* Wall badges ride in this cell rather than a column of their own -
+           the flow table's column order is read by index in four places, so a
+           new <td> would break sort, filter, CSV export and the row count
+           together. Returns '' while PIN_BADGES_ENABLED is false. */
+        statusCell += signalWallFlag(x);
+
         const jsonStr = escapeHtml(JSON.stringify(x));
 
         return `
