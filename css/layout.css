@@ -182,8 +182,12 @@
       flex-shrink: 0;
     }
 
-    /* Collapse the whole header for maximum table room. */
+    /* Collapse the whole header for maximum table room. The pin strip is a
+       sibling of .top-row, not a child, so it needs naming here or the
+       collapse button leaves it behind - which is the one thing the button
+       exists to prevent. */
     #top.collapsed .top-row,
+    #top.collapsed #pin-card,
     #top.collapsed .date-bar {
       display: none;
     }
@@ -777,6 +781,12 @@
       .pin-fact { justify-content: flex-start; }
     }
 
+    /* ── PIN / CHOP STRIP, PHONE ──
+       #top is capped at 55dvh here and scrolls, so an over-tall strip does not
+       clip - it pushes the KPI cards, the price and the news below a scroll
+       inside the header, and buries the number the phone is opened for. The
+       desktop strip stacks to roughly 350px in one column, so everything below
+       is about getting that under ~200px without dropping anything. */
     @media (max-width: 700px) {
       .pin-strip {
         grid-template-columns: minmax(0, 1fr);
@@ -786,21 +796,43 @@
           "chart"
           "facts"
           "hist";
+        gap: 5px;
+        padding: 8px 10px;
+      }
+
+      /* Stays four across, as on desktop: at ~316px of content each column
+         gets ~74px, which still takes "Call Wall" at --fs-xs beside a
+         6-character price once the value drops to --fs-md. Stacking them 2x2
+         would cost a 46px row to buy width nothing needs. */
+      .pin-levels { gap: 4px; }
+
+      .pin-lv .val { font-size: var(--fs-md); }
+
+      /* The label default is tuned for a KPI card, which has twice the room. */
+      .pin-lv .label { letter-spacing: .2px; }
+
+      .pin-chart svg { max-height: 66px; }
+
+      /* One column, label and value on the same line, each row the full
+         width. Two columns was tried and is worse: at ~150px a column cannot
+         fit "Walls since 09:55" beside "stable · call 0, put 1 strikes", so
+         it forces the label above the value and three two-line rows come out
+         taller than five one-line ones. The value ellipses if it still does
+         not fit, which beats reflowing the card. */
+      .pin-fact {
+        justify-content: space-between;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         gap: 8px;
       }
 
-      /* Four levels across a phone leaves each about 70px, which fits a
-         6-character price but not its label - two rows of two instead. */
-      .pin-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-      .pin-chart svg { max-height: 84px; }
-
-      /* The facts are the detector's reasoning and worth keeping legible, so
-         they wrap rather than truncate. */
-      .pin-fact {
-        white-space: normal;
-        flex-wrap: wrap;
+      .pin-fact > span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
       }
+
+      .pin-fact .label { flex: 0 0 auto; }
 
       /* The history table is wider than a phone; let it scroll on its own
          rather than widening the page. */
