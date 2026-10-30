@@ -107,4 +107,22 @@ left join flow f on f.ny = i.ny
 order by i.ny;
 $function$;
 
-grant execute on function public.v2_pin_series_by_strategy(date, date, text) to anon, authenticated, service_role;
+/* service_role ONLY - and the revoke is part of the fix, not belt-and-braces.
+   This function is SECURITY DEFINER, so it runs as its owner and RLS never
+   applies to it. Granted to anon it was therefore readable by anyone holding
+   a publishable key - and one was sitting in index_old_main.html in a public
+   repo, so "anyone" meant the internet. Verified on 2026-10-29: an anon key
+   got HTTP 200 and paged the whole series, every strategy, past Cloudflare
+   Access entirely, because Access gates dashflow.trade and not
+   egsgycizhssexstjrsqi.supabase.co.
+
+   The dashboard does not need the grant. worker.js authenticates with
+   SUPABASE_SECRET_KEY, which is service_role; that is how the other twenty
+   RPCs already work, and they answer anon with 42501 permission denied.
+
+   The revoke runs before the grant because CREATE OR REPLACE FUNCTION keeps
+   the privileges already on the function - so re-running this file without it
+   would leave an old anon grant in place and silently reopen the hole. */
+revoke execute on function public.v2_pin_series_by_strategy(date, date, text) from anon, authenticated;
+revoke execute on function public.v2_pin_series_by_strategy(date, date, text) from public;
+grant  execute on function public.v2_pin_series_by_strategy(date, date, text) to service_role;

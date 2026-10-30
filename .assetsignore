@@ -22,8 +22,9 @@ supabase/
 RELEASE.md
 FEASIBILITY_REVIEW.md
 
-# The pre-split original, kept for reference only - 122KB nobody should be
-# able to load from the live site.
+# Deleted 2026-10-29: it carried a live Supabase publishable key, and this
+# repo is public. Kept listed as a guard, so if anyone ever restores the file
+# for reference it still cannot be served from the live site.
 index_old_main.html
 
 # Database source. These run against Supabase via the CLI; they are not part
