@@ -81,6 +81,15 @@
     const PIN_TEST_FROM       = '09:35';
     const PIN_FLOW_FROM       = '10:00';
 
+    /* These anchor the windows at a wall-clock time rather than trailing the
+       current candle, which means a session that settles into a pin after
+       lunch is disqualified by its morning. Section 7 of pin_backtest.sql
+       tried the trailing version and it is worse: as a day classifier it is
+       true on 18 of 20 SPY sessions and the days it picks average exactly
+       the same range as every other day, and per alert the 60-minute window
+       underperforms no rule at all in both halves of the session while the
+       90-minute window disagrees with it. Anchored stays. */
+
     /* How near a wall an alert has to point for INTO WALL. Note this makes
        AWAY FROM WALL mean "not into a wall", so it also covers an alert
        sitting mid-range with neither wall within reach. The backtest used the

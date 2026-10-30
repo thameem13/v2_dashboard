@@ -469,3 +469,168 @@ select case when st < '12:00' then 'morning' else 'afternoon' end half,
 from f left join pnl p
   on p.candle_time_ny = f.signal_time and p.direction = f.direction
 group by 1 order by 1;
+
+
+/* ══════════════════════════════════════════════════════════════════════
+ * 7. SHOULD THE WINDOW TRAIL INSTEAD OF ANCHORING AT 09:55?
+ *
+ * Rule 1 measures wall drift from 09:55 across the whole session, so a day
+ * that settles into a pin at lunchtime is disqualified by its morning.
+ * 2026-10-29 QQQ is the case: the call wall stopped moving at 11:25 and the
+ * put wall held 712 from 13:35 for the last 30 candles, which is as still
+ * as SPY ever gets, yet the session reads NO PIN. A trailing window - the
+ * last 60 or 90 minutes, rolling - would catch that.
+ *
+ * ANSWER: it catches it, and it is not worth having.
+ *
+ *   - As a day classifier it selects nothing. "Pinned at some point in a
+ *     trailing hour" is true on 18 of 20 SPY sessions and 14 of 19 QQQ
+ *     ones, and the average range of the days it picks is 5.00 against an
+ *     all-day average of 5.00. It is not describing anything.
+ *   - Per alert it does not separate P&L either, and the two window
+ *     lengths contradict each other, which is what noise looks like:
+ *
+ *         morning    trailing 60: 47.4% / +0.052 (n=19)
+ *                    trailing 90: 70.0% / +0.438 (n=10)
+ *         afternoon  trailing 60: 23.8% / -0.344 (n=21)
+ *                    trailing 90: 46.2% / -0.167 (n=26)
+ *
+ *     Against all alerts at 47.7% / +0.121 morning and 31.3% / -0.200
+ *     afternoon, the 60-minute window is WORSE than no rule in both
+ *     halves. A real effect does not flip that far between 60 and 90.
+ *   - And it would not have changed 10-29 QQQ anyway, for a better reason
+ *     than drift: from 14:00 the trailing drift is 0 and 0, perfectly
+ *     stable - but tc60 is false. Price never came within 0.5 of the 717
+ *     call wall in any trailing hour of the afternoon. It tested the call
+ *     wall six times around 11:35-11:50 and then left, and spent the rest
+ *     of the day leaning on 712. It was riding one wall, not pinning
+ *     between two. Under a trailing window plus a looser gap it would read
+ *     PIN FORMING, never PIN CONFIRMED - which is the honest description.
+ *
+ * So the 09:55 anchor stays. The detector was right about QQQ, and right
+ * for the reason the card already prints: one wall tested, not two.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+\echo '=== 7a. Trailing window as a day classifier: it selects nearly every day ==='
+
+with raw as (
+  select 'SPY' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy')
+  union all
+  select 'QQQ' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_qqq')
+),
+s as (select sym, trade_date, candle_time_ny ct, candle_time_ny::time t,
+             price, call_wall cw, put_wall pw from raw),
+-- 5-minute candles, so 12 rows is 60 minutes and 18 is 90. The count(*)
+-- test keeps the first candles of the session from qualifying on a window
+-- that is not yet full.
+w as (
+  select s.*,
+    max(cw) over w60 - min(cw) over w60 cwd60, max(pw) over w60 - min(pw) over w60 pwd60,
+    bool_or(abs(price-cw)<=0.5) over w60 tc60, bool_or(abs(price-pw)<=0.5) over w60 tp60,
+    count(*) over w60 n60,
+    max(cw) over w90 - min(cw) over w90 cwd90, max(pw) over w90 - min(pw) over w90 pwd90,
+    bool_or(abs(price-cw)<=0.5) over w90 tc90, bool_or(abs(price-pw)<=0.5) over w90 tp90,
+    count(*) over w90 n90
+  from s
+  window w60 as (partition by sym, trade_date order by ct rows between 11 preceding and current row),
+         w90 as (partition by sym, trade_date order by ct rows between 17 preceding and current row)),
+flag as (
+  select sym, trade_date, t,
+    (n60=12 and cwd60<=1 and pwd60<=1 and (cw-pw)<=3 and tc60 and tp60) p60,
+    (n90=18 and cwd90<=1 and pwd90<=1 and (cw-pw)<=3 and tc90 and tp90) p90
+  from w),
+rng as (select sym, trade_date, round(max(price)-min(price),2) day_range from s group by 1,2),
+agg as (
+  select f.sym, f.trade_date, r.day_range,
+    bool_or(p60) ever60, bool_or(p90) ever90,
+    (array_agg(p60 order by t desc))[1] close60,
+    (array_agg(p90 order by t desc))[1] close90
+  from flag f join rng r using (sym, trade_date) group by 1,2,3)
+select sym, count(*) days,
+  count(*) filter (where close60) at_close_60,
+  count(*) filter (where close90) at_close_90,
+  count(*) filter (where ever60)  ever_60,
+  count(*) filter (where ever90)  ever_90,
+  round(avg(day_range) filter (where ever60),2) ever60_avg_range,
+  round(avg(day_range),2) all_avg_range   -- identical: it describes nothing
+from agg group by 1 order by 1;
+
+
+\echo '=== 7b. Trailing vs anchored, per SPY alert, split by half ==='
+\echo '    The 60 and 90 minute windows disagree with each other. That is noise.'
+
+with s as (
+  select trade_date, candle_time_ny ct, candle_time_ny::time t,
+         price, call_wall cw, put_wall pw
+  from spy_session_view where trade_date >= '2026-10-02'),
+w as (
+  select s.*,
+    max(cw) over w60 - min(cw) over w60 cwd60, max(pw) over w60 - min(pw) over w60 pwd60,
+    bool_or(abs(price-cw)<=0.5) over w60 tc60, bool_or(abs(price-pw)<=0.5) over w60 tp60,
+    count(*) over w60 n60,
+    max(cw) over w90 - min(cw) over w90 cwd90, max(pw) over w90 - min(pw) over w90 pwd90,
+    bool_or(abs(price-cw)<=0.5) over w90 tc90, bool_or(abs(price-pw)<=0.5) over w90 tp90,
+    count(*) over w90 n90
+  from s
+  window w60 as (partition by trade_date order by ct rows between 11 preceding and current row),
+         w90 as (partition by trade_date order by ct rows between 17 preceding and current row)),
+sig as (select signal_time, direction from v2_signal_log
+        where signal_time::date >= '2026-10-02'),
+anchored as (
+  select g.signal_time,
+    max(c.cw) filter (where c.t>='09:55')-min(c.cw) filter (where c.t>='09:55') cwd,
+    max(c.pw) filter (where c.t>='09:55')-min(c.pw) filter (where c.t>='09:55') pwd,
+    bool_or(c.t>='09:35' and abs(c.price-c.cw)<=0.5) tc,
+    bool_or(c.t>='09:35' and abs(c.price-c.pw)<=0.5) tp,
+    (array_agg(c.cw order by c.ct desc))[1] cw_now,
+    (array_agg(c.pw order by c.ct desc))[1] pw_now
+  from sig g join s c on c.trade_date = g.signal_time::date and c.ct <= g.signal_time
+  group by 1),
+f as (
+  select g.signal_time, g.direction, g.signal_time::time st,
+    (a.cwd<=1 and a.pwd<=1 and (a.cw_now-a.pw_now)<=3 and a.tc and a.tp) anchor_conf,
+    (w.n60=12 and w.cwd60<=1 and w.pwd60<=1 and (w.cw-w.pw)<=3 and w.tc60 and w.tp60) trail60,
+    (w.n90=18 and w.cwd90<=1 and w.pwd90<=1 and (w.cw-w.pw)<=3 and w.tc90 and w.tp90) trail90
+  from sig g
+  join anchored a on a.signal_time = g.signal_time
+  join w on w.trade_date = g.signal_time::date and w.ct = g.signal_time),
+pnl as (
+  select candle_time_ny, direction, pnl
+  from v2_premium_backtest_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy',
+                                       1.50, 1.00, array['A','B','C','D','F'], 0, 30))
+select case when st < '12:00' then 'morning' else 'afternoon' end half,
+  count(*) n_all,
+  round(100.0*count(*) filter (where p.pnl>0)/nullif(count(p.pnl),0),1) all_win_pct,
+  round(avg(p.pnl),3) all_avg_pnl,
+  count(*) filter (where anchor_conf) anchored_n,
+  round(100.0*count(*) filter (where anchor_conf and p.pnl>0)
+        /nullif(count(p.pnl) filter (where anchor_conf),0),1) anchored_win_pct,
+  round(avg(p.pnl) filter (where anchor_conf),3) anchored_avg_pnl,
+  count(*) filter (where trail60) trail60_n,
+  round(100.0*count(*) filter (where trail60 and p.pnl>0)
+        /nullif(count(p.pnl) filter (where trail60),0),1) trail60_win_pct,
+  round(avg(p.pnl) filter (where trail60),3) trail60_avg_pnl,
+  count(*) filter (where trail90) trail90_n,
+  round(100.0*count(*) filter (where trail90 and p.pnl>0)
+        /nullif(count(p.pnl) filter (where trail90),0),1) trail90_win_pct,
+  round(avg(p.pnl) filter (where trail90),3) trail90_avg_pnl
+from f left join pnl p on p.candle_time_ny = f.signal_time and p.direction = f.direction
+group by 1 order by 1;
+
+
+\echo '=== 7c. 2026-10-29 QQQ: why a trailing window still would not call it ==='
+\echo '    Walls dead still from 14:00 - but the call wall is never tested.'
+
+with s as (
+  select candle_time_ny ct, candle_time_ny::time t, price, call_wall cw, put_wall pw, impl_move
+  from qqq_session_view where trade_date = '2026-10-29'),
+w as (
+  select s.*,
+    max(cw) over w60 - min(cw) over w60 cwd60, max(pw) over w60 - min(pw) over w60 pwd60,
+    bool_or(abs(price-cw)<=0.5) over w60 tc60, bool_or(abs(price-pw)<=0.5) over w60 tp60,
+    count(*) over w60 n60
+  from s window w60 as (order by ct rows between 11 preceding and current row))
+select t, cw call_wall, pw put_wall, cw-pw gap, cwd60 trail_cw_drift, pwd60 trail_pw_drift,
+  tc60 tested_call_in_hour, tp60 tested_put_in_hour,
+  round((cw-pw)/nullif(impl_move,0),2) gap_over_implied
+from w where t in ('14:00','14:30','15:00','15:30','16:00') order by t;
