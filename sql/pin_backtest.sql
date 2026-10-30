@@ -309,3 +309,163 @@ select drift_max, gap_max, contain_tol,
 from matched
 group by 1, 2, 3
 order by 1, 2, 3;
+
+
+/* ══════════════════════════════════════════════════════════════════════
+ * 6. IS THE GAP LIMIT THE WRONG SHAPE?
+ *
+ * PIN_GAP_MAX is 3 points, an absolute count tuned on SPY. QQQ moves wider
+ * - implied move averaged 6.03 against SPY's 4.01 over October - so the
+ * question is whether the limit should be a fraction of the implied move
+ * instead, which would be scale-free and let one constant serve both
+ * symbols.
+ *
+ * ANSWER, on 2026-10-02 .. 10-29: no, or at least not on this evidence.
+ *
+ *   - Judged at the close, the proportional gap changes NOTHING. Pin-day
+ *     counts are identical at ratio <= 0.60 and <= 0.80: SPY 3, QQQ 1. The
+ *     gap was never the binding constraint.
+ *   - The binding constraint is wall DRIFT. QQQ's walls move far more than
+ *     SPY's: average spread since 09:55 was 3.79 / 4.00 strikes against
+ *     SPY's 2.65 / 2.70, and QQQ fails rule 1 on 18 of 19 sessions on drift
+ *     alone. No gap rule can reach that.
+ *   - Loosening drift to a mode-share test (each wall sat at its dominant
+ *     strike for >= 70% of candles since 09:55) does raise the counts - SPY
+ *     3 -> 4, QQQ 1 -> 3 - but the days it adds are QQQ 10-08 and 10-20,
+ *     whose ranges were 12.54 and 11.41 points. A pin day with a 12-point
+ *     range is a false positive by any reading, so the strict min-max drift
+ *     is doing real work and stays.
+ *   - At SIGNAL time the proportional gap does differ, because impl_move
+ *     decays through the session and the ratio tightens with it. It moves
+ *     20 alerts out of PIN CONFIRMED, and those 20 were the weak ones
+ *     (30.0% win, -0.279) against the 43 that stay (55.8%, +0.077). But
+ *     most of that is time of day, not the rule: ALL afternoon alerts ran
+ *     31.3% / -0.200 against the morning's 47.7% / +0.121. Split by half
+ *     the rule still edges ahead - morning 51.6% / +0.193 on n=31 against
+ *     the absolute rule's 45.7% / +0.078 on n=46 - but on samples that
+ *     size, and with win rate and average P&L disagreeing in the
+ *     afternoon, that is not a result to retune a constant on.
+ *
+ * So PIN_GAP_MAX stays absolute. Re-run this as sessions accumulate; the
+ * morning split is the number to watch.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+\echo '=== 6a. Wall behaviour by symbol: drift, gap, and gap as a share of implied ==='
+
+with raw as (
+  select 'SPY' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy')
+  union all
+  select 'QQQ' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_qqq')
+),
+s as (select sym, trade_date, candle_time_ny, candle_time_ny::time t,
+             price, call_wall, put_wall, impl_move from raw),
+d as (
+  select sym, trade_date,
+    max(call_wall) filter (where t>='09:55') - min(call_wall) filter (where t>='09:55') cw_drift,
+    max(put_wall)  filter (where t>='09:55') - min(put_wall)  filter (where t>='09:55') pw_drift,
+    max(impl_move) impl_open
+  from s group by 1,2),
+l as (select distinct on (sym, trade_date) sym, trade_date, call_wall - put_wall gap
+      from s order by sym, trade_date, candle_time_ny desc)
+select d.sym, count(*) days,
+  round(avg(cw_drift),2) avg_cw_drift, max(cw_drift) max_cw_drift,
+  round(avg(pw_drift),2) avg_pw_drift, max(pw_drift) max_pw_drift,
+  round(avg(gap),2) avg_gap, max(gap) max_gap,
+  round(avg(gap/nullif(impl_open,0)),3) avg_gap_ratio,
+  round(avg(impl_open),2) avg_impl
+from d join l using (sym, trade_date) group by 1 order by 1;
+
+
+\echo '=== 6b. Pin-day counts under each candidate rule. Identical for the ratio. ==='
+
+with raw as (
+  select 'SPY' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy')
+  union all
+  select 'QQQ' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_qqq')
+),
+s as (select sym, trade_date, candle_time_ny, candle_time_ny::time t,
+             price, call_wall, put_wall, impl_move from raw),
+-- The dominant strike each wall held since 09:55, and how much of the
+-- session it held it for. A min-max spread is blown up by one flicker
+-- candle; this is the robust alternative, tested and rejected above.
+m as (
+  select sym, trade_date,
+    mode() within group (order by call_wall) cw_mode,
+    mode() within group (order by put_wall)  pw_mode,
+    count(*) n
+  from s where t >= '09:55' group by 1,2),
+d as (
+  select s.sym, s.trade_date, cw_mode, pw_mode, cw_mode - pw_mode mode_gap,
+    max(call_wall) filter (where t>='09:55') - min(call_wall) filter (where t>='09:55') cw_drift,
+    max(put_wall)  filter (where t>='09:55') - min(put_wall)  filter (where t>='09:55') pw_drift,
+    round(count(*) filter (where t>='09:55' and call_wall = cw_mode)::numeric / n, 2) cw_share,
+    round(count(*) filter (where t>='09:55' and put_wall  = pw_mode)::numeric / n, 2) pw_share,
+    bool_or(t>='09:35' and abs(price - call_wall) <= 0.5) tc,
+    bool_or(t>='09:35' and abs(price - put_wall ) <= 0.5) tp,
+    round(max(price) - min(price), 2) day_range,
+    max(impl_move) impl_open
+  from s join m using (sym, trade_date) group by 1,2,cw_mode,pw_mode,n),
+l as (select distinct on (sym, trade_date) sym, trade_date, call_wall - put_wall gap
+      from s order by sym, trade_date, candle_time_ny desc),
+j as (select d.*, l.gap from d join l using (sym, trade_date))
+select sym, count(*) days,
+  count(*) filter (where cw_drift<=1 and pw_drift<=1 and gap<=3 and tc and tp) shipped_rule,
+  count(*) filter (where cw_drift<=1 and pw_drift<=1
+                     and gap/nullif(impl_open,0)<=0.60 and tc and tp) ratio_60,
+  count(*) filter (where cw_drift<=1 and pw_drift<=1
+                     and gap/nullif(impl_open,0)<=0.80 and tc and tp) ratio_80,
+  count(*) filter (where cw_share>=0.70 and pw_share>=0.70 and mode_gap<=3 and tc and tp) mode_70,
+  -- The reason mode_70 is rejected: the range on the days it adds.
+  round(max(day_range) filter (where cw_share>=0.70 and pw_share>=0.70 and mode_gap<=3
+                                 and tc and tp
+                                 and not (cw_drift<=1 and pw_drift<=1 and gap<=3)), 2) added_day_max_range
+from j group by 1 order by 1;
+
+
+\echo '=== 6c. SPY alerts: absolute vs proportional gap, scored AT SIGNAL TIME ==='
+\echo '    Split morning/afternoon, because impl_move decays and the ratio'
+\echo '    tightens with it - without the split this measures the clock.'
+
+with s as (
+  select trade_date, candle_time_ny, candle_time_ny::time t,
+         price, call_wall, put_wall, impl_move
+  from spy_session_view where trade_date >= '2026-10-02'),
+sig as (select signal_time, direction from v2_signal_log
+        where signal_time::date >= '2026-10-02'),
+at_signal as (
+  select g.signal_time, g.direction, g.signal_time::time st,
+    max(c.call_wall) filter (where c.t>='09:55')-min(c.call_wall) filter (where c.t>='09:55') cw_drift,
+    max(c.put_wall)  filter (where c.t>='09:55')-min(c.put_wall)  filter (where c.t>='09:55') pw_drift,
+    bool_or(c.t>='09:35' and abs(c.price-c.call_wall)<=0.5) tc,
+    bool_or(c.t>='09:35' and abs(c.price-c.put_wall )<=0.5) tp,
+    (array_agg(c.call_wall order by c.candle_time_ny desc))[1] cw_now,
+    (array_agg(c.put_wall  order by c.candle_time_ny desc))[1] pw_now,
+    (array_agg(c.impl_move order by c.candle_time_ny desc))[1] impl_now
+  from sig g join s c
+    on c.trade_date = g.signal_time::date and c.candle_time_ny <= g.signal_time
+  group by 1,2,3),
+f as (
+  select a.*,
+    (cw_drift<=1 and pw_drift<=1 and (cw_now-pw_now)<=3 and tc and tp) abs_conf,
+    (cw_drift<=1 and pw_drift<=1
+      and (cw_now-pw_now)/nullif(impl_now,0)<=0.60 and tc and tp) ratio_conf
+  from at_signal a),
+pnl as (
+  select candle_time_ny, direction, pnl
+  from v2_premium_backtest_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy',
+                                       1.50, 1.00, array['A','B','C','D','F'], 0, 30))
+select case when st < '12:00' then 'morning' else 'afternoon' end half,
+  count(*) all_alerts,
+  round(100.0*count(*) filter (where p.pnl>0)/nullif(count(p.pnl),0),1) all_win_pct,
+  round(avg(p.pnl),3) all_avg_pnl,
+  count(*) filter (where abs_conf) abs_n,
+  round(100.0*count(*) filter (where abs_conf and p.pnl>0)
+        /nullif(count(p.pnl) filter (where abs_conf),0),1) abs_win_pct,
+  round(avg(p.pnl) filter (where abs_conf),3) abs_avg_pnl,
+  count(*) filter (where ratio_conf) ratio_n,
+  round(100.0*count(*) filter (where ratio_conf and p.pnl>0)
+        /nullif(count(p.pnl) filter (where ratio_conf),0),1) ratio_win_pct,
+  round(avg(p.pnl) filter (where ratio_conf),3) ratio_avg_pnl
+from f left join pnl p
+  on p.candle_time_ny = f.signal_time and p.direction = f.direction
+group by 1 order by 1;

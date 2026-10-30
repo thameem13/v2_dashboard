@@ -21,8 +21,8 @@
    alert by the detector's reading at the moment it fired, the wall flag still
    does not separate P&L: inside PIN CONFIRMED, INTO WALL ran +0.011 over 50
    alerts against AWAY FROM WALL's -0.215 over 13 - the opposite sign to the
-   hypothesis. On QQQ there were no pin days at all and the two flags were
-   indistinguishable. So PIN_BADGES_ENABLED ships false.
+   hypothesis. On QQQ there was a single pin day in the month and the two
+   flags were indistinguishable. So PIN_BADGES_ENABLED ships false.
 
    WHAT DID SHOW UP, unasked for and with the sign reversed: the status itself
    sorted the alerts. Fired while the detector read NO PIN, INTO WALL alerts
@@ -44,6 +44,17 @@
        measured it alone picked out 10-13, 10-28 and 10-29. */
     const PIN_WALL_DRIFT_MAX  = 1;      // strikes
     const PIN_GAP_MAX         = 3;      // points, call_wall - put_wall
+
+    /* The gap limit is an absolute point count tuned on SPY, and QQQ moves
+       wider - 6.03 average implied move against SPY's 4.01 - so it was worth
+       asking whether it should be a fraction of the implied move instead.
+       Section 6 of sql/pin_backtest.sql says no: judged at the close the
+       proportional gap picks exactly the same days, because the gap is not
+       what QQQ fails on. QQQ fails on DRIFT, on 18 of 19 sessions - its walls
+       move 3.79 / 4.00 strikes on average against SPY's 2.65 / 2.70. The
+       obvious loosening, a mode-share test in place of the min-max spread,
+       buys QQQ two more pin days whose ranges were 12.54 and 11.41 points,
+       which is not what the word pin means. Left alone deliberately. */
 
     /* Rule 2 - a wall counts as tested when price came this close to it. */
     const PIN_TEST_TOL        = 0.5;    // points
