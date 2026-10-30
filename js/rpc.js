@@ -374,6 +374,14 @@
       pinIndexStatus(null);
       pinHistory = null;
 
+      /* The badges cannot work here, but the status can: fan the wall series
+         out the same way as the flow RPC and show one line per strategy. Not
+         folded into the Promise.allSettled above because a pin series that
+         fails must not take a strategy's alerts off the table with it - the
+         card is the optional half. retries = 1 for the same reason as above. */
+      pinAgg = await loadAggPin(signal, dateCtx, strategies);
+      if (signal.aborted) return;
+
       renderAggCards(all);
       renderPinCard();
       renderFlow(all);
@@ -383,4 +391,35 @@
       checkAggAlerts(all);
       updateRowCounts();
       applySort('flow');
+    }
+
+    /* The wall series for every strategy at once, for the aggregate card.
+       Returns [{ id, label, symbol, rows }] in registry order, with the
+       strategies whose fetch failed left out - a missing row says less than a
+       wrong one, and the card names what it has. The rows are kept raw and
+       evalPin() runs at render time, so a theme switch or a re-render does
+       not need another round trip. */
+    async function loadAggPin(signal, dateCtx, strategies) {
+      const settled = await Promise.allSettled(strategies.map(s =>
+        rpcWithRetry('v2_pin_series_by_strategy', signal,
+          dateCtx.isLive
+            ? { p_strategy: s.id }
+            : { p_start: dateCtx.start, p_end: dateCtx.end, p_strategy: s.id },
+          1)));
+
+      const out = [];
+      settled.forEach((res, i) => {
+        const s = strategies[i];
+        if (res.status !== 'fulfilled') {
+          if (!res.reason || res.reason.name !== 'AbortError') {
+            console.warn('Pin series load failed for ' + s.id + ':', res.reason);
+          }
+          return;
+        }
+        if (!res.value || !res.value.length) return;
+        out.push({ id: s.id, symbol: s.symbol,
+                   label: s.symbol || s.label || s.name || s.id,
+                   rows: res.value });
+      });
+      return out;
     }

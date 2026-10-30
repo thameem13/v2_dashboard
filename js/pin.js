@@ -303,8 +303,10 @@
       /* The series is one strategy's. In "Today's Alerts" the table holds
          several symbols at once, so a single pair of wall levels would be
          wrong for most rows - the same reason loadAggregate() empties
-         anomalyMap and volMap. Hidden rather than guessed. */
-      if (isAggregate()) { host.style.display = 'none'; host.innerHTML = ''; return; }
+         anomalyMap and volMap. The badges stay off there for exactly that
+         reason, but the status is per-symbol and perfectly sayable, so that
+         view gets a row each instead of nothing. */
+      if (isAggregate()) { renderPinAgg(host); return; }
 
       const byDay = pinGroupByDay(pinSeries);
       const days = Object.keys(byDay).sort();
@@ -378,6 +380,73 @@
           </button>
           <div id="pin-hist-body">${pinHistory ? pinHistoryTable() : ''}</div>
         </div>
+      </div>`;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       THE AGGREGATE CARD — one line per strategy
+
+       "Today's Alerts" is the view most of the session is spent on, so the
+       detector has to be readable from there too. What it cannot show is the
+       single-symbol card: two symbols' walls in one pair of level readouts
+       would be wrong for whichever symbol is not SPY. So each strategy gets
+       its own line with its own status, and the chart and the history table
+       are left to the per-strategy view - five charts stacked above the table
+       would cost more height than the alerts they sit on top of.
+       ══════════════════════════════════════════════════════ */
+    function renderPinAgg(host) {
+      const list = (pinAgg || []).map(p => {
+        const byDay = pinGroupByDay(p.rows);
+        const days = Object.keys(byDay).sort();
+        if (!days.length) return null;
+        const day = days[days.length - 1];
+        return { ...p, day, st: evalPin(byDay[day], null) };
+      }).filter(p => p && p.st);
+
+      if (!list.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+      host.style.display = '';
+
+      const f2 = v => v == null ? '-' : (+v).toFixed(2);
+
+      /* Pinning symbols first, then by label, so the one worth knowing about
+         is the one at the top rather than wherever the registry put it. */
+      const rank = { 'PIN CONFIRMED': 0, 'PIN FORMING': 1, 'NO PIN': 2 };
+      list.sort((a, b) => (rank[a.st.status] - rank[b.st.status])
+        || String(a.label).localeCompare(String(b.label)));
+
+      const pinning = list.filter(p => p.st.status !== 'NO PIN');
+      const head = pinning.length
+        ? pinning.map(p => escapeHtml(p.label)).join(', ') + ' pinning'
+        : 'no symbol pinning';
+
+      const latest = list[0];
+
+      const rows = list.map(p => {
+        const st = p.st;
+        const tested = [
+          st.testedCallAt ? `call ${escapeHtml(st.testedCallAt)}` : 'call untested',
+          st.testedPutAt ? `put ${escapeHtml(st.testedPutAt)}` : 'put untested'
+        ].join(' · ');
+        return `
+        <div class="pin-agg-row">
+          <span class="pin-agg-sym">${escapeHtml(p.label)}</span>
+          <span class="pin-state ${PIN_PILL_CLASS[st.status] || 'pin-state-none'}">${escapeHtml(st.status)}</span>
+          <span class="pin-agg-lv">
+            <span class="pin-cw">${f2(st.callWall)}</span> /
+            <span class="pin-pw">${f2(st.putWall)}</span>
+            <span class="muted">gap ${f2(st.gap)}</span>
+          </span>
+          <span class="pin-agg-note">${f2(st.price)} now · ${escapeHtml(tested)} · range ${f2(st.dayRange)}</span>
+        </div>`;
+      }).join('');
+
+      host.innerHTML = `
+      <div class="pin-strip pin-strip-agg">
+        <div class="pin-head">
+          <span class="panel-title"><svg class="ico"><use href="#ic-gauge"></use></svg>Pin / Chop</span>
+          <span class="pin-asof">${escapeHtml(latest.day)} · ${escapeHtml(latest.st.at)} NY · ${escapeHtml(head)}</span>
+        </div>
+        <div class="pin-agg">${rows}</div>
       </div>`;
     }
 

@@ -277,8 +277,8 @@
       letter-spacing: -0.01em;
     }
 
-    .pin-lv .pin-cw { color: var(--red); }
-    .pin-lv .pin-pw { color: var(--green); }
+    /* Wall colours are set once, further down, beside the aggregate row's
+       copy of the same two classes. */
 
     /* The SVG scales uniformly, so width alone sizes it and the viewBox's
        620x120 sets the height - see the note in pinChartSvg(). max-height
@@ -381,4 +381,69 @@
       text-transform: uppercase;
       letter-spacing: .4px;
       font-weight: 600;
+    }
+
+    /* ── PIN / CHOP, AGGREGATE VIEW ──
+       "Today's Alerts" merges several symbols into one table, so the card
+       drops the levels/chart/facts layout and lists one line per strategy
+       instead. Written as .pin-strip.pin-strip-agg rather than
+       .pin-strip-agg on purpose: the responsive blocks in layout.css restate
+       .pin-strip's areas and load after this file, so a single class would
+       lose to them and the rows would land in grid areas that no longer
+       exist here. */
+    .pin-strip.pin-strip-agg {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "head"
+        "agg";
+      align-items: stretch;
+    }
+
+    .pin-agg {
+      grid-area: agg;
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .pin-agg-row {
+      display: flex;
+      align-items: center;
+      gap: 6px 10px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .pin-agg-sym {
+      font-family: var(--font-data);
+      font-weight: 700;
+      font-size: var(--fs-md);
+      letter-spacing: .3px;
+      /* Fixed so the pills line up down the column rather than stepping in
+         and out with the length of each symbol. */
+      flex: 0 0 46px;
+    }
+
+    .pin-agg-lv {
+      font-family: var(--font-data);
+      font-size: var(--fs-md);
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .pin-agg-lv .muted { font-size: var(--fs-xs); font-weight: 500; }
+
+    /* Shares the per-wall colours with the single-symbol card. */
+    .pin-lv .pin-cw, .pin-agg-lv .pin-cw { color: var(--red); }
+    .pin-lv .pin-pw, .pin-agg-lv .pin-pw { color: var(--green); }
+
+    .pin-agg-note {
+      color: var(--dim);
+      font-family: var(--font-data);
+      font-size: var(--fs-xs);
+      /* Pushed to the far edge while there is room; it is the detail, and the
+         status pill is what the row is read for. On a narrow screen it wraps
+         to its own line, where auto margins do nothing. */
+      margin-left: auto;
+      min-width: 0;
     }

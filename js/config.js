@@ -18,7 +18,7 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.7.0';
+    const BUILD = '2.7.1';
     const BUILD_TS = '2026-10-29T00:00Z';
 
     /* ── STATE ── */
@@ -76,6 +76,11 @@
        on the poll because it cannot change during a session. */
     let pinSeries = null;
     let pinHistory = null;
+    /* "Today's Alerts" shows several symbols in one table, so one pair of wall
+       levels cannot describe it. pinAgg holds one evaluated status per
+       strategy instead - [{ id, label, symbol, rows, st }] - and the card
+       renders a row each. null outside aggregate mode. */
+    let pinAgg = null;
     let perfRows = null;           // Rows from v2_signal_performance
     let perfKey = null;            // Date-range key the perfRows were loaded for
     let perfLoading = false;

@@ -838,3 +838,41 @@
          rather than widening the page. */
       .pin-hist-wrap { overflow-x: auto; }
     }
+
+    /* ── PIN / CHOP AGGREGATE ROWS, PHONE ──
+       The desktop row is symbol, pill, levels, then the detail pushed to the
+       right edge. At phone width that detail is the first thing that will not
+       fit, so it drops to its own line under the pill and the levels stay
+       beside the status. Appended after the phone block above for the same
+       later-rule-wins reason noted there. */
+    @media (max-width: 700px) {
+      .pin-agg { gap: 8px; }
+
+      .pin-agg-row {
+        /* symbol | everything else, so the second line of a wrapped row lines
+           up under the pill rather than under the ticker. */
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        align-items: center;
+        gap: 2px 8px;
+      }
+
+      /* Spans all three lines of the row so the ticker sits centred against
+         the block it labels, rather than against its first line. */
+      .pin-agg-sym { grid-row: 1 / span 3; font-size: var(--fs-base); }
+
+      .pin-agg-row .pin-state { grid-column: 2; justify-self: start; }
+
+      .pin-agg-lv {
+        grid-column: 2;
+        font-size: var(--fs-base);
+      }
+
+      /* Full width under the pill, and allowed to wrap: the tested times and
+         the range are three short facts, not one long one. */
+      .pin-agg-note {
+        grid-column: 2;
+        margin-left: 0;
+        white-space: normal;
+      }
+    }
