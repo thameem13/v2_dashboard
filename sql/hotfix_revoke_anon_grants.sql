@@ -19,7 +19,7 @@
  * STEP 1 of 3. Rotating the keys is step 2 and purging the file is step 3 -
  * neither is optional. Until the keys are rotated the leaked ones still work
  * on anything else they can reach, and the one in git history never expires
- * on its own (the legacy JWT's exp is in 2092).
+ * on its own (the legacy anon JWT is dated 2026-04-29 and runs to 2036-04-28).
  */
 
 begin;
