@@ -15,7 +15,7 @@
  *   just closed: a privileged object reachable by anon.
  *
  *   Probed on 2026-10-31 with the leaked publishable key, all five answered
- *   HTTP 200 with Content-Range */0 - granted, reachable, zero rows. Zero rows
+ *   HTTP 200 with a zero-row Content-Range: granted, reachable, no rows. That
  *   is consistent with these being security_invoker views (so anon's own RLS
  *   applies and filters everything out), but it is ALSO what an empty view
  *   looks like. From outside the database the two are indistinguishable, so
