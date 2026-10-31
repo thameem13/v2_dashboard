@@ -6,6 +6,24 @@
   "main": "worker.js",
   "compatibility_date": "2026-09-01",
 
+  // Both OFF deliberately, and pinned here rather than left to the dashboard
+  // toggles, because Wrangler DEFAULTS workers_dev TO TRUE - and Cloudflare
+  // reads this file as the source of truth on every Git deploy. Left unset,
+  // the next push would quietly publish the Worker on
+  // v2-dashboard.<subdomain>.workers.dev again.
+  //
+  // That hostname is not in the dashflow.trade zone, so the WAF custom rule
+  // "Allow CA and IN only" does NOT apply to it, nor does Bot Fight Mode.
+  // It would be a way in from any country, past both filters. Access still
+  // gates it, so it is not an open door - but it is a hole through the two
+  // layers in front of Access, re-opened by a routine deploy with nothing in
+  // the diff to show it.
+  //
+  // preview_urls covers the *-v2-dashboard.<subdomain>.workers.dev wildcard,
+  // which is the same exposure once per deployed version.
+  "workers_dev": false,
+  "preview_urls": false,
+
   // Serve the repo root as the static site. Requests matching a real file
   // (index.html, etc.) are served directly; anything else falls through to
   // worker.js, which is how /api/rpc/* reaches the proxy.
