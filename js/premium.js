@@ -297,8 +297,18 @@
 
     async function premRunSweep() {
       if (premSweepLoading) return;
-      if (isAggregate()) return;
       const el0 = document.getElementById('prem-sweep');
+      /* "Today's Alerts" has no single strategy to back-test, so there is
+         nothing to scale. This used to return silently, which is the worst
+         possible answer to a button press - it reads as a broken feature
+         rather than one that does not apply here. */
+      if (isAggregate()) {
+        if (el0) {
+          el0.innerHTML = '<div class="muted">Pick a single strategy - '
+            + 'the comparison re-runs one strategy\'s own trades.</div>';
+        }
+        return;
+      }
       /* The baseline side comes from premRows, so there has to be a backtest on
          screen first. Without this the table would render a scaled column
          against an empty baseline and read as a free improvement. */
@@ -319,9 +329,17 @@
         const volByDay = await premSessionVol(ctx);
         const buckets = premVolBuckets(volByDay);
         if (!buckets) {
+          /* Says what it found, not just what it wanted. The default range is
+             the single live session, so this is the state the comparison is in
+             on a fresh page load - and "need at least 3" on its own gives no
+             clue that the date range is the thing to change. */
+          const got = Object.keys(volByDay).length;
           if (el) {
-            el.innerHTML = '<div class="muted">Need at least '
-              + PREM_SWEEP_BUCKETS + ' sessions with a VIX1D reading to compare.</div>';
+            el.innerHTML = '<div class="muted">Found ' + got + ' session'
+              + (got === 1 ? '' : 's') + ' with a 09:55 VIX1D reading; the '
+              + 'comparison needs at least ' + PREM_SWEEP_BUCKETS
+              + '. Widen the date range above - a single session cannot be '
+              + 'split into volatility buckets.</div>';
           }
           return;
         }
@@ -337,10 +355,15 @@
            on-demand comparison rather than something on the poll. */
         let scaledRows = [];
         let capped = 0;
+        /* A floored bucket is no more measuring the formula than a capped one,
+           and it was silently unreported. It is also the likelier of the two at
+           PREM_EXIT_FLOOR = 0.05, where the target sits inside the spread. */
+        let floored = 0;
         for (const b of buckets) {
           const raw = k * b.medExp;
           b.exit = +Math.min(cap, Math.max(PREM_EXIT_FLOOR, raw)).toFixed(2);
           if (raw > cap) capped++;
+          else if (raw < PREM_EXIT_FLOOR) floored++;
           const rows = await rpcWithRetry('v2_premium_backtest_by_strategy', null, {
             p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy,
             p_tp: b.exit, p_sl: b.exit, p_grades: premGrades
@@ -363,7 +386,7 @@
           r => inScope.has(String(r.trade_date).slice(0, 10)));
 
         premSweep = {
-          buckets, k, medExp, capped,
+          buckets, k, medExp, capped, floored,
           base: aggPrem(baseRows),
           scaled: aggPrem(scaledRows)
         };
@@ -431,6 +454,7 @@
           median expected move of ${d2(s.medExp)} points, so the middle bucket
           stays near what you have set and only the calm and wild ends move.
           ${s.capped ? `<br><b>${s.capped} bucket(s) hit the ${PREM_EXIT_CAP_MULT}x cap</b> - those are not measuring the formula.` : ''}
+          ${s.floored ? `<br><b>${s.floored} bucket(s) hit the $${d2(PREM_EXIT_FLOOR)} floor</b> - a target that tight is decided inside the spread, not by the market.` : ''}
           ${mismatch ? `<br><b class="put">Trade counts differ (${s.base.n} vs ${s.scaled.n}) - sessions leaked between buckets, do not read the P&amp;L.</b>` : ''}
         </div>
         <div class="prem-ledger-wrap"><table class="perf-tbl">
