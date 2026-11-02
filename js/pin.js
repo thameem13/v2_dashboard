@@ -38,12 +38,65 @@
        repeats them in its own preamble; change both together or the backtest
        stops describing the thing on screen. */
 
-    /* Rule 1 - walls stable. Each wall may drift this many strikes from where
-       it stood at PIN_STABLE_FROM, and the gap between them may be this wide.
-       This rule does nearly all the discriminating work: on the 20 sessions
-       measured it alone picked out 10-13, 10-28 and 10-29. */
-    const PIN_WALL_DRIFT_MAX  = 1;      // strikes
+    /* Rule 1 - walls stable. Each wall may drift this far from where it stood
+       at PIN_STABLE_FROM, and the gap between them may be this wide. This rule
+       does nearly all the discriminating work: on the 20 sessions measured it
+       alone picked out 10-13, 10-28 and 10-29.
+
+       The drift allowance USED TO BE a flat 1 strike. It is now a share of the
+       session's expected move, because a flat count tuned on SPY disqualified
+       QQQ on 18 of 19 sessions - see the note below PIN_GAP_MAX, which records
+       that QQQ fails on drift and not on gap. PIN_DRIFT_FLOOR keeps the old
+       value as a lower bound, so the rule can only ever LOOSEN: a session that
+       reads stable today cannot start reading unstable because of this change.
+       That makes the SPY regression test a one-way check - pin days may be
+       added, never removed. */
     const PIN_GAP_MAX         = 3;      // points, call_wall - put_wall
+    const PIN_DRIFT_FLOOR     = 1;      // points, the pre-normalization value
+
+    /* Which volatility reading the allowance scales with. 'vix1d' or 'impl'.
+       Both are computed either way and both are returned, so switching this
+       changes only which one gates the status - and sql/pin_backtest.sql
+       section 8 reports the two side by side over the same sessions.
+
+       'vix1d' WAS MEASURED AND REJECTED - do not switch back without re-running
+       section 8. VIX1D is market-wide: only the SPY feed carries it and
+       v2_pin_series_by_strategy coalesces that one value onto every symbol's
+       rows, so the number is IDENTICAL on SPY and QQQ and the only thing left
+       separating them is price level. Over 2026-10-02..10-29 that put the
+       expected move at 4.00 on QQQ against 4.26 on SPY - it ranks QQQ as the
+       CALMER symbol, while the same sessions' implied move says QQQ is 5.60
+       against SPY's 4.24, or 32% more volatile. The two disagree in direction,
+       so no choice of PIN_DRIFT_K rescues 'vix1d'; it is not mis-tuned, it is
+       measuring the wrong thing. It also floored to PIN_DRIFT_FLOOR on every
+       session of both symbols and added exactly zero pin days.
+
+       'impl' is what shipped. On the same sessions it is an exact no-op on SPY
+       (3 pin days before and after, none added) and allows 1.40 on QQQ against
+       SPY's 1.06, which is the per-symbol separation this change exists for.
+       It added one QQQ day, range 4.74 against a pin-day average of 3.27 and
+       below QQQ's own implied move - a defensible pin by the standard that
+       rejected the mode-share alternative, not a 12-point session.
+
+       Note what that does NOT amount to: QQQ went from 1 pin day to 2 out of
+       19. Drift was necessary and nowhere near sufficient. Section 9 is the
+       query that asks what QQQ is really failing. */
+    const PIN_VOL_ANCHOR      = 'impl';
+
+    /* Expected 1-day move in points, from an annualized vol percentage:
+         price * (vix1d / 100) / sqrt(252)
+       252 trading days, so sqrt(252) = 15.87. */
+    const PIN_TRADING_DAYS_SQRT = 15.87;
+
+    /* Share of the expected move each wall may drift across. Both are set so
+       that a typical SPY session reproduces the old flat 1 point, which is
+       what makes this a no-op on the sessions the existing result rests on:
+         vix1d: SPY 770 at VIX1D 13 -> 770*0.13/15.87 = 6.31 pts, * 0.16 = 1.01
+         impl:  SPY implied move averaged 4.01 over October,      * 0.25 = 1.00
+       Re-derive both if the median VIX1D or the implied move moves materially;
+       they are calibration, not theory. */
+    const PIN_DRIFT_K         = 0.16;   // share of expPts, 'vix1d' anchor
+    const PIN_DRIFT_K_IMPL    = 0.25;   // share of impl_move, 'impl' anchor
 
     /* The gap limit is an absolute point count tuned on SPY, and QQQ moves
        wider - 6.03 average implied move against SPY's 4.01 - so it was worth
@@ -154,9 +207,39 @@
       const pwDrift = pwVals.length ? Math.max(...pwVals) - Math.min(...pwVals) : null;
       const gap = (callWall != null && putWall != null) ? +(callWall - putWall).toFixed(2) : null;
 
+      /* The drift allowance is read ONCE, off the PIN_STABLE_FROM candle, and
+         not off `latest`. Anchoring it to the start of the same window the
+         drift is measured over is the whole point: a threshold that tracked
+         the current candle would let a status flip because volatility moved
+         rather than because the walls did, and the card would contradict
+         itself between two polls with identical walls.
+
+         stable[] is already the window, so its first element IS that candle -
+         or undefined before 09:55, in which case every drift value is null and
+         wallsStable is false regardless. */
+      const anchor      = stable.length ? stable[0] : null;
+      const anchorPrice = anchor ? pinNum(anchor.price) : null;
+      const anchorVix   = anchor ? pinNum(anchor.vix1d) : null;
+      const anchorImpl  = anchor ? pinNum(anchor.impl_move) : null;
+
+      /* Null vol falls through to the floor rather than to NaN. That is the
+         live case on QQQ whenever the SPY coalesce in the RPC misses, and a
+         NaN comparison is false, which would silently mark every session
+         unstable instead of degrading to the old flat rule. */
+      const expPts = (anchorPrice != null && anchorVix != null)
+        ? +(anchorPrice * (anchorVix / 100) / PIN_TRADING_DAYS_SQRT).toFixed(2)
+        : null;
+      const driftMaxVix  = expPts == null
+        ? PIN_DRIFT_FLOOR
+        : Math.max(PIN_DRIFT_FLOOR, +(PIN_DRIFT_K * expPts).toFixed(2));
+      const driftMaxImpl = anchorImpl == null
+        ? PIN_DRIFT_FLOOR
+        : Math.max(PIN_DRIFT_FLOOR, +(PIN_DRIFT_K_IMPL * anchorImpl).toFixed(2));
+      const driftMax = PIN_VOL_ANCHOR === 'impl' ? driftMaxImpl : driftMaxVix;
+
       const wallsStable = cwDrift != null && pwDrift != null && gap != null
-        && cwDrift <= PIN_WALL_DRIFT_MAX
-        && pwDrift <= PIN_WALL_DRIFT_MAX
+        && cwDrift <= driftMax
+        && pwDrift <= driftMax
         && gap <= PIN_GAP_MAX;
 
       /* Rules 2 and 3 - both measured against each candle's own walls, as
@@ -210,6 +293,11 @@
       return {
         status, tradeDate: pinDay(latest.candle_time_ny), at: pinHHMM(latest.candle_time_ny),
         callWall, putWall, price, gap, cwDrift, pwDrift, wallsStable,
+        /* driftMax is the allowance actually applied; the other three are the
+           workings, kept so the card can show them and so section 8 of
+           pin_backtest.sql can be reconciled against the live reading rather
+           than trusted to agree. */
+        driftMax, driftMaxVix, driftMaxImpl, expPts,
         testedCallAt, testedPutAt,
         maxBreach: maxBreach == null ? null : +maxBreach.toFixed(2),
         contained: maxBreach != null && maxBreach <= PIN_CONTAIN_TOL,
@@ -383,7 +471,9 @@
 
         <div class="pin-facts">
           <div class="pin-fact"><span class="label">Walls since ${escapeHtml(PIN_STABLE_FROM)}</span>
-            <span>${st.wallsStable ? 'stable' : 'moved'} · call ${f0(st.cwDrift)}, put ${f0(st.pwDrift)} strikes</span></div>
+            <span>${st.wallsStable ? 'stable' : 'moved'} · call ${f2(st.cwDrift)}, put ${f2(st.pwDrift)} of ${f2(st.driftMax)} allowed${st.driftMax <= PIN_DRIFT_FLOOR ? ' (floor)' : ''}</span></div>
+          <div class="pin-fact"><span class="label">Drift allowance</span>
+            <span>${escapeHtml(PIN_VOL_ANCHOR)} · ${st.expPts == null ? 'no vix1d' : `${f2(st.expPts)} pts expected`} · impl would allow ${f2(st.driftMaxImpl)}</span></div>
           <div class="pin-fact"><span class="label">Tested</span>
             <span>${testedBits.join(' · ')}</span></div>
           <div class="pin-fact"><span class="label">Range so far</span>

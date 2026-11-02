@@ -19,6 +19,13 @@
  *   drift <= 1 strike since 09:55, gap <= 3 points, test tolerance 0.5,
  *   containment tolerance 0.75 (diagnostic only), INTO WALL distance 1.0.
  *
+ * SECTIONS 1-7 KEEP THE FLAT 1-POINT DRIFT ALLOWANCE DELIBERATELY. js/pin.js
+ * now scales that allowance by the 09:55 volatility reading, so these sections
+ * no longer describe the live rule - they are the baseline the new rule has to
+ * be measured against, and rewriting the 16 places the literal 1 appears would
+ * destroy it. Section 8 reports the normalized rule beside the flat one over
+ * the same sessions, and is the only section to keep in step with pin.js.
+ *
  * Alert universe: v2_signal_log, which is what actually fired. It is SPY-only
  * - section 4 covers QQQ off the graded has_signal candles instead, which is
  * what the dashboard shows for QQQ.
@@ -634,3 +641,171 @@ select t, cw call_wall, pw put_wall, cw-pw gap, cwd60 trail_cw_drift, pwd60 trai
   tc60 tested_call_in_hour, tp60 tested_put_in_hour,
   round((cw-pw)/nullif(impl_move,0),2) gap_over_implied
 from w where t in ('14:00','14:30','15:00','15:30','16:00') order by t;
+
+
+\echo ''
+\echo '=== 8. Drift normalized by volatility: does it rescue QQQ without junk? ==='
+\echo '    shipped_rule is the flat 1-point allowance. vix_rule and impl_rule'
+\echo '    scale it by the 09:55 reading. Judge on added_*_max_range, not count.'
+
+/* Mirrors the constants at the top of js/pin.js:
+ *   PIN_DRIFT_FLOOR       = 1      -- allowance floor, the pre-normalization value
+ *   PIN_DRIFT_K           = 0.16   -- share of expected move, 'vix1d' anchor
+ *   PIN_DRIFT_K_IMPL      = 0.25   -- share of impl_move,     'impl'  anchor
+ *   PIN_TRADING_DAYS_SQRT = 15.87
+ *   expPts = price_0955 * (vix1d_0955 / 100) / 15.87
+ *
+ * The vol reading comes off the FIRST candle at or after 09:55, not off the
+ * close, matching evalPin()'s stable[0] anchor. Sections 6a and 6b use
+ * max(impl_move) over the whole session, which is lookahead and is safe there
+ * only because those blocks are close-judged. A drift allowance has to be
+ * knowable at 09:55 or the live card cannot apply it.
+ *
+ * NOTE ON vix1d. It is market-wide, carried only on the SPY feed, and
+ * coalesced onto every symbol by v2_pin_series_by_strategy - so it is the SAME
+ * number on both symbols here and the only thing separating them is price.
+ * QQQ trades below SPY, so vix_rule comes out TIGHTER on QQQ, the opposite of
+ * what normalizing drift is for. impl_move is per-symbol and carries QQQ's
+ * 6.03 against SPY's 4.01. That contrast is the finding this section exists to
+ * measure; expect impl_rule to be the one that works.
+ */
+with raw as (
+  select 'SPY' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy')
+  union all
+  select 'QQQ' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_qqq')
+),
+s as (select sym, trade_date, candle_time_ny, candle_time_ny::time t,
+             price, call_wall, put_wall, impl_move, vix1d from raw),
+-- The 09:55 anchor: one row per session, the first candle at or after the
+-- drift window opens. This is the reading the live card gates on.
+a as (
+  select distinct on (sym, trade_date)
+    sym, trade_date, price anchor_price, vix1d anchor_vix, impl_move anchor_impl
+  from s where t >= '09:55'
+  order by sym, trade_date, candle_time_ny),
+d as (
+  select sym, trade_date,
+    max(call_wall) filter (where t>='09:55') - min(call_wall) filter (where t>='09:55') cw_drift,
+    max(put_wall)  filter (where t>='09:55') - min(put_wall)  filter (where t>='09:55') pw_drift,
+    bool_or(t>='09:35' and abs(price - call_wall) <= 0.5) tc,
+    bool_or(t>='09:35' and abs(price - put_wall ) <= 0.5) tp,
+    round(max(price) - min(price), 2) day_range
+  from s group by 1,2),
+l as (select distinct on (sym, trade_date) sym, trade_date, call_wall - put_wall gap
+      from s order by sym, trade_date, candle_time_ny desc),
+j as (
+  select d.*, l.gap, a.anchor_impl,
+    round(a.anchor_price * (a.anchor_vix / 100.0) / 15.87, 2) exp_pts
+  from d join l using (sym, trade_date) join a using (sym, trade_date)),
+-- coalesce to 0 so a null vol reading lands on the floor, which is what
+-- evalPin() does. greatest() is why this can only ever loosen the rule.
+k as (
+  select j.*,
+    greatest(1, round(0.16 * coalesce(exp_pts, 0), 2))     drift_max_vix,
+    greatest(1, round(0.25 * coalesce(anchor_impl, 0), 2)) drift_max_impl
+  from j)
+select sym, count(*) days,
+  round(avg(exp_pts), 2)        avg_exp_pts,
+  round(avg(drift_max_vix), 2)  avg_allow_vix,
+  round(avg(drift_max_impl), 2) avg_allow_impl,
+  count(*) filter (where cw_drift<=1 and pw_drift<=1 and gap<=3 and tc and tp) shipped_rule,
+  count(*) filter (where cw_drift<=drift_max_vix  and pw_drift<=drift_max_vix
+                     and gap<=3 and tc and tp) vix_rule,
+  count(*) filter (where cw_drift<=drift_max_impl and pw_drift<=drift_max_impl
+                     and gap<=3 and tc and tp) impl_rule,
+  -- The test that decides it. A rule that adds days whose range runs 11-12
+  -- points has not found pins, it has stopped meaning anything - that is how
+  -- the mode-share alternative in 6b was rejected. Compare against
+  -- shipped_avg_range, not against zero.
+  round(max(day_range) filter (where cw_drift<=drift_max_vix and pw_drift<=drift_max_vix
+                                 and gap<=3 and tc and tp
+                                 and not (cw_drift<=1 and pw_drift<=1)), 2) added_vix_max_range,
+  round(max(day_range) filter (where cw_drift<=drift_max_impl and pw_drift<=drift_max_impl
+                                 and gap<=3 and tc and tp
+                                 and not (cw_drift<=1 and pw_drift<=1)), 2) added_impl_max_range,
+  round(avg(day_range) filter (where cw_drift<=1 and pw_drift<=1
+                                 and gap<=3 and tc and tp), 2) shipped_avg_range
+from k group by 1 order by 1;
+
+
+\echo ''
+\echo '=== 9. What is QQQ actually failing? Each rule scored separately. ==='
+\echo '    Section 8 loosened drift and bought ONE day. This asks what is left.'
+
+/* Section 8 fixed the rule everyone assumed was binding on QQQ and moved it
+ * from 1 pin day to 2 out of 19. So drift was not the whole story, and this
+ * section stops assuming and counts each rule's failures on its own.
+ *
+ * The drift allowance here is the SHIPPED one - 0.25 * impl_move at 09:55,
+ * floored at 1 - matching PIN_VOL_ANCHOR = 'impl' in js/pin.js. The point is
+ * to see what still fails AFTER the normalization, so scoring against the old
+ * flat 1 would answer a question that is no longer being asked.
+ *
+ * Two kinds of count, because they say different things:
+ *   fail_*  - the rule is violated, alone or alongside others. The marginal
+ *             view: how often is this rule a problem at all.
+ *   only_*  - the rule is the ONLY one violated. The actionable view: relaxing
+ *             this one rule would convert exactly this many sessions, and
+ *             relaxing a rule whose only_ count is 0 converts nothing however
+ *             far it is loosened.
+ * A session can appear in several fail_ columns and in at most one only_.
+ *
+ * The gap percentiles are here because PIN_GAP_MAX is the next absolute
+ * SPY-tuned constant in the stack, and section 6 only ever tested it as a
+ * share of implied move at the CLOSE. If QQQ's median gap sits just above 3,
+ * that is a tuning question; if it sits at 8, the walls are simply further
+ * apart on QQQ and no gap limit in points will ever transfer.
+ */
+with raw as (
+  select 'SPY' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_spy')
+  union all
+  select 'QQQ' sym, * from v2_pin_series_by_strategy('2026-10-02','2026-10-29','two_tier_divergence_qqq')
+),
+s as (select sym, trade_date, candle_time_ny, candle_time_ny::time t,
+             price, call_wall, put_wall, impl_move from raw),
+a as (
+  select distinct on (sym, trade_date) sym, trade_date, impl_move anchor_impl
+  from s where t >= '09:55'
+  order by sym, trade_date, candle_time_ny),
+d as (
+  select sym, trade_date,
+    max(call_wall) filter (where t>='09:55') - min(call_wall) filter (where t>='09:55') cw_drift,
+    max(put_wall)  filter (where t>='09:55') - min(put_wall)  filter (where t>='09:55') pw_drift,
+    bool_or(t>='09:35' and abs(price - call_wall) <= 0.5) tc,
+    bool_or(t>='09:35' and abs(price - put_wall ) <= 0.5) tp,
+    round(max(price) - min(price), 2) day_range
+  from s group by 1,2),
+l as (select distinct on (sym, trade_date) sym, trade_date, call_wall - put_wall gap
+      from s order by sym, trade_date, candle_time_ny desc),
+j as (
+  select d.*, l.gap, a.anchor_impl,
+    greatest(1, round(0.25 * coalesce(a.anchor_impl, 0), 2)) allow
+  from d join l using (sym, trade_date) join a using (sym, trade_date)),
+f as (
+  select j.*,
+    (cw_drift > allow or pw_drift > allow) f_drift,
+    (gap > 3)                              f_gap,
+    (not (tc and tp))                      f_tested
+  from j)
+select sym, count(*) days,
+  count(*) filter (where not f_drift and not f_gap and not f_tested) pass_all,
+  -- Marginal: how often each rule is violated at all.
+  count(*) filter (where f_drift)  fail_drift,
+  count(*) filter (where f_gap)    fail_gap,
+  count(*) filter (where f_tested) fail_tested,
+  -- Exclusive: relaxing this ONE rule converts exactly this many sessions.
+  count(*) filter (where f_drift  and not f_gap and not f_tested) only_drift,
+  count(*) filter (where f_gap    and not f_drift and not f_tested) only_gap,
+  count(*) filter (where f_tested and not f_drift and not f_gap)   only_tested,
+  count(*) filter (where (f_drift::int + f_gap::int + f_tested::int) > 1) fail_multi,
+  -- Which wall goes untested, since "tested both" is two rules in a coat.
+  count(*) filter (where tc and not tp) tested_call_only,
+  count(*) filter (where tp and not tc) tested_put_only,
+  count(*) filter (where not tc and not tp) tested_neither,
+  -- Is PIN_GAP_MAX = 3 a tuning question on QQQ, or the wrong shape entirely?
+  round(min(gap), 2) gap_min,
+  round(percentile_cont(0.5) within group (order by gap)::numeric, 2) gap_median,
+  round(max(gap), 2) gap_max,
+  round(avg(gap / nullif(anchor_impl, 0)), 3) gap_over_impl_avg,
+  round(avg(allow), 2) avg_allow
+from f group by 1 order by 1;

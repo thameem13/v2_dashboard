@@ -57,6 +57,7 @@
         if (el) el.innerHTML = `<div class="perf-empty">${AGG_TAB_NOTICE}</div>`;
         premRows = null;
         premKey = null;
+        premClearSweep();     // no single strategy, so no baseline to scale
         perfRows = null;      // per strategy too; a stale count would be wrong
         perfKey = null;
         updateRowCounts();
@@ -113,6 +114,11 @@
 
         premRows = pr || [];
         premKey = key;
+        /* The comparison is derived from premRows and from premTP, so a re-run
+           with a different range, grade set or exit size invalidates it. Showing
+           a stale scaled table beside a fresh baseline is the one way this
+           feature could actually mislead, so it is dropped rather than kept. */
+        premClearSweep();
         renderPerformance(hasPremium ? null : (src && src.reason));
       } catch (e) {
         if (bodyEl) {
@@ -183,6 +189,269 @@
       if (tpEl) tpEl.value = premTP.toFixed(2);
       if (slEl) slEl.value = premSL.toFixed(2);
       if (gEl) gEl.value = g;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       VOL-SCALED EXITS - A COMPARISON, NOT A SETTING
+
+       WHY. p_tp and p_sl are absolute premium dollars, and the same $0.50 is
+       used on a VIX1D 9 session and a VIX1D 30 one. On a quiet day the option
+       never travels that far, so neither the target nor the stop is reached and
+       the trade is flattened at the EOD mark - the rule did nothing. On a wild
+       day the same 50c is inside the noise and the trade is stopped out of a
+       move it would have survived. The exit rule is therefore contributing
+       variance of its own to every P&L figure on this tab, which matters
+       because the sample is 129 alerts and cannot afford it.
+
+       The tab ALREADY measures the first half of that: eodShare, warned on at
+       0.4 in premPill(). If eodShare is high on calm days and low on wild ones,
+       this is real. If it is flat, the fixed exit is fine and this whole
+       comparison should be deleted rather than tuned.
+
+       HOW. p_tp/p_sl decide which bar a trade exits on, so they cannot be
+       re-sliced in the browser - see the note in changePremParams(). The RPC
+       has to be called again per exit size. It takes ONE pair per call, so the
+       sessions are split into volatility buckets and each bucket gets its own
+       call at its own exit size, keeping only that bucket's own trades. Three
+       calls, then the pieces are concatenated into one row set the same shape
+       as premRows, so aggPrem() reads it unchanged.
+
+       CALIBRATION, and this is the part that makes the result readable. The
+       scale factor is derived from the CURRENT setting and this range's own
+       median volatility, k = premTP / median(expPts). So the middle bucket
+       reproduces roughly what is on screen now and only the OUTER buckets move.
+       The comparison is then purely about dispersion across regimes rather than
+       about the overall level, and it needs no per-symbol constant - QQQ's $1.00
+       calibrates against QQQ's own sessions exactly as SPY's $0.50 does.
+
+       NOTHING HERE WRITES BACK. premTP/premSL are untouched, nothing is
+       persisted, and the live alerting path never sees any of it.
+       ══════════════════════════════════════════════════════ */
+
+    /* Three buckets, not five: at 20 sessions a fifth is four days, and
+       aggPrem()'s own PREM_MIN_N already calls a 20-trade bucket too small to
+       read. Three is the most that leaves anything to compare. */
+    const PREM_SWEEP_BUCKETS  = 3;
+    /* Matches the min= on the TP/SL inputs in index.html. Also a floor against
+       the real limit: exits resolve on 2-minute chain snapshots, entry at the
+       ask and exit at the bid, so a target inside the spread is decided by
+       which of the target and the stop the remote function happens to test
+       first - not by the market. */
+    const PREM_EXIT_FLOOR     = 0.05;
+    /* Of the baseline, so one violent session cannot push a bucket's target
+       somewhere no contract would ever reach and manufacture an all-EOD bucket.
+       Hitting the cap is reported, because a capped bucket is not measuring
+       what the formula asked for. */
+    const PREM_EXIT_CAP_MULT  = 3;
+
+    let premSweep = null;        // { buckets, base, scaled, k, medExp } or null
+    let premSweepLoading = false;
+
+    /* Expected 1-day move per session, from the 09:55 candle of the pin series.
+       Deliberately the SAME anchor and the SAME arithmetic as evalPin() in
+       pin.js - PIN_STABLE_FROM, PIN_TRADING_DAYS_SQRT and stable[0] - so a
+       session's volatility cannot be one number on the pin card and a different
+       one here. pin.js loads before this file, so those are in scope. */
+    async function premSessionVol(ctx) {
+      const rows = await rpcWithRetry('v2_pin_series_by_strategy', null,
+        { p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy }, 2);
+      const byDay = pinGroupByDay(rows || []);
+      const out = {};
+      Object.keys(byDay).forEach(d => {
+        const stable = byDay[d].filter(r => pinHHMM(r.candle_time_ny) >= PIN_STABLE_FROM);
+        if (!stable.length) return;
+        const price = pinNum(stable[0].price);
+        const vix = pinNum(stable[0].vix1d);
+        // Null vol drops the session rather than guessing one. It cannot go in
+        // the baseline bucket either - that would quietly compare a scaled
+        // bucket against a session that was never scaled.
+        if (price == null || vix == null) return;
+        out[d] = +(price * (vix / 100) / PIN_TRADING_DAYS_SQRT).toFixed(2);
+      });
+      return out;
+    }
+
+    /* Equal-count buckets by expected move, low to high. Equal-count and not
+       equal-width: VIX1D is right-skewed, so equal-width would put seventeen
+       sessions in one bucket and one in another. */
+    function premVolBuckets(volByDay) {
+      const days = Object.keys(volByDay).sort((a, b) => volByDay[a] - volByDay[b]);
+      const n = days.length;
+      if (n < PREM_SWEEP_BUCKETS) return null;
+      const out = [];
+      for (let i = 0; i < PREM_SWEEP_BUCKETS; i++) {
+        const lo = Math.floor(i * n / PREM_SWEEP_BUCKETS);
+        const hi = Math.floor((i + 1) * n / PREM_SWEEP_BUCKETS);
+        const slice = days.slice(lo, hi);
+        if (!slice.length) return null;
+        const vols = slice.map(d => volByDay[d]);
+        out.push({
+          days: new Set(slice),
+          medExp: median(vols),
+          loExp: Math.min(...vols),
+          hiExp: Math.max(...vols)
+        });
+      }
+      return out;
+    }
+
+    async function premRunSweep() {
+      if (premSweepLoading) return;
+      if (isAggregate()) return;
+      const el0 = document.getElementById('prem-sweep');
+      /* The baseline side comes from premRows, so there has to be a backtest on
+         screen first. Without this the table would render a scaled column
+         against an empty baseline and read as a free improvement. */
+      if (!premRows || !premRows.length) {
+        if (el0) {
+          el0.innerHTML = '<div class="muted">Run the backtest first - '
+            + 'the comparison needs a baseline to measure against.</div>';
+        }
+        return;
+      }
+      premSweepLoading = true;
+      setBusy(true);
+      const el = document.getElementById('prem-sweep');
+      if (el) el.innerHTML = '<div class="muted">Running vol-scaled comparison...</div>';
+
+      try {
+        const ctx = getDateContext();
+        const volByDay = await premSessionVol(ctx);
+        const buckets = premVolBuckets(volByDay);
+        if (!buckets) {
+          if (el) {
+            el.innerHTML = '<div class="muted">Need at least '
+              + PREM_SWEEP_BUCKETS + ' sessions with a VIX1D reading to compare.</div>';
+          }
+          return;
+        }
+
+        /* k off this range's own median, so the middle bucket lands on the
+           current setting and the outer two are the only thing being tested. */
+        const medExp = median(Object.keys(volByDay).map(d => volByDay[d]));
+        const k = medExp > 0 ? premTP / medExp : 0;
+        const cap = premTP * PREM_EXIT_CAP_MULT;
+
+        /* Sequential, not Promise.all. Three concurrent backtests over the same
+           range is a burst the proxy has no reason to absorb, and this is an
+           on-demand comparison rather than something on the poll. */
+        let scaledRows = [];
+        let capped = 0;
+        for (const b of buckets) {
+          const raw = k * b.medExp;
+          b.exit = +Math.min(cap, Math.max(PREM_EXIT_FLOOR, raw)).toFixed(2);
+          if (raw > cap) capped++;
+          const rows = await rpcWithRetry('v2_premium_backtest_by_strategy', null, {
+            p_start: ctx.start, p_end: ctx.end, p_strategy: currentStrategy,
+            p_tp: b.exit, p_sl: b.exit, p_grades: premGrades
+          }, 2) || [];
+          /* Keep only this bucket's own sessions. Without this filter each call
+             contributes the whole range and the merged set is three times the
+             size - which is exactly the trade-count check in the plan. */
+          b.rows = rows.filter(r => b.days.has(String(r.trade_date).slice(0, 10)));
+          b.base = aggPrem((premRows || []).filter(
+            r => b.days.has(String(r.trade_date).slice(0, 10))));
+          b.agg = aggPrem(b.rows);
+          scaledRows = scaledRows.concat(b.rows);
+        }
+
+        /* The baseline is restricted to the same sessions, so a session with no
+           VIX1D reading is absent from both sides and the two row counts can be
+           compared directly. */
+        const inScope = new Set(Object.keys(volByDay));
+        const baseRows = (premRows || []).filter(
+          r => inScope.has(String(r.trade_date).slice(0, 10)));
+
+        premSweep = {
+          buckets, k, medExp, capped,
+          base: aggPrem(baseRows),
+          scaled: aggPrem(scaledRows)
+        };
+        renderPremSweep();
+      } catch (e) {
+        if (el) {
+          el.innerHTML = '<div class="err">Comparison failed: '
+            + escapeHtml(e.message) + '</div>';
+        }
+      } finally {
+        premSweepLoading = false;
+        setBusy(false);
+      }
+    }
+
+    function premClearSweep() {
+      premSweep = null;
+      const el = document.getElementById('prem-sweep');
+      if (el) el.innerHTML = '';
+    }
+
+    function renderPremSweep() {
+      const el = document.getElementById('prem-sweep');
+      if (!el) return;
+      if (!premSweep) { el.innerHTML = ''; return; }
+      const s = premSweep;
+      const pct = v => v == null ? '-' : (v * 100).toFixed(1) + '%';
+      const d2 = v => v == null ? '-' : (+v).toFixed(2);
+
+      /* base is the SAME sessions under the unchanged $premTP exit, so the
+         delta is the only thing attributable to exit sizing. Shown per bucket
+         rather than only in total: the whole hypothesis is that the fixed exit
+         helps one regime and hurts another, and a total can net that to zero
+         and look like nothing happened. */
+      const rowFor = (label, a, exit, range, base) => {
+        const delta = base ? a.pnl - base.pnl : null;
+        return `
+        <tr>
+          <td>${escapeHtml(label)}</td>
+          <td class="muted">${range}</td>
+          <td>${exit == null ? '-' : '$' + d2(exit)}</td>
+          <td>${a.n}</td>
+          <td class="${a.pnl >= 0 ? 'call' : 'put'}">${d2(a.pnl)}</td>
+          <td>${base ? d2(base.pnl) : '-'}</td>
+          <td class="${delta == null ? 'muted' : (delta >= 0 ? 'call' : 'put')}">${
+            delta == null ? '-' : (delta >= 0 ? '+' : '') + d2(delta)}</td>
+          <td>${d2(a.avgPnl)}</td>
+          <td>${pct(a.winRate)}</td>
+          <td class="${a.eodShare >= 0.4 ? 'prem-censor' : 'muted'}">${pct(a.eodShare)}</td>
+        </tr>`;
+      };
+
+      /* Trade counts are shown and compared rather than assumed equal. They
+         SHOULD match - same alerts, same grades, only the exit differs - and a
+         mismatch means sessions leaked between buckets, which would invalidate
+         every other number in the table. */
+      const mismatch = s.base.n !== s.scaled.n;
+
+      el.innerHTML = `
+        <div class="perf-note" style="margin-top:14px">
+          <b>Vol-scaled exits - comparison only.</b> Nothing here changes your
+          Take profit / Stop loss settings or the live alerts; it re-runs the
+          same trades with the exit sized to each session's volatility.
+          Scale is taken from your current $${d2(premTP)} against this range's
+          median expected move of ${d2(s.medExp)} points, so the middle bucket
+          stays near what you have set and only the calm and wild ends move.
+          ${s.capped ? `<br><b>${s.capped} bucket(s) hit the ${PREM_EXIT_CAP_MULT}x cap</b> - those are not measuring the formula.` : ''}
+          ${mismatch ? `<br><b class="put">Trade counts differ (${s.base.n} vs ${s.scaled.n}) - sessions leaked between buckets, do not read the P&amp;L.</b>` : ''}
+        </div>
+        <div class="prem-ledger-wrap"><table class="perf-tbl">
+          <thead><tr>
+            <th>Bucket</th><th>Expected move</th><th>Exit</th><th>Trades</th>
+            <th>Scaled P&amp;L</th><th>Base P&amp;L</th><th>Delta</th>
+            <th>Avg</th><th>Win rate</th><th>EOD exits</th>
+          </tr></thead>
+          <tbody>
+            ${rowFor('Baseline (all)', s.base, premTP, '-', null)}
+            ${s.buckets.map((b, i) => rowFor(
+              ['Calm', 'Middle', 'Wild'][i] || ('Bucket ' + (i + 1)),
+              b.agg, b.exit, d2(b.loExp) + ' - ' + d2(b.hiExp) + ' pts', b.base)).join('')}
+            ${rowFor('Scaled (all)', s.scaled, null, '-', s.base)}
+          </tbody>
+        </table></div>
+        <div class="muted" style="margin-top:8px">
+          Read total P&amp;L and win rate <b>separately</b>. If they move in
+          opposite directions again, exit sizing was not what caused that -
+          which is itself a finding worth keeping.
+        </div>`;
     }
 
     /* ══════════════════════════════════════════════════════
