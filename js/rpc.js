@@ -237,6 +237,8 @@
         pinSeries = pin || [];
         pinIndexSeries(pinSeries);
         pinIndexStatus(pinSeries);
+        /* id '' because these rows carry no _sid - see pinWallKey(). */
+        pinIndexWalls([{ id: '', rows: pinSeries }]);
         renderPinCard();
 
         renderCards(flow, vol);
@@ -372,6 +374,7 @@
       pinSeries = null;
       pinIndexSeries(null);
       pinIndexStatus(null);
+      pinIndexWalls(null);
       pinHistory = null;
 
       /* The badges cannot work here, but the status can: fan the wall series
@@ -381,6 +384,12 @@
          card is the optional half. retries = 1 for the same reason as above. */
       pinAgg = await loadAggPin(signal, dateCtx, strategies);
       if (signal.aborted) return;
+
+      /* The INTO/AWAY badges cannot work here - one symbol's walls against
+         another's candles - but the put-wall flag can, because pinAgg keeps
+         each strategy's rows separate and pinWallKey() carries the id. Indexed
+         before renderFlow, like the single-strategy path above. */
+      pinIndexWalls(pinAgg);
 
       renderAggCards(all);
       renderPinCard();

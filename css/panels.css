@@ -344,3 +344,12 @@
       background: rgba(255, 165, 0, .20);
       color: var(--amber);
     }
+
+    /* Put-wall zone. Amber rather than red: it is a note on an alert that
+       still fired, not a stand-aside. Unlike the rules above this one is live
+       - PIN_PUT_WALL_FLAG ships true - so these rules do match. */
+    .wall-putzone {
+      background: rgba(255, 165, 0, .18);
+      color: var(--amber);
+      border: 1px solid rgba(255, 165, 0, .35);
+    }

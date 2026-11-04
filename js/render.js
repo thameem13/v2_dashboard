@@ -464,6 +464,10 @@
            new <td> would break sort, filter, CSV export and the row count
            together. Returns '' while PIN_BADGES_ENABLED is false. */
         statusCell += signalWallFlag(x);
+        /* Its own call, not folded into signalWallFlag: that one is the
+           rejected INTO/AWAY experiment behind PIN_BADGES_ENABLED, and this
+           must not switch on and off with it. */
+        statusCell += putWallFlag(x);
 
         const jsonStr = escapeHtml(JSON.stringify(x));
 

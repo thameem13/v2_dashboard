@@ -192,6 +192,44 @@ async function fetchVolumeMap(env, strategyId) {
   }
 }
 
+/* Put-wall levels for the session, same shape and failure behaviour as
+   fetchVolumeMap: null on any failure, and the alert sends without the line
+   rather than not sending. v2_dashboard_by_strategy does not carry the walls -
+   it returns poc/val/vah only - so this is a second call, made lazily for the
+   same reason as the volume map. The band is duplicated from js/pin.js
+   (PIN_PUT_WALL_BAND); change both together. */
+const PUT_WALL_BAND = 0.5;
+
+async function fetchWallMap(env, strategyId) {
+  try {
+    const today = nyToday();
+    const res = await callSupabase(env, 'v2_pin_series_by_strategy', '',
+      JSON.stringify({ p_start: today, p_end: today, p_strategy: strategyId }));
+    if (!res.ok) { console.log('alerts: walls upstream', res.status); return null; }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    const m = new Map();
+    for (const r of rows) m.set(candleKey(r.candle_time_ny), r);
+    return m;
+  } catch (err) {
+    console.log('alerts: wall lookup failed, sending without it');
+    return null;
+  }
+}
+
+/* The line itself. Returns '' unless this is a PUT sitting strictly above the
+   put wall and inside the band - see the long note in js/pin.js for why the
+   sign matters and why there is no call-side equivalent. */
+function putWallBlock(sig, wall) {
+  if (!wall || sig.direction !== 'PUT') return '';
+  const price = wall.price == null ? null : +wall.price;
+  const pw = wall.put_wall == null ? null : +wall.put_wall;
+  if (price == null || pw == null || isNaN(price) || isNaN(pw)) return '';
+  const gap = +(price - pw).toFixed(2);
+  if (!(gap > 0 && gap <= PUT_WALL_BAND)) return '';
+  return `\n⚠ Put wall ${tgEscape(pw)} · ${tgEscape(gap.toFixed(2))} above - dealer support`;
+}
+
 function volBlock(v) {
   if (!v) return '';
   const lines = [];
@@ -248,7 +286,7 @@ function dirLabel(d) {
   return '⚪ NO SIDE';
 }
 
-function alertText(sig, vol, symbol) {
+function alertText(sig, vol, symbol, wall) {
   // Symbol is passed in, not assumed: with more than one strategy running, an
   // alert that does not name its instrument is worse than no alert.
   const sym = tgEscape(symbol || 'SPY');
@@ -274,7 +312,7 @@ Price    <b>${tgEscape(sig.price)}</b>
 Flow     <b>${tgEscape(sig.flow)}</b>
 Room     <b>${tgEscape(sig.room)}</b>
 POC      ${tgEscape(sig.poc)}${volBlock(vol)}
-Candle   ${tgEscape(time)} NY${why}
+Candle   ${tgEscape(time)} NY${why}${putWallBlock(sig, wall)}
 
 https://dashflow.trade/`;
 }
@@ -520,11 +558,17 @@ async function alertForStrategy(env, strat) {
      outage mid-batch is retried next tick instead of being swallowed. */
   // Only now that we know something is going out.
   const volMap = await fetchVolumeMap(env, strat.id);
+  /* Only fetched when a PUT is actually going out - the flag is PUT-only, so
+     a batch of CALLs should not pay for a round trip it cannot use. */
+  const wallMap = pending.some(r => r.direction === 'PUT')
+    ? await fetchWallMap(env, strat.id)
+    : null;
 
   let lastOk = null;
   for (const sig of pending) {
     const vol = volMap ? volMap.get(candleKey(sig.candle_time_ny)) : null;
-    const ok = await sendTelegram(env, alertText(sig, vol, strat.symbol));
+    const wall = wallMap ? wallMap.get(candleKey(sig.candle_time_ny)) : null;
+    const ok = await sendTelegram(env, alertText(sig, vol, strat.symbol, wall));
     if (!ok) { console.log('alerts[' + strat.id + ']: telegram send failed, will retry next tick'); break; }
     lastOk = candleKey(sig.candle_time_ny);
   }

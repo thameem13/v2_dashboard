@@ -157,6 +157,53 @@
        to true is the whole switch: the card does not depend on it. */
     const PIN_BADGES_ENABLED  = false;
 
+    /* ── PUT-WALL ZONE FLAG ──
+       A SEPARATE feature from the badges above, deliberately on its own
+       switch. PIN_BADGES_ENABLED controls the symmetric INTO/AWAY badge the
+       backtest rejected; turning that on would put a disproven experiment back
+       on screen beside this one.
+
+       WHY THIS ONE IS DIFFERENT. The INTO/AWAY test pooled CALL and PUT and
+       measured |price - wall|, which conflates two opposite states: price
+       approaching the wall from above, and price that has already broken
+       through it. Split by sign over the 30 sessions to 2026-11-04, scored on
+       the premium backtest at each symbol's own exit size:
+
+         price 0 to 0.5 ABOVE the put wall   47 trades  -10.94   29.8% win
+         price 0 to 1 BELOW it               27 trades   +3.71   51.9%
+         price 1 to 2 above                  17 trades   +9.49   76.5%
+
+       The whole loss sits in one band, and it holds on both symbols
+       separately - SPY 36 trades at 30.6%, QQQ 11 at 27.3%. The mechanism
+       fits: dealers short those puts must BUY as price falls into the strike,
+       so a PUT signal there is a short into forced buying. Once price is
+       through the wall that hedge unwinds and the move continues, which is
+       why the below-wall bands are profitable.
+
+       THERE IS NO CALL-SIDE MIRROR. Measured the same way, 0-0.5 below the
+       call wall is +3.29 and positive on both symbols. A call wall that
+       breaks accelerates rather than resists. PUT only, deliberately.
+
+       WHAT THIS IS NOT. Flat rather than scaled by impl_move on purpose: the
+       vol-scaled variants were worse (0.10*impl blocked 19 trades for -8.75
+       against this rule's 47 for -10.94). Dealer gamma concentrates at the
+       strike and both symbols trade $1 strikes, so the band is in strike
+       units, not volatility units - the opposite of the wall-drift rule above,
+       and for a reason, not by oversight.
+
+       CAVEATS, because this ships as a note and not a gate. One month. The
+       0.5 boundary was chosen with the data in hand and the 0.5-1.0 band holds
+       n=2, so 0.5 versus 1.0 is genuinely undecided. Most of the P&L it saves
+       comes from up days, where the down-day cell is only n=15 - part of what
+       it detects is "shorting into a rising market", which it cannot say
+       directly. It changes no gate: has_signal, score and grade are untouched.
+
+       THE TEST TO SETTLE IT, written down before the data arrives: if after 20
+       more sessions the 0-0.5 band is still under 40% win rate on SPY and QQQ
+       independently, promote it to a gate. Otherwise drop it. */
+    const PIN_PUT_WALL_FLAG   = true;
+    const PIN_PUT_WALL_BAND   = 0.5;    // points above the put wall
+
     /* ── TIME HELPERS ──
        candle_time_ny arrives as timestamp from some RPCs and timestamptz from
        others - the mismatch that once silently killed the surge pills, see the
@@ -365,6 +412,65 @@
           if (st) pinStatusByTs[tsKey(r.candle_time_ny)] = st.status;
         });
       });
+    }
+
+    /* Wall rows for putWallFlag(), keyed by STRATEGY + candle.
+
+       Separate from pinByTs, and keyed differently on purpose. The aggregate
+       table carries several symbols at once, and a timestamp alone is not
+       unique across them: SPY 11:05 and QQQ 11:05 would overwrite each other
+       and print one symbol's put wall against the other's signal. That is the
+       same trap config.js records for the alert cursor - one scalar cannot
+       serve N strategies.
+
+       The single-strategy view indexes under id '', and flow rows there carry
+       no _sid, so one lookup serves both views without a mode flag. */
+    let pinWallByKey = {};
+
+    function pinWallKey(sid, ts) { return (sid || '') + '|' + tsKey(ts); }
+
+    /* groups is [{ id, rows }] - pinAgg's own shape, so the aggregate path can
+       pass it straight through. */
+    function pinIndexWalls(groups) {
+      pinWallByKey = {};
+      (groups || []).forEach(g => {
+        (g.rows || []).forEach(r => {
+          pinWallByKey[pinWallKey(g.id, r.candle_time_ny)] = r;
+        });
+      });
+    }
+
+    /* Returns the gap in points when a PUT signal sits in the put wall's
+       hedging band, else null. Split out from the markup so the flow table and
+       any later caller cannot disagree about what the band is. */
+    function putWallGap(x) {
+      if (!PIN_PUT_WALL_FLAG) return null;
+      if (!x || !x.has_signal || x.direction !== 'PUT') return null;
+
+      const row = pinWallByKey[pinWallKey(x._sid, x.candle_time_ny)];
+      if (!row) return null;
+
+      const price = pinNum(row.price);
+      const wall  = pinNum(row.put_wall);
+      if (price == null || wall == null) return null;
+
+      /* Strictly above the wall. Price already through it is the profitable
+         case, so >= 0 would flag exactly the trades this must not flag. */
+      const gap = +(price - wall).toFixed(2);
+      return (gap > 0 && gap <= PIN_PUT_WALL_BAND) ? gap : null;
+    }
+
+    function putWallFlag(x) {
+      const gap = putWallGap(x);
+      if (gap == null) return '';
+      const row = pinWallByKey[pinWallKey(x._sid, x.candle_time_ny)];
+      const wall = pinNum(row.put_wall);
+      return ' <span class="wall-pill wall-putzone" title="PUT fired '
+        + escapeHtml(gap.toFixed(2)) + ' above the put wall at '
+        + escapeHtml(String(wall)) + ' - dealers short those puts buy as price '
+        + 'falls into the strike. Historically ~30% win rate against ~60% '
+        + 'elsewhere, on one month. A note, not a gate.">PUT WALL '
+        + escapeHtml(gap.toFixed(2)) + '</span>';
     }
 
     /* The badges for one flow row. Returns '' unless the feature is on, so
