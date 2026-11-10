@@ -134,9 +134,12 @@ changing only the baseline rule and the day filter:
 | Variant | Bottom third | Top third | n |
 |---|---|---|---|
 | A — prior-days baseline, bad sessions excluded | −3.1 bp, 45% | **+0.2 bp, 50%** | 179 |
-| B — same, terciles rather than 0.80 / 1.10 | −0.8 bp, 48% | +1.7 bp, 52% | ~194 |
-| C — look-ahead baseline, bad sessions excluded | −1.4 bp, 45% | +2.8 bp, 58% | ~195 |
+| B — same, terciles rather than 0.80 / 1.10 | −0.9 bp, 47% | +2.2 bp, 54% | 177 |
+| C — look-ahead baseline, bad sessions excluded | −1.4 bp, 45% | +2.8 bp, 58% | 195 |
 | D — look-ahead baseline, no day filter | −3.7 bp, 38% | **+4.5 bp, 61%** | 228 |
+
+Run `sql/verify_volume_regime.sql` to reproduce. Figures confirmed against the
+live objects on 2026-11-09.
 
 **D is the earlier analysis.** 228 signals against the remembered ~229, +4.5 bp
 and 61% against the remembered +4 bp and 63%. So that analysis averaged each

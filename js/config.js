@@ -18,7 +18,7 @@
        a <meta name="build"> tag so the deployed version can be confirmed from
        the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
        "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.10.0';
+    const BUILD = '2.10.1';
     const BUILD_TS = '2026-11-09T00:00Z';
 
     /* ── STATE ── */
@@ -101,6 +101,7 @@
     let volRegimeDays = null;
     let volRegimeKey = null;
     let volRegimeLoading = false;
+    let volRegimeFailed = false;
 
     let premRows = null;
     let premKey = null;

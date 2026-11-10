@@ -311,9 +311,10 @@
           .filter(r => ['LOW', 'NORMAL', 'HIGH'].includes(r.vol_regime))
           .reduce((a, r) => a + (r.n || 0), 0);
         const total = rows.reduce((a, r) => a + (r.n || 0), 0);
-        document.getElementById('row-counts').textContent = total
-          ? `${classified} of ${total} signals classified`
-          : 'No signal data for this strategy';
+        document.getElementById('row-counts').textContent =
+          volRegimeFailed ? 'Volume regime unavailable'
+            : total ? `${classified} of ${total} signals classified`
+            : 'No signal data for this strategy';
         return;
       }
       const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');

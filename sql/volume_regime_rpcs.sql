@@ -50,9 +50,17 @@ AS $function$
   ),
   bucketed AS (
     SELECT r.ny_date,
-           /* floor the bar onto its 30-minute bucket: 09:35 -> 09:30 */
-           (date_trunc('hour', r.tod::interval)
-             + floor(extract(minute FROM r.tod) / 30) * interval '30 minutes')::time AS bucket_start,
+           /* Bucket on the bar's INTERVAL START, not its stamp. Bars are
+              stamped end-of-interval, so the 10:00 bar covers 09:55-10:00 and
+              belongs with the opening half hour. Flooring the stamp instead
+              put it in the 10:00 bucket, which left the first bucket holding
+              5 bars, every middle bucket 6, and a spurious 1-bar 16:00 bucket
+              reading 0.76% - an opening that looked lighter than it was and a
+              close that looked like a collapse. Subtracting one bar width
+              gives 13 buckets of 6 bars each. */
+           (date_trunc('hour', (r.tod - interval '5 minutes')::interval)
+             + floor(extract(minute FROM (r.tod - interval '5 minutes')) / 30)
+               * interval '30 minutes')::time AS bucket_start,
            sum(r.bar_vol) AS bucket_vol
     FROM v2_volume_regime r
     WHERE r.symbol = (SELECT symbol FROM sym)
@@ -145,7 +153,17 @@ $function$;
 
    stale_min lets the client say how old the reading is. The matview refreshes
    every five minutes, so a couple of bars of lag is normal and only a large
-   number means something is wrong. */
+   number means something is wrong.
+
+   market_open rides along because stale_min on its own is useless outside
+   trading hours: at 23:00 the last bar is legitimately 428 minutes old, and a
+   client warning on stale_min alone would cry stale every evening and all
+   weekend. The warning is only meaningful while bars should be arriving.
+
+   DROP first: CREATE OR REPLACE FUNCTION cannot change a function's return
+   type, and this gained a column. */
+
+DROP FUNCTION IF EXISTS public.v2_vol_regime_status_by_strategy(text);
 
 CREATE OR REPLACE FUNCTION public.v2_vol_regime_status_by_strategy(
   p_strategy text DEFAULT 'two_tier_divergence_spy'
@@ -164,6 +182,7 @@ RETURNS TABLE(
   first_bar         time without time zone,
   last_bar          time without time zone,
   stale_min         integer,
+  market_open       boolean,
   low_max           numeric,
   normal_max        numeric,
   min_baseline_days integer,
@@ -189,6 +208,14 @@ AS $function$
     l.first_bar, l.last_bar,
     greatest(0, round(extract(epoch FROM
       ((current_timestamp AT TIME ZONE 'America/New_York') - l.ts)) / 60))::integer AS stale_min,
+    /* Regular session only, and weekdays only. Holidays are not modelled -
+       there is no calendar table here - so a holiday reads as open and the
+       client may show one spurious staleness note per holiday. That is the
+       cheap failure; the expensive one was warning every night. */
+    (   extract(dow  FROM (current_timestamp AT TIME ZONE 'America/New_York')) BETWEEN 1 AND 5
+    AND (current_timestamp AT TIME ZONE 'America/New_York')::time >= time '09:30'
+    AND (current_timestamp AT TIME ZONE 'America/New_York')::time <= time '16:00'
+    ) AS market_open,
     c.low_max, c.normal_max, c.min_baseline_days, c.min_n_reliable
   FROM latest l CROSS JOIN v2_vol_regime_config c;
 $function$;

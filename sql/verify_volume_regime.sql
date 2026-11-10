@@ -25,13 +25,17 @@
  *
  *   variant  bucket  n    bp_60  win_60
  *   A        LOW     32   -3.1   45%
+ *   A        NORMAL  100  +0.9   56%
  *   A        HIGH    47   +0.2   50%
- *   B        bottom  ~65  -0.8   48%
- *   B        top     ~64  +1.7   52%
- *   C        bottom  ~65  -1.4   45%
- *   C        top     ~65  +2.8   58%
- *   D        bottom   76  -3.7   38%
- *   D        top      76  +4.5   61%
+ *   B        bottom  59   -0.9   47%
+ *   B        middle  59   -1.3   56%
+ *   B        top     59   +2.2   54%
+ *   C        bottom  65   -1.4   45%
+ *   C        top     65   +2.8   58%
+ *   D        bottom  76   -3.7   38%
+ *   D        top     76   +4.5   61%
+ *
+ * Confirmed against the live objects on 2026-11-09.
  *
  * D is the earlier finding, near enough: 228 signals, +4.5 bp and 61% on the
  * top third against the remembered ~229, +4 bp and 63%. So the earlier

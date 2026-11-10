@@ -26,6 +26,7 @@
       if (!force && volRegimeKey === key && volRegimePerf) return;
 
       volRegimeLoading = true;
+      volRegimeFailed = false;
       renderVolRegimeLoading();
       try {
         const params = { p_strategy: currentStrategy };
@@ -44,8 +45,13 @@
         updateRowCounts();
       } catch (e) {
         if (e.name === 'AbortError') return;
+        /* volRegimeFailed keeps the row-count badge from saying "no signal
+           data for this strategy", which asserts a fact about the data when
+           what actually happened is that the request failed. */
+        volRegimeFailed = true;
         document.getElementById('volregime-status').innerHTML =
           `<div class="chart-empty" style="height:60px">Could not load volume regime: ${escapeHtml(e.message || String(e))}</div>`;
+        updateRowCounts();
       } finally {
         volRegimeLoading = false;
       }
@@ -99,7 +105,10 @@
           + ` against a ${fmtCompact(s.baseline)} baseline from ${s.baseline_n} prior clean session${s.baseline_n === 1 ? '' : 's'}`;
       }
 
-      const stale = s.stale_min >= 10
+      /* Only while bars should actually be arriving. Outside the session the
+         last bar is legitimately hours old, and warning on stale_min alone
+         would cry stale every evening and all weekend. */
+      const stale = (s.market_open && s.stale_min >= 10)
         ? `<span class="vr-stale">last bar ${s.stale_min} min ago</span>` : '';
 
       return `<div class="vr-status ${cls}">
