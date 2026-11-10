@@ -1,7 +1,10 @@
 /* volume_regime - 30-minute option-volume regime, and the signal log enriched
  * with it.
  *
- * STEP 1 OF 4. Nothing here has been applied. Review first.
+ * Applied 2026-11-09. Verified on apply: no day with day_quality <> 'CLEAN'
+ * contributes to any baseline, one slot's baseline recomputed by hand from the
+ * prior clean days matches to nine decimal places, and anon and authenticated
+ * have SELECT on none of these objects.
  *
  * Why this exists: we want to know whether the v2 signal's edge depends on how
  * busy the option tape is when it fires. No existing object answers that.
@@ -53,9 +56,29 @@ INSERT INTO public.v2_vol_regime_config (id) VALUES (true) ON CONFLICT (id) DO N
 
 /* --------------------------------------------------------------------------
    2. v2_volume_regime - one row per deduplicated 5-minute bar, both symbols
-   -------------------------------------------------------------------------- */
+   --------------------------------------------------------------------------
+   MATERIALIZED, and it has to be. As a plain view this was correct but would
+   not compose: Postgres cannot estimate through the row_number() ... rn = 1
+   dedupe, so it planned the bars CTE at 27 rows against an actual 5,358.
+   Every downstream CTE inherited that guess, the planner chose nested loops
+   throughout, and a plain
 
-CREATE OR REPLACE VIEW public.v2_volume_regime AS
+       select count(*) from v2_signal_enriched
+
+   estimated 72.8 million rows out of a 250-row signal log and ran for over
+   two minutes. The same view answered a GROUP BY in 323 ms minutes earlier -
+   with estimates that bad the plan flips between workable and catastrophic on
+   trivia, which is worse than being reliably slow. Materialising gives the
+   planner real statistics and turns every read into an indexed scan.
+
+   The unique index below is not optional: REFRESH ... CONCURRENTLY requires
+   one, and without CONCURRENTLY the refresh takes an AccessExclusiveLock and
+   blocks the dashboard every five minutes. */
+
+DROP MATERIALIZED VIEW IF EXISTS public.v2_volume_regime CASCADE;
+DROP VIEW IF EXISTS public.v2_volume_regime CASCADE;
+
+CREATE MATERIALIZED VIEW public.v2_volume_regime AS
 WITH cfg AS (
   SELECT * FROM public.v2_vol_regime_config
 ),
@@ -191,6 +214,10 @@ SELECT
   b.ny_date,
   b.tod,
   b.cum_vol,
+  /* The bar's own volume. Carried so the daily-profile chart can sum
+     increments per 30-minute bucket instead of differencing cum_vol, which
+     would depend on the cumulative resetting cleanly at every session open. */
+  b.tot_inc AS bar_vol,
   w.vol_30m,
   bc.baseline,
   coalesce(bc.baseline_n, 0) AS baseline_n,
@@ -217,7 +244,35 @@ FROM bars b
 CROSS JOIN cfg
 JOIN      day_quality   q  ON q.symbol  = b.symbol AND q.ny_date = b.ny_date
 LEFT JOIN win30         w  ON w.symbol  = b.symbol AND w.ts      = b.ts
-LEFT JOIN baseline_calc bc ON bc.symbol = b.symbol AND bc.ts     = b.ts;
+LEFT JOIN baseline_calc bc ON bc.symbol = b.symbol AND bc.ts     = b.ts
+WITH DATA;
+
+/* Required by REFRESH ... CONCURRENTLY. (symbol, ts) is the natural key: one
+   bar per symbol per timestamp, which the dedupe above guarantees. */
+CREATE UNIQUE INDEX IF NOT EXISTS v2_volume_regime_symbol_ts_key
+  ON public.v2_volume_regime (symbol, ts);
+
+/* The access patterns the RPCs use: latest bar per symbol, and day lookups. */
+CREATE INDEX IF NOT EXISTS v2_volume_regime_symbol_date_idx
+  ON public.v2_volume_regime (symbol, ny_date);
+CREATE INDEX IF NOT EXISTS v2_volume_regime_ts_idx
+  ON public.v2_volume_regime (ts);
+
+/* Bars land every 5 minutes, so refreshing every 5 minutes means the status
+   box is at most one bar behind. The hours and weekdays match the Worker's
+   own cron in wrangler.jsonc - 13 to 21 UTC, Monday to Friday - so both run
+   only while the market is open. CONCURRENTLY keeps readers unblocked; it
+   needs the unique index above, and it cannot run against an unpopulated
+   matview, which is why the create above says WITH DATA.
+
+   To change the cadence, re-run cron.schedule with the same job name - it
+   replaces the existing schedule rather than adding a second one.
+   To stop it:  SELECT cron.unschedule('refresh_v2_volume_regime'); */
+SELECT cron.schedule(
+  'refresh_v2_volume_regime',
+  '*/5 13-21 * * 1-5',
+  $cron$REFRESH MATERIALIZED VIEW CONCURRENTLY public.v2_volume_regime$cron$
+);
 
 
 /* The name the spec asks for. One symbol, same columns. */

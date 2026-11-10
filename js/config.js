@@ -91,6 +91,17 @@
        the per-strategy premium-feed registry, fetched once - it is a property
        of the strategy list, not of the selected strategy, so it survives a
        strategy switch. */
+    /* Volume Regime tab. Loaded on demand by switchTab, like the premium
+       rows. volRegimeKey is the strategy the current data belongs to, so a
+       strategy switch refetches rather than showing SPY numbers under a QQQ
+       heading. */
+    let volRegimePerf = null;
+    let volRegimeProfile = null;
+    let volRegimeStatus = null;
+    let volRegimeDays = null;
+    let volRegimeKey = null;
+    let volRegimeLoading = false;
+
     let premRows = null;
     let premKey = null;
     let premLoading = false;

@@ -304,6 +304,15 @@
       perfKey = null;
       premRows = null;
       premKey = null;
+      /* The regime tab is per-symbol on three of its four panels and SPY-only
+         on the fourth, so keeping any of it would show one symbol's numbers
+         under the other's name. volRegimeKey alone would be enough to force a
+         refetch, but the panels render from these before the fetch returns. */
+      volRegimePerf = null;
+      volRegimeProfile = null;
+      volRegimeStatus = null;
+      volRegimeDays = null;
+      volRegimeKey = null;
       priceHistory = [];
       flowHistory = [];
       regimeCtx = null;
@@ -323,6 +332,7 @@
 
       loadAll();
       if (activeTab === 'prem') loadPremium(true);
+      if (activeTab === 'volregime') loadVolRegime(true);
     }
 
     /* ══════════════════════════════════════════════════════

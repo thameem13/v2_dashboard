@@ -335,6 +335,7 @@
       <div class="tab" onclick="switchTab('vol')">Option Volume</div>
       <div class="tab" onclick="switchTab('anomaly')">Anomalies</div>
       <div class="tab" onclick="switchTab('prem')">Performance</div>
+      <div class="tab" onclick="switchTab('volregime')">Volume Regime</div>
     </div>
     <div class="row-count-badge" id="row-counts">Loading records...</div>
   </div>
@@ -645,6 +646,39 @@
     </div>
   </div>
 
+  <!-- TAB 5: VOLUME REGIME (30-min option volume vs a prior-days baseline) -->
+  <div id="tab-volregime" class="tab-content">
+    <div class="perf-wrap" id="volregime-wrap">
+      <div class="perf-note">
+        How busy the option tape was when each signal fired. 30-minute volume is compared
+        against the <b>average for that same time of day on prior clean sessions only</b> -
+        never the current day, which would be look-ahead. The ratio is <b>vratio</b>, and the
+        cutoffs that turn it into LOW / NORMAL / HIGH live in
+        <code>v2_vol_regime_config</code>, not in this page.
+        <br><br>
+        <b>Read the n on every row before the basis points.</b> An earlier hand analysis of
+        this same question reported the high-volume third at about +4 bp with a 63% win rate.
+        That figure came from averaging each time slot over the whole sample including the
+        day being scored, with the frozen-feed days left in. Under the honest rules the
+        high-volume edge is roughly flat. The low-volume side is the one that survives.
+      </div>
+
+      <!-- Current status. Renders a first-class "no regime" state: on a frozen
+           feed there is no vratio to show, and a blank panel would read as
+           nothing being wrong. -->
+      <div id="volregime-status"></div>
+
+      <!-- (a) average share of a day's volume per 30-minute bucket -->
+      <div id="volregime-profile"></div>
+
+      <!-- (b) + (d) performance by regime, every number carrying its own n -->
+      <div id="volregime-perf"></div>
+
+      <!-- (e) days excluded for bad data, with the reason and the cost -->
+      <div id="volregime-days"></div>
+    </div>
+  </div>
+
   <div id="foot">
     <span id="foot-status">observe &amp; log - polarity unconfirmed</span>
     <span id="foot-build" title="Deployed build. This tab is running the current version.">build -</span>
@@ -671,7 +705,8 @@
     <kbd>1</kbd> Flow tab &nbsp;
     <kbd>2</kbd> Volume tab &nbsp;
     <kbd>3</kbd> Anomalies tab &nbsp;
-    <kbd>4</kbd> Performance tab<br>
+    <kbd>4</kbd> Performance tab &nbsp;
+    <kbd>5</kbd> Volume Regime tab<br>
     <kbd>D</kbd> Cycle date range &nbsp;
     <kbd>Esc</kbd> Dismiss alert / clear filters<br>
     <kbd>H</kbd> Compact header &nbsp;
@@ -727,6 +762,9 @@
   <script src="js/rpc.js?v=2.9.0"></script>
   <script src="js/render.js?v=2.9.0"></script>
   <script src="js/premium.js?v=2.9.0"></script>
+  <!-- After format.js (escapeHtml, fmt helpers) and rpc.js (rpcWithRetry).
+       Loaded on demand by switchTab, like premium.js. -->
+  <script src="js/volregime.js?v=2.9.0"></script>
   <script src="js/main.js?v=2.9.0"></script>
 </body>
 

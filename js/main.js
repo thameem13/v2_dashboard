@@ -184,6 +184,10 @@
           e.preventDefault();
           switchTab('prem');
           break;
+        case '5':
+          e.preventDefault();
+          switchTab('volregime');
+          break;
         case 'escape':
           e.preventDefault();
           clearFilters();

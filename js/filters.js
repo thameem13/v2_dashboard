@@ -11,7 +11,7 @@
       /* This array is matched against the .tab elements BY INDEX, so it has to
          stay in the same order as the markup in index.html. A tab added to one
          and not the other highlights the wrong heading, silently. */
-      const order = ['flow', 'vol', 'anomaly', 'prem'];
+      const order = ['flow', 'vol', 'anomaly', 'prem', 'volregime'];
       document.querySelectorAll('.tab').forEach((t, i) => {
         t.classList.toggle('active', order[i] === name);
       });
@@ -22,6 +22,7 @@
       // The Columns menu is per-tab, so close whichever one is open.
       closeColumnMenus();
       if (name === 'prem') loadPremium();
+      if (name === 'volregime') loadVolRegime();
       updateRowCounts();
     }
 
@@ -301,6 +302,20 @@
           + ` - ${sn} alerted signal${sn === 1 ? '' : 's'} for direction`;
         return;
       }
+      /* The regime tab counts signals classified, not rendered rows - the
+         whole point of the tab is how thin each bucket is, so the badge says
+         that rather than "6 rows". */
+      if (activeTab === 'volregime') {
+        const rows = volRegimePerf || [];
+        const classified = rows
+          .filter(r => ['LOW', 'NORMAL', 'HIGH'].includes(r.vol_regime))
+          .reduce((a, r) => a + (r.n || 0), 0);
+        const total = rows.reduce((a, r) => a + (r.n || 0), 0);
+        document.getElementById('row-counts').textContent = total
+          ? `${classified} of ${total} signals classified`
+          : 'No signal data for this strategy';
+        return;
+      }
       const tbodyId = activeTab === 'flow' ? '#tbody-flow' : (activeTab === 'vol' ? '#tbody-vol' : '#tbody-anomaly');
       const total = document.querySelectorAll(`${tbodyId} tr`).length;
       const visible = document.querySelectorAll(`${tbodyId} tr:not(.hidden)`).length;
@@ -416,6 +431,25 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = `performance_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      /* Export the regime summary with its n columns intact. Exporting the
+         rendered table would drop them into the same cell as the percentage,
+         and the n is the part worth keeping in a spreadsheet. */
+      if (activeTab === 'volregime') {
+        if (!volRegimePerf || !volRegimePerf.length) return alert('No regime data to export.');
+        const cols = ['vol_regime', 'n', 'n_30', 'n_60', 'win_30', 'win_60',
+          'avg_bp_30', 'avg_bp_60', 'avg_bp_eod', 'min_n_reliable', 'is_reliable'];
+        const lines = [cols.join(',')].concat(volRegimePerf.map(r =>
+          cols.map(c => `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',')));
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `volume_regime_${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         return;

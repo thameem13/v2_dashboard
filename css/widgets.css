@@ -674,3 +674,202 @@
       /* The width was set for a 12px figure. */
       .prem-ctrl input { width: 84px; }
     }
+
+    /* ── Volume Regime tab ───────────────────────────────────────────────
+       Built on the same tokens as the Performance tab, so the two read as
+       one surface. The one thing styled distinctly is the n: it rides inside
+       every numeric cell as a second line rather than living in its own
+       column, because a reader skimming basis points has to meet the sample
+       size without looking for it. */
+
+    .vr-section-head {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin: 14px 0 6px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      color: var(--txt);
+    }
+
+    .vr-sub {
+      font-weight: 400;
+      font-size: var(--fs-sm);
+      color: var(--dim);
+    }
+
+    /* ── current status ── */
+    .vr-status {
+      border: 1px solid var(--line);
+      border-left-width: 3px;
+      border-radius: var(--r-md);
+      background: var(--panel);
+      padding: 10px 12px;
+      margin: 10px 0 4px;
+      font-family: var(--font-ui);
+    }
+
+    .vr-status.vr-low    { border-left-color: var(--amber); }
+    .vr-status.vr-normal { border-left-color: var(--blue); }
+    .vr-status.vr-high   { border-left-color: var(--green); }
+    .vr-status.vr-none   { border-left-color: var(--dim); }
+
+    .vr-status-main {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .vr-badge {
+      font-size: var(--fs-lg);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--txt);
+    }
+
+    .vr-detail {
+      font-size: var(--fs-base);
+      color: var(--dim);
+    }
+
+    .vr-status-foot {
+      margin-top: 6px;
+      font-size: var(--fs-xs);
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .vr-stale {
+      margin-left: 8px;
+      color: var(--amber);
+      font-weight: 600;
+    }
+
+    /* ── the n warning ──
+       Above the table, not a footnote: every number below it is provisional
+       and the reader should know that before reading any of them. */
+    .vr-warn {
+      border: 1px solid var(--amber);
+      border-radius: var(--r-sm);
+      background: rgba(138, 100, 0, 0.08);
+      padding: 8px 10px;
+      margin: 8px 0;
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      line-height: 1.5;
+      color: var(--txt);
+    }
+
+    .vr-banner {
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel2);
+      padding: 8px 10px;
+      margin: 8px 0;
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      line-height: 1.5;
+      color: var(--dim);
+    }
+
+    /* ── tables ── */
+    .vr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-data);
+      font-size: var(--fs-cell);
+      font-variant-numeric: tabular-nums;
+      margin: 4px 0;
+    }
+
+    .vr-table th {
+      text-align: right;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+
+    .vr-table th:first-child,
+    .vr-table td:first-child { text-align: left; }
+
+    .vr-table td {
+      text-align: right;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      color: var(--txt);
+      vertical-align: top;
+    }
+
+    .vr-table tr:last-child td { border-bottom: none; }
+
+    .vr-table td.pos { color: var(--green); }
+    .vr-table td.neg { color: var(--red); }
+    .vr-table td.vr-na { color: var(--dim); }
+
+    /* The sample size, under every number it belongs to. */
+    .vr-n {
+      display: block;
+      font-family: var(--font-ui);
+      font-size: var(--fs-micro);
+      font-weight: 400;
+      color: var(--dim);
+      margin-top: 1px;
+    }
+
+    .vr-reg { font-weight: 700; }
+    .vr-table td.vr-low    { color: var(--amber); }
+    .vr-table td.vr-normal { color: var(--blue); }
+    .vr-table td.vr-high   { color: var(--green); }
+
+    /* A thin row is dimmed rather than hidden: the sample is worth watching
+       as it grows, it just is not evidence yet. Mirrors the rvol-thin
+       treatment in the volume table. */
+    .vr-table tr.vr-thin td { opacity: 0.62; }
+
+    .vr-flag {
+      display: inline-block;
+      padding: 0 4px;
+      border-radius: var(--r-xs);
+      background: var(--pill-muted-bg);
+      font-family: var(--font-ui);
+      font-size: var(--fs-micro);
+      font-weight: 600;
+      color: var(--dim);
+    }
+
+    .vr-reason { text-align: left; color: var(--dim); }
+
+    .vr-rest {
+      margin: 6px 0 2px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      color: var(--dim);
+    }
+
+    .vr-rest span { white-space: nowrap; }
+
+    @media (max-width: 700px) {
+      /* Four numeric columns do not fit a phone. The table scrolls rather
+         than wrapping, so the n stays attached to its own number. */
+      .vr-table { display: block; overflow-x: auto; }
+      .vr-status-main { gap: 4px; }
+    }
+
+    /* The light-theme panel borders read as too hard against the dark
+       surface, exactly as for .perf-note and friends above. */
+    [data-theme="dark"] .vr-status,
+    [data-theme="dark"] .vr-banner {
+      border-color: var(--line);
+    }
+
+    /* --amber is a different hue in dark mode, so the tint is restated
+       rather than inherited from the light-theme rgba. */
+    [data-theme="dark"] .vr-warn {
+      background: rgba(210, 153, 34, 0.10);
+    }
