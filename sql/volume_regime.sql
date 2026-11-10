@@ -75,8 +75,29 @@ INSERT INTO public.v2_vol_regime_config (id) VALUES (true) ON CONFLICT (id) DO N
    one, and without CONCURRENTLY the refresh takes an AccessExclusiveLock and
    blocks the dashboard every five minutes. */
 
-DROP MATERIALIZED VIEW IF EXISTS public.v2_volume_regime CASCADE;
-DROP VIEW IF EXISTS public.v2_volume_regime CASCADE;
+/* Dropped by relkind rather than with two IF EXISTS statements. IF EXISTS
+   only guards against the object being absent - it does NOT make
+   DROP MATERIALIZED VIEW tolerate finding a plain view, which raises 42809
+   and aborts the whole file. Neither static order is safe both ways: one
+   breaks on the first run, the other on every re-run once this is already a
+   matview. So: look at what is actually there. */
+DO $drop$
+DECLARE
+  kind "char";
+BEGIN
+  SELECT c.relkind INTO kind
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public' AND c.relname = 'v2_volume_regime';
+
+  IF kind = 'm' THEN
+    DROP MATERIALIZED VIEW public.v2_volume_regime CASCADE;
+  ELSIF kind = 'v' THEN
+    DROP VIEW public.v2_volume_regime CASCADE;
+  END IF;
+  /* kind IS NULL: nothing there yet, nothing to drop. */
+END
+$drop$;
 
 CREATE MATERIALIZED VIEW public.v2_volume_regime AS
 WITH cfg AS (
