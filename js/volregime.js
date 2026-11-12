@@ -298,7 +298,7 @@
             onclick="volRegimePick(${t.i})" tabindex="0"
             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();volRegimePick(${t.i});}"
             aria-label="${escapeHtml(t.label)} to ${escapeHtml(t.end)}: ${t.vol == null ? 'no volume' : t.vol.toFixed(1) + '% of session volume'}, ${hasSig ? `${t.nFired} signals, ${t.nM} with a ${hz.label} result, ${t.w} won, ${t.l} lost` : 'signals not applicable'}">
-          <td class="vr-time">${escapeHtml(t.label)}<span class="vr-n">to ${escapeHtml(t.end)}</span></td>
+          <td class="vr-time">${escapeHtml(t.label)}<span class="vr-dash">&ndash;</span>${escapeHtml(t.end)}</td>
           ${volCell}${cumCell}${sigCell}${rateCell}${avgCell}${netCell}
         </tr>`;
       }).join('');

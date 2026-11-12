@@ -1065,7 +1065,20 @@
       box-shadow: inset 3px 0 0 var(--blue);
     }
 
-    .vr-time { white-space: nowrap; }
+    /* The whole interval on one line. It was stacked - the start time with
+       "to 10:00" underneath - which read as two facts about one row rather
+       than one range, and left the column twice as tall as it needed to be. */
+    /* width:1% with nowrap is the shrink-to-fit idiom: the column takes only
+       what its text needs and the slack goes to the bar columns, which are the
+       ones that get easier to read as they widen. Without it the browser
+       spread the spare width evenly and left a hand's gap between the time and
+       the first bar. */
+    .vr-time { white-space: nowrap; width: 1%; }
+
+    .vr-dash {
+      padding: 0 1px;
+      color: var(--dim);
+    }
 
     /* Bar and number share a cell. The number keeps a fixed gutter so the
          digits line up down the column even as the bars stretch. */
