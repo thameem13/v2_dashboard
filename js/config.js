@@ -14,12 +14,25 @@
        shipped. Cloudflare Access gates the hostname, including /api.
        ══════════════════════════════════════════════════════ */
 
-    /* Bump BUILD on every push. It is rendered in the footer and mirrored in
-       a <meta name="build"> tag so the deployed version can be confirmed from
-       the browser or with curl - GitHub Pages caches HTML for 10 minutes, so
-       "is my change live?" is otherwise unanswerable. */
-    const BUILD = '2.10.1';
-    const BUILD_TS = '2026-11-09T00:00Z';
+    /* READ FROM THE PAGE, not declared here. The version is bumped in exactly
+       one place - index.html - where it is already written four-and-twenty
+       times as the ?v= cache-buster on every script and stylesheet, plus the
+       <meta name="build"> tag this reads. A second copy as a literal in this
+       file is a copy that can drift, and when it drifted the failure was not
+       cosmetic: chrome.js compares this value against the meta tag it re-fetches
+       to decide whether a newer build is deployed, so a stale constant here
+       means every load raises "a newer build is live, reload" against a page
+       that is already current - a prompt the reader cannot ever clear.
+
+       Taking it from the meta tag makes that comparison what it was always
+       meant to be: the version the page LOADED with, against the version the
+       server is handing out now. They can only differ when the HTML really is
+       stale. config.js is loaded from the foot of index.html, long after the
+       tag is parsed, so the lookup cannot run early. 'dev' is for opening the
+       file off disk with no meta tag at all; the check in chrome.js already
+       bails when the fetched HTML has no meta, so that case stays quiet. */
+    const BUILD = document.querySelector('meta[name="build"]')?.content || 'dev';
+    const BUILD_TS = document.querySelector('meta[name="build-ts"]')?.content || '';
 
     /* ── STATE ── */
     let soundEnabled = true;
