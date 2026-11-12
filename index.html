@@ -14,7 +14,7 @@
        After pushing, always hard-reload with Ctrl+Shift+R. -->
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
-  <meta name="build" content="2.10.1">
+  <meta name="build" content="2.11.0">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -51,14 +51,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.10.1">
-  <link rel="stylesheet" href="css/base.css?v=2.10.1">
-  <link rel="stylesheet" href="css/cards.css?v=2.10.1">
-  <link rel="stylesheet" href="css/tables.css?v=2.10.1">
-  <link rel="stylesheet" href="css/layout.css?v=2.10.1">
-  <link rel="stylesheet" href="css/panels.css?v=2.10.1">
-  <link rel="stylesheet" href="css/overlays.css?v=2.10.1">
-  <link rel="stylesheet" href="css/widgets.css?v=2.10.1">
+  <link rel="stylesheet" href="css/tokens.css?v=2.11.0">
+  <link rel="stylesheet" href="css/base.css?v=2.11.0">
+  <link rel="stylesheet" href="css/cards.css?v=2.11.0">
+  <link rel="stylesheet" href="css/tables.css?v=2.11.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.11.0">
+  <link rel="stylesheet" href="css/panels.css?v=2.11.0">
+  <link rel="stylesheet" href="css/overlays.css?v=2.11.0">
+  <link rel="stylesheet" href="css/widgets.css?v=2.11.0">
 </head>
 
 <body>
@@ -650,11 +650,18 @@
   <div id="tab-volregime" class="tab-content">
     <div class="perf-wrap" id="volregime-wrap">
       <div class="perf-note">
-        How busy the option tape was when each signal fired. 30-minute volume is compared
-        against the <b>average for that same time of day on prior clean sessions only</b> -
-        never the current day, which would be look-ahead. The ratio is <b>vratio</b>, and the
-        cutoffs that turn it into LOW / NORMAL / HIGH live in
+        How busy the option tape was when each signal fired. The <b>Session flow</b> table reads
+        by time of day: for each 30-minute bucket, what share of a session's option volume trades
+        in it, how many signals fired on those bars, and what those signals made or lost. The
+        <b>regime</b> table below reads the same signals by how busy the tape was rather than when:
+        30-minute volume compared against the <b>average for that same time of day on prior clean
+        sessions only</b> - never the current day, which would be look-ahead. The ratio is
+        <b>vratio</b>, and the cutoffs that turn it into LOW / NORMAL / HIGH live in
         <code>v2_vol_regime_config</code>, not in this page.
+        <br><br>
+        Every result here is measured from the historical price log, so the 15-minute delay on the
+        live feed is a backtesting concern only - it affects the current-status panel below and
+        nothing else on this tab.
         <br><br>
         <b>Read the n on every row before the basis points.</b> An earlier hand analysis of
         this same question reported the high-volume third at about +4 bp with a 63% win rate.
@@ -668,8 +675,10 @@
            nothing being wrong. -->
       <div id="volregime-status"></div>
 
-      <!-- (a) average share of a day's volume per 30-minute bucket -->
-      <div id="volregime-profile"></div>
+      <!-- (a) Session flow: volume share, signals and outcome per 30-minute
+           bucket, in one table. Replaced the standalone volume-profile chart,
+           whose single column is now this table's first one. -->
+      <div id="volregime-flow"></div>
 
       <!-- (b) + (d) performance by regime, every number carrying its own n -->
       <div id="volregime-perf"></div>
@@ -747,25 +756,25 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.10.1"></script>
-  <script src="js/alerts.js?v=2.10.1"></script>
-  <script src="js/chrome.js?v=2.10.1"></script>
-  <script src="js/news.js?v=2.10.1"></script>
-  <script src="js/signal.js?v=2.10.1"></script>
-  <script src="js/format.js?v=2.10.1"></script>
-  <script src="js/filters.js?v=2.10.1"></script>
-  <script src="js/charts.js?v=2.10.1"></script>
-  <script src="js/perf.js?v=2.10.1"></script>
+  <script src="js/config.js?v=2.11.0"></script>
+  <script src="js/alerts.js?v=2.11.0"></script>
+  <script src="js/chrome.js?v=2.11.0"></script>
+  <script src="js/news.js?v=2.11.0"></script>
+  <script src="js/signal.js?v=2.11.0"></script>
+  <script src="js/format.js?v=2.11.0"></script>
+  <script src="js/filters.js?v=2.11.0"></script>
+  <script src="js/charts.js?v=2.11.0"></script>
+  <script src="js/perf.js?v=2.11.0"></script>
   <!-- After format.js (uses escapeHtml, tsKey) and before render.js, which
        calls signalWallFlag() while building each flow row. -->
-  <script src="js/pin.js?v=2.10.1"></script>
-  <script src="js/rpc.js?v=2.10.1"></script>
-  <script src="js/render.js?v=2.10.1"></script>
-  <script src="js/premium.js?v=2.10.1"></script>
+  <script src="js/pin.js?v=2.11.0"></script>
+  <script src="js/rpc.js?v=2.11.0"></script>
+  <script src="js/render.js?v=2.11.0"></script>
+  <script src="js/premium.js?v=2.11.0"></script>
   <!-- After format.js (escapeHtml, fmt helpers) and rpc.js (rpcWithRetry).
        Loaded on demand by switchTab, like premium.js. -->
-  <script src="js/volregime.js?v=2.10.1"></script>
-  <script src="js/main.js?v=2.10.1"></script>
+  <script src="js/volregime.js?v=2.11.0"></script>
+  <script src="js/main.js?v=2.11.0"></script>
 </body>
 
 </html>

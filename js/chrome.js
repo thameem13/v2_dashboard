@@ -304,12 +304,14 @@
       perfKey = null;
       premRows = null;
       premKey = null;
-      /* The regime tab is per-symbol on three of its four panels and SPY-only
-         on the fourth, so keeping any of it would show one symbol's numbers
-         under the other's name. volRegimeKey alone would be enough to force a
-         refetch, but the panels render from these before the fetch returns. */
+      /* The regime tab is per-symbol on its status and flow panels and
+         SPY-only on the regime and excluded-day ones, so keeping any of it
+         would show one symbol's numbers under the other's name. volRegimeKey
+         alone would be enough to force a refetch, but the panels render from
+         these before the fetch returns. volRegimeHz / volRegimeSel are view
+         state, not data, and are left alone on purpose - see js/config.js. */
       volRegimePerf = null;
-      volRegimeProfile = null;
+      volRegimeFlow = null;
       volRegimeStatus = null;
       volRegimeDays = null;
       volRegimeKey = null;

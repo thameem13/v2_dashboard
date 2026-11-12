@@ -36,13 +36,16 @@ const ALLOWED = new Set([
   'v2_premium_sources',
   'v2_premium_backtest_by_strategy',
   // Volume Regime tab. The regime views are not reachable from the browser -
-  // only functions are - so these four are the whole surface. perf and days
-  // are SPY-only because v2_signal_log has no symbol column; profile and
-  // status work for both. See sql/volume_regime_rpcs.sql.
+  // only functions are - so these five are the whole surface. perf and days
+  // are SPY-only because v2_signal_log has no symbol column, and flow returns
+  // its volume columns for both symbols with the signal columns null; profile
+  // and status work for both. See sql/volume_regime_rpcs.sql and
+  // sql/volume_regime_flow.sql.
   'v2_vol_regime_profile_by_strategy',
   'v2_vol_regime_perf_by_strategy',
   'v2_vol_regime_status_by_strategy',
   'v2_vol_regime_days_by_strategy',
+  'v2_vol_regime_flow_by_strategy',
   // The original SPY-only set. Kept callable so a cached page from before the
   // switch keeps working, and so there is something to fall back to.
   'v2_dashboard_today',

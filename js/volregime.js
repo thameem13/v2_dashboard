@@ -5,19 +5,22 @@
    handlers in index.html depend on that. Load order is load-bearing - this
    needs escapeHtml/fmtCompact from format.js and rpcWithRetry from rpc.js.
 
-   Charts are inline SVG for the reason set out at js/premium.js:568-577: they
-   are built inside an innerHTML string, so a <canvas> would need a second
-   pass to find the element and draw after insertion, and could silently
-   render blank if the ordering changed. Colours come through
-   style="fill:var(--token)" so they follow the theme with no redraw.
+   The bars in the Session Flow table are styled divs, not SVG or canvas: they
+   sit inside table cells that already have to stretch with their column, and
+   a fixed viewBox would either clip or letterbox at every width. Colours come
+   through CSS tokens so they follow the theme with no redraw. The tab holds
+   no SVG chart any more - the volume profile that used to be one is now the
+   volume column of that table, next to the signals it explains.
 
    The one rule this tab exists to enforce: no number is shown without the n
-   it rests on, and anything under the configured min_n_reliable is marked as
-   not yet trustworthy. The whole reason the tab was built is that an earlier
+   it rests on, and anything under the configured threshold - min_n_reliable
+   for the regime table, min_n_bucket for the 30-minute buckets, which cannot
+   share a cutoff because one splits 250 signals three ways and the other
+   thirteen - is marked as not yet trustworthy. The whole reason the tab was built is that an earlier
    read of this same question reported a +4 bp high-volume edge that turned
    out to be look-ahead bias plus frozen-feed days. */
 
-    /* Fetched together: four small result sets, and rendering half a tab
+    /* Fetched together: five small result sets, and rendering half a tab
        while the rest is still in flight reads as a broken page rather than a
        loading one. */
     async function loadVolRegime(force) {
@@ -30,16 +33,20 @@
       renderVolRegimeLoading();
       try {
         const params = { p_strategy: currentStrategy };
-        const [status, profile, perf, days] = await Promise.all([
+        const [status, flow, perf, days] = await Promise.all([
           rpcWithRetry('v2_vol_regime_status_by_strategy', null, params),
-          rpcWithRetry('v2_vol_regime_profile_by_strategy', null, params),
+          rpcWithRetry('v2_vol_regime_flow_by_strategy', null, params),
           rpcWithRetry('v2_vol_regime_perf_by_strategy', null, params),
           rpcWithRetry('v2_vol_regime_days_by_strategy', null, params),
         ]);
         volRegimeStatus = Array.isArray(status) ? (status[0] || null) : status;
-        volRegimeProfile = profile || [];
+        volRegimeFlow = flow || [];
         volRegimePerf = perf || [];
         volRegimeDays = days || [];
+        /* The selected row is an index into the flow rows, so a strategy
+           switch that returns a shorter result would otherwise leave the
+           focus card reading a row that no longer exists. */
+        if (volRegimeSel >= volRegimeFlow.length) volRegimeSel = 0;
         volRegimeKey = key;
         renderVolRegime();
         updateRowCounts();
@@ -60,13 +67,13 @@
     function renderVolRegimeLoading() {
       document.getElementById('volregime-status').innerHTML =
         '<div class="chart-empty" style="height:60px">Loading volume regime...</div>';
-      ['volregime-profile', 'volregime-perf', 'volregime-days']
+      ['volregime-flow', 'volregime-perf', 'volregime-days']
         .forEach(id => { document.getElementById(id).innerHTML = ''; });
     }
 
     function renderVolRegime() {
       document.getElementById('volregime-status').innerHTML = volRegimeStatusHtml();
-      document.getElementById('volregime-profile').innerHTML = volRegimeProfileHtml();
+      document.getElementById('volregime-flow').innerHTML = volRegimeFlowHtml();
       document.getElementById('volregime-perf').innerHTML = volRegimePerfHtml();
       document.getElementById('volregime-days').innerHTML = volRegimeDaysHtml();
     }
@@ -125,48 +132,297 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       (a) DAILY PROFILE
+       (a) SESSION FLOW - volume, signals and outcome per bucket
        ══════════════════════════════════════════════════════ */
 
-    /* Average share of a session's volume in each 30-minute bucket. Clean
-       days only - a frozen feed would drag whichever buckets it spans toward
-       zero and bend the curve. */
-    function volRegimeProfileHtml() {
-      const rows = volRegimeProfile || [];
-      const head = '<div class="vr-section-head">Daily volume profile'
-        + '<span class="vr-sub">average share of a session\'s option volume, by 30-minute bucket, clean sessions only</span></div>';
-      if (!rows.length) return head + svgEmpty(160, 'No clean sessions yet');
+    /* One row per 30-minute bucket, answering the three parts of the same
+       question side by side: how much of a session's option volume trades in
+       this half hour, how many signals fired on those bars, and what those
+       signals made or lost. This replaced a standalone volume-profile chart,
+       which showed the first part and left the reader holding the other two in
+       their head while they looked at a regime table further down the page.
 
-      const W = 620, H = 170, PL = 34, PR = 10, PT = 12, PB = 34;
-      const hi = Math.max(...rows.map(r => +r.avg_pct)) || 1;
-      const bw = (W - PL - PR) / rows.length;
-      const y = v => PT + (1 - v / hi) * (H - PT - PB);
-      const base = H - PB;
-      const daysN = Math.min(...rows.map(r => r.days_n));
+       Two populations in one row, and they do not share an n. The volume
+       columns are an average over CLEAN sessions only - a frozen feed would
+       bend the shape of the curve. The signal columns count EVERY signal, bad
+       sessions included, because a frozen option feed says nothing about the
+       price log the returns are measured from. Each side carries its own n for
+       that reason, and n_bad says how much of a bucket came off an excluded
+       session. See the header of sql/volume_regime_flow.sql.
 
-      const bars = rows.map((r, i) => {
-        const v = +r.avg_pct;
-        const x = PL + i * bw;
-        const top = y(v);
-        return `<rect x="${(x + 1).toFixed(1)}" y="${top.toFixed(1)}"
-            width="${(bw - 2).toFixed(1)}" height="${(base - top).toFixed(1)}"
-            style="fill:var(--blue)" opacity="0.75"
-            title="${escapeHtml(r.bucket_label)}: ${v.toFixed(2)}% of a session, ${r.days_n} sessions"/>
-          ${i % 2 === 0
-            ? `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 20}" text-anchor="middle"
-                 style="fill:var(--dim)" font-size="8">${escapeHtml(r.bucket_label)}</text>` : ''}`;
+       Results come from spy_intraday_log, which is historical: the 15-minute
+       delay on the live feed affects the status panel above and nothing here.
+
+       Signals are bucketed on the same shifted stamp as the bars, so a signal
+       always sits in the same row as the volume it fired on. A bar stamped
+       10:00 covers 09:55-10:00 and belongs to the opening half hour; so does
+       the signal that fired off it. */
+
+    /* Which columns the horizon switch reads. The win count, the average and
+       the total all have to move together with the n they rest on, so they
+       live in one record rather than three parallel lookups that can fall out
+       of step when a fourth horizon is added. */
+    const VR_HZ = {
+      '30':  { label: '+30 min',  n: 'n_30',   w: 'win_30',   avg: 'avg_bp_30',  sum: 'sum_bp_30',  when: '30 minutes after the signal' },
+      '60':  { label: '+60 min',  n: 'n_60',   w: 'win_60',   avg: 'avg_bp_60',  sum: 'sum_bp_60',  when: '60 minutes after the signal' },
+      'eod': { label: 'To close', n: 'n_eod',  w: 'win_eod',  avg: 'avg_bp_eod', sum: 'sum_bp_eod', when: 'by the close' },
+    };
+
+    /* Re-renders only the flow panel. The status, regime and excluded-day
+       panels do not depend on the horizon or the selected row, and redrawing
+       the whole tab would scroll a reader away from the row they just
+       clicked. */
+    function volRegimeSetHz(hz) {
+      if (!VR_HZ[hz] || volRegimeHz === hz) return;
+      volRegimeHz = hz;
+      document.getElementById('volregime-flow').innerHTML = volRegimeFlowHtml();
+    }
+
+    function volRegimePick(i) {
+      volRegimeSel = i;
+      document.getElementById('volregime-flow').innerHTML = volRegimeFlowHtml();
+    }
+
+    /* U+2212 MINUS, not a hyphen: at --fs-cell in a tabular-nums column a
+       hyphen sits too high and too short to read as a sign. */
+    function vrSign(v, dp) {
+      return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(dp);
+    }
+    function vrPn(v) { return v > 0 ? 'vr-pos' : v < 0 ? 'vr-neg' : ''; }
+
+    function volRegimeFlowHtml() {
+      const rows = volRegimeFlow || [];
+      const hz = VR_HZ[volRegimeHz] || VR_HZ['30'];
+
+      const head = '<div class="vr-section-head">Session flow'
+        + '<span class="vr-sub">per 30-minute bucket: share of a session\'s option volume,'
+        + ' the signals that fired on those bars, and what they made or lost</span></div>';
+
+      if (!rows.length) return head + '<div class="chart-empty" style="height:60px">No clean sessions yet</div>';
+
+      /* has_signals is false for a non-SPY strategy, which is not the same
+         fact as a bucket having no signals in it. The volume half of the table
+         is still worth showing, so the signal columns go to "n/a" and the
+         banner says why rather than the table reading as a flat loss. */
+      const hasSig = rows.some(r => r.has_signals);
+      const minN = +(rows[0].min_n_bucket || 10);
+      const sel = Math.min(Math.max(volRegimeSel | 0, 0), rows.length - 1);
+
+      /* Derived once, read by the table, the totals row and the focus card -
+         three places that must not disagree about what the selected bucket
+         did. */
+      let cum = 0;
+      const items = rows.map((r, i) => {
+        const vol = r.avg_pct == null ? null : +r.avg_pct;
+        if (vol != null) cum += vol;
+        const nM = r[hz.n] == null ? 0 : +r[hz.n];
+        const w = r[hz.w] == null ? 0 : +r[hz.w];
+        return {
+          i,
+          label: r.bucket_label,
+          /* The bucket's own end, so the row reads as the interval it is
+             rather than an instant. The last bucket closes the session. */
+          end: i + 1 < rows.length ? rows[i + 1].bucket_label : '16:00',
+          vol, cum,
+          daysN: +(r.days_n || 0),
+          nFired: r.n == null ? null : +r.n,
+          nBad: r.n_bad == null ? 0 : +r.n_bad,
+          nM, w, l: nM - w,
+          rate: nM ? (w / nM) * 100 : null,
+          avg: r[hz.avg] == null ? null : +r[hz.avg],
+          net: r[hz.sum] == null ? null : +r[hz.sum],
+          thin: nM > 0 && nM < minN,
+        };
+      });
+
+      /* Scales. Every bar is relative to the largest value in its own column,
+         so the shape of each column is readable; the numbers next to them are
+         what the reader compares across columns. */
+      const maxVol = Math.max(1, ...items.map(t => t.vol || 0));
+      const maxN   = Math.max(1, ...items.map(t => t.nM));
+      const maxAbs = Math.max(1, ...items.map(t => Math.abs(t.avg || 0)));
+
+      const pct = (v, hi) => Math.max(0, Math.min(100, (v / hi) * 100));
+
+      const body = items.map(t => {
+        const volCell = t.vol == null
+          ? '<td class="vr-na">-</td>'
+          : `<td><span class="vr-cellbar">
+               <span class="vr-bar"><span class="vr-bar-fill" style="width:${pct(t.vol, maxVol).toFixed(1)}%"></span></span>
+               <span class="vr-num">${t.vol.toFixed(1)}%</span>
+             </span></td>`;
+
+        /* "Traded by then" is cumulative; the n line underneath is this
+           bucket's share of that cumulative total - the mockup's "34% of
+           32.1%" read. Guarded because a bucket with no volume at all on any
+           clean session would make the first row divide by zero. */
+        const cumCell = t.vol == null
+          ? '<td class="vr-na">-</td>'
+          : `<td>${t.cum.toFixed(1)}%${t.cum > 0
+              ? `<span class="vr-n">${Math.round((t.vol / t.cum) * 100)}% of it</span>` : ''}</td>`;
+
+        const sigCell = !hasSig
+          ? '<td class="vr-na">n/a</td>'
+          : t.nFired
+            ? `<td><span class="vr-cellbar">
+                 <span class="vr-bar ${t.thin ? 'vr-bar-thin' : ''}">
+                   <span class="vr-wl-w" style="width:${pct(t.w, maxN).toFixed(1)}%"></span>
+                   <span class="vr-wl-l" style="left:${pct(t.w, maxN).toFixed(1)}%;width:${pct(t.l, maxN).toFixed(1)}%"></span>
+                 </span>
+                 <span class="vr-num">${t.nM}${t.thin ? ' <span class="vr-flag">thin</span>' : ''}
+                   <span class="vr-n">${t.w}W ${t.l}L${t.nM < t.nFired ? ` &middot; of ${t.nFired}` : ''}</span>
+                 </span>
+               </span></td>`
+            : '<td class="vr-na">0<span class="vr-n">none fired</span></td>';
+
+        const rateCell = t.rate == null
+          ? '<td class="vr-na">-</td>'
+          : `<td class="${t.rate > 50 ? 'pos' : t.rate < 50 ? 'neg' : ''}">${Math.round(t.rate)}%</td>`;
+
+        const avgCell = t.avg == null
+          ? '<td class="vr-na">-</td>'
+          : `<td><span class="vr-cellbar">
+               <span class="vr-div">
+                 <span class="vr-div-zero"></span>
+                 <span class="vr-div-${t.avg >= 0 ? 'pos' : 'neg'}"
+                       style="width:${(pct(Math.abs(t.avg), maxAbs) / 2).toFixed(1)}%"></span>
+               </span>
+               <span class="vr-num ${vrPn(t.avg)}">${vrSign(t.avg, 1)}</span>
+             </span></td>`;
+
+        const netCell = t.net == null
+          ? '<td class="vr-na">-</td>'
+          : `<td class="vr-net ${vrPn(t.net)}">${vrSign(t.net, 0)}</td>`;
+
+        return `<tr class="vr-flow-row ${t.i === sel ? 'vr-sel' : ''} ${t.thin ? 'vr-thin' : ''}"
+            onclick="volRegimePick(${t.i})" tabindex="0"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();volRegimePick(${t.i});}"
+            aria-label="${escapeHtml(t.label)} to ${escapeHtml(t.end)}: ${t.vol == null ? 'no volume' : t.vol.toFixed(1) + '% of session volume'}, ${hasSig ? `${t.nFired} signals, ${t.nM} with a ${hz.label} result, ${t.w} won, ${t.l} lost` : 'signals not applicable'}">
+          <td class="vr-time">${escapeHtml(t.label)}<span class="vr-n">to ${escapeHtml(t.end)}</span></td>
+          ${volCell}${cumCell}${sigCell}${rateCell}${avgCell}${netCell}
+        </tr>`;
       }).join('');
 
-      const ticks = [hi, hi / 2, 0];
-      return head + `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
-        aria-label="Average share of session option volume by 30-minute bucket across ${daysN} clean sessions">
-        ${ticks.map(t => `<line x1="${PL}" x2="${W - PR}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"
-            style="stroke:var(--line)" stroke-width="1" ${t === 0 ? '' : 'stroke-dasharray="2 3"'}/>
-          <text x="${PL - 6}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end"
-            style="fill:var(--dim)" font-size="9">${t.toFixed(1)}%</text>`).join('')}
-        ${bars}
-        <text x="${PL}" y="${H - 6}" style="fill:var(--dim)" font-size="9">n = ${daysN} clean sessions</text>
-      </svg>`;
+      /* The totals row is the check on the table above it: the volume column
+         has to add to 100% of a session, and the signal column has to add to
+         the signal log. A reader who cannot see that cannot tell whether a
+         bucket went missing. */
+      const tVol = items.reduce((a, t) => a + (t.vol || 0), 0);
+      const tFired = items.reduce((a, t) => a + (t.nFired || 0), 0);
+      const tM = items.reduce((a, t) => a + t.nM, 0);
+      const tW = items.reduce((a, t) => a + t.w, 0);
+      const tNet = items.reduce((a, t) => a + (t.net || 0), 0);
+      const foot = `<tr class="vr-total">
+        <td class="vr-time">Session</td>
+        <td>${tVol.toFixed(1)}%</td>
+        <td class="vr-na">at close</td>
+        ${hasSig
+          ? `<td>${tM}<span class="vr-n">${tW}W ${tM - tW}L${tM < tFired ? ` &middot; of ${tFired}` : ''}</span></td>
+             <td>${tM ? Math.round((tW / tM) * 100) + '%' : '-'}</td>
+             <td class="${tM ? vrPn(tNet) : ''}">${tM ? vrSign(tNet / tM, 1) + ' avg' : '-'}</td>
+             <td class="vr-net ${vrPn(tNet)}">${vrSign(tNet, 0)}</td>`
+          : '<td class="vr-na">n/a</td><td class="vr-na">n/a</td><td class="vr-na">n/a</td><td class="vr-na">n/a</td>'}
+      </tr>`;
+
+      const toggle = ['30', '60', 'eod'].map(k =>
+        `<button class="vr-hz-btn ${volRegimeHz === k ? 'on' : ''}" onclick="volRegimeSetHz('${k}')"
+           aria-pressed="${volRegimeHz === k}">${VR_HZ[k].label}</button>`).join('');
+
+      const legend = `<div class="vr-legend">
+        <span><i class="vr-sw vr-sw-vol"></i>Share of session option volume</span>
+        <span><i class="vr-sw vr-sw-win"></i>Signals that won</span>
+        <span><i class="vr-sw vr-sw-loss"></i>Signals that lost</span>
+        <span><i class="vr-sw vr-sw-thin"></i>Under n = ${minN}, not yet reliable</span>
+      </div>`;
+
+      const banner = hasSig ? '' : `<div class="vr-banner">The signal log is SPY-only - it has no
+        symbol column - so the signal, win-rate and basis-point columns are not available for this
+        strategy. The volume columns are for the selected symbol.</div>`;
+
+      return head
+        + `<div class="vr-flow-bar">
+             <div class="vr-hz" role="group" aria-label="Result horizon">
+               <span class="vr-hz-lab">Result measured</span>${toggle}
+             </div>
+           </div>`
+        + banner
+        + volRegimeFocusHtml(items[sel], hz, hasSig, minN)
+        + legend
+        + `<div class="vr-flow-scroll"><table class="vr-table vr-flow-table">
+            <thead><tr>
+              <th>Time (ET)</th>
+              <th>Volume share</th>
+              <th>Traded by then</th>
+              <th>Signals (${escapeHtml(hz.label)})</th>
+              <th>Win</th>
+              <th>Avg bp</th>
+              <th>Net bp</th>
+            </tr></thead>
+            <tbody>${body}${foot}</tbody>
+          </table></div>`
+        + `<div class="vr-rest">Volume is an average over clean sessions only; the signal columns
+            count every signal, including the ${items.reduce((a, t) => a + t.nBad, 0)} on excluded
+            sessions, because a frozen option feed does not invalidate a price. Click a row to
+            read it on its own.</div>`;
+    }
+
+    /* The focus card exists because the table answers the question in seven
+       columns and the question was asked in one sentence. It restates the
+       selected row as that sentence, with the n it rests on in plain sight. */
+    function volRegimeFocusHtml(t, hz, hasSig, minN) {
+      if (!t) return '';
+      const range = `${escapeHtml(t.label)}&ndash;${escapeHtml(t.end)}`;
+
+      const tile = (lab, val, sub, cls) => `<div class="vr-tile">
+        <div class="vr-tile-lab">${lab}</div>
+        <div class="vr-tile-val ${cls || ''}">${val}</div>
+        <div class="vr-tile-sub">${sub}</div>
+      </div>`;
+
+      const tiles = [
+        tile('Option volume', t.vol == null ? '-' : `${t.vol.toFixed(1)}%`,
+          t.vol == null ? 'no clean sessions' : `of a session &middot; ${t.daysN} sessions`),
+        hasSig
+          ? tile('Signals fired', t.nFired == null ? '-' : t.nFired,
+              t.nM === t.nFired ? `all have a ${escapeHtml(hz.label)} result`
+                : `${t.nM} have a ${escapeHtml(hz.label)} result`)
+          : tile('Signals fired', 'n/a', 'SPY-only log'),
+        hasSig
+          ? tile('Won / lost', `<span class="vr-pos">${t.w}</span><span class="vr-slash"> / </span><span class="vr-neg">${t.l}</span>`,
+              t.rate == null ? 'no measured result' : `win rate ${Math.round(t.rate)}% of n = ${t.nM}`)
+          : tile('Won / lost', 'n/a', 'SPY-only log'),
+        hasSig
+          ? tile('Net result', t.net == null ? '-' : `${vrSign(t.net, 0)} <span class="vr-unit">bp</span>`,
+              t.avg == null ? '' : `avg ${vrSign(t.avg, 1)} bp per signal`, vrPn(t.net))
+          : tile('Net result', 'n/a', 'SPY-only log'),
+      ].join('');
+
+      let sentence;
+      if (!hasSig) {
+        sentence = `${range} ET carries ${t.vol == null ? 'no measured share' : t.vol.toFixed(1)
+          + '% of a session\'s option volume'}. Signal results are SPY-only.`;
+      } else if (!t.nFired) {
+        sentence = `${range} ET carries ${t.vol.toFixed(1)}% of a session's option volume and has
+          not fired a single signal yet, so there is nothing to score.`;
+      } else {
+        const verdict = t.net > 0 ? 'a net gain' : t.net < 0 ? 'a net loss' : 'break-even';
+        sentence = `${range} ET carries ${t.vol == null ? 'an unmeasured share' : t.vol.toFixed(1) + '%'}
+          of a session's option volume (${t.cum.toFixed(1)}% of it has traded by the end of this bucket)
+          and fired ${t.nFired} signal${t.nFired === 1 ? '' : 's'}.
+          ${t.nM} of those have a result ${hz.when}: ${t.w} right, ${t.l} wrong, for ${verdict}
+          of ${vrSign(t.net, 0)} bp.`
+          + (t.thin ? ` Only ${t.nM} measured signals, under the n = ${minN} this tab trusts - provisional.` : '')
+          + (t.nBad ? ` ${t.nBad} of them fired on a session excluded from the volume baselines.` : '');
+      }
+
+      return `<div class="vr-focus">
+        <div class="vr-focus-head">
+          <span class="vr-focus-lab">Selected bucket</span>
+          <span class="vr-focus-range">${range} ET</span>
+        </div>
+        <div class="vr-tiles">${tiles}</div>
+        <p class="vr-focus-sent">${sentence}</p>
+      </div>`;
     }
 
     /* ══════════════════════════════════════════════════════

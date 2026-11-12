@@ -437,15 +437,37 @@
         return;
       }
 
-      /* Export the regime summary with its n columns intact. Exporting the
-         rendered table would drop them into the same cell as the percentage,
-         and the n is the part worth keeping in a spreadsheet. */
+      /* Export both regime tables with their n columns intact. Exporting the
+         rendered tables would drop the n into the same cell as the percentage,
+         and the n is the part worth keeping in a spreadsheet. Two blocks in
+         one file, separated by a blank line and each with its own header row:
+         the flow table is per 30-minute bucket and the regime table is per
+         regime, so they cannot share columns, and a reader who got only one of
+         them would not know the other existed. */
       if (activeTab === 'volregime') {
-        if (!volRegimePerf || !volRegimePerf.length) return alert('No regime data to export.');
-        const cols = ['vol_regime', 'n', 'n_30', 'n_60', 'win_30', 'win_60',
+        const flow = volRegimeFlow || [];
+        const perf = volRegimePerf || [];
+        if (!flow.length && !perf.length) return alert('No regime data to export.');
+        const q = (r, cols) => cols.map(c =>
+          `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',');
+        const flowCols = ['bucket_label', 'avg_pct', 'days_n', 'n', 'n_bad',
+          'n_30', 'n_60', 'n_eod', 'win_30', 'win_60', 'win_eod',
+          'avg_bp_30', 'avg_bp_60', 'avg_bp_eod',
+          'sum_bp_30', 'sum_bp_60', 'sum_bp_eod', 'min_n_bucket'];
+        const perfCols = ['vol_regime', 'n', 'n_30', 'n_60', 'win_30', 'win_60',
           'avg_bp_30', 'avg_bp_60', 'avg_bp_eod', 'min_n_reliable', 'is_reliable'];
-        const lines = [cols.join(',')].concat(volRegimePerf.map(r =>
-          cols.map(c => `"${String(r[c] == null ? '' : r[c]).replace(/"/g, '""')}"`).join(',')));
+        const lines = [];
+        if (flow.length) {
+          lines.push('# session flow, per 30-minute bucket');
+          lines.push(flowCols.join(','));
+          flow.forEach(r => lines.push(q(r, flowCols)));
+          if (perf.length) lines.push('');
+        }
+        if (perf.length) {
+          lines.push('# performance by volume regime');
+          lines.push(perfCols.join(','));
+          perf.forEach(r => lines.push(q(r, perfCols)));
+        }
         const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

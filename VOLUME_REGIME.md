@@ -173,8 +173,40 @@ flag, which is correct rather than a defect.
 | `spy_volume_regime` | `v2_volume_regime` filtered to SPY — the name the brief asked for |
 | `v2_signal_enriched` | `v2_signal_log` plus regime and signed forward returns |
 
-Defined in `sql/volume_regime.sql`. The four RPCs behind the tab are in
-`sql/volume_regime_rpcs.sql`.
+Defined in `sql/volume_regime.sql`. Four of the five RPCs behind the tab are in
+`sql/volume_regime_rpcs.sql`; the fifth, `v2_vol_regime_flow_by_strategy`, is in
+`sql/volume_regime_flow.sql`, which also adds `min_n_bucket` to the config
+table.
+
+### The flow RPC, and its two populations
+
+`v2_vol_regime_flow_by_strategy` returns one row per 30-minute bucket with the
+volume side and the signal side together. They are **different populations and
+do not share an n**:
+
+| Side | Sessions counted | Why |
+|---|---|---|
+| `avg_pct`, `days_n` | clean only | a frozen feed drags whichever buckets it spans toward zero and bends the shape of the curve |
+| `n`, `win_*`, `avg_bp_*`, `sum_bp_*` | **all** | a frozen *option* feed says nothing about the price log the returns come from, so dropping those signals would discard real outcomes for an unrelated fault |
+
+`n_bad` is how many of a bucket's signals fell on an excluded session, so the
+tab can disclose the overlap rather than hide it. Bad days are excluded from
+baselines, not from P&L.
+
+Signals are bucketed on the **same shifted stamp as the bars**: a bar stamped
+10:00 covers 09:55–10:00 and belongs to the opening half hour, and so does the
+signal that fired off it. Flooring the signal clock instead would put a signal
+one row below its own bar's volume, which defeats the point of the table.
+
+`min_n_bucket` (default 10) is separate from `min_n_reliable` (100) because one
+splits ~250 signals three ways and the other thirteen; 100 per time bucket is
+unreachable. Same rule as every other cutoff here: it lives in the config table
+so retuning it is an `UPDATE`, and the page shows the number it is actually
+using.
+
+`sum_bp_*` is summed in SQL rather than computed as `n × avg` in the client:
+rounding an average to two decimals and multiplying it back up drifts by whole
+basis points by the time n reaches the twenties.
 
 ### Why it is materialized
 
@@ -223,17 +255,43 @@ the tab reports `n`, `n_30` and `n_60` separately: they are not the same number.
 
 ## The tab
 
-Reachable at **Volume Regime**, or keyboard `5`.
+Reachable at **Volume Regime**, or keyboard `5`. Four panels, in this order:
+
+1. **Current status** — the latest bar and the cutoffs it was judged against.
+   The only panel on the tab that reads the live feed, and therefore the only
+   one the 15-minute delay touches. Everything below it is measured from the
+   historical price log, which is why the delay is a non-issue for backtesting.
+2. **Session flow** — one row per 30-minute bucket: share of a session's option
+   volume, the signals that fired on those bars, win/loss split, average bp and
+   net bp. A horizon switch moves the result columns between +30 min, +60 min
+   and the close; clicking a row restates it as a sentence in the focus card
+   above the table. This replaced a standalone volume-profile chart, whose
+   single column is now the table's first one — the chart answered a third of
+   the question and left the reader holding the rest in their head.
+3. **Performance by regime** — the same signals read by how busy the tape was
+   rather than when, every cell carrying its own n.
+4. **Sessions excluded for bad data** — with the reason and how many signals
+   each exclusion cost.
+
+The session row at the foot of the flow table is a check on the columns above
+it: volume has to add to ~100% of a session and the signal count to the log. A
+reader who cannot see that has no way to tell whether a bucket went missing,
+which is the class of quiet loss this tab exists to surface.
 
 The client holds no Supabase key, so the views are not reachable from the
 browser — only functions are, and only once their names are in `ALLOWED` in
-`worker.js`. The four are listed at the foot of `sql/volume_regime_rpcs.sql`.
-Forgetting one gives a 403, not an empty panel.
+`worker.js`. Four are listed at the foot of `sql/volume_regime_rpcs.sql` and the
+fifth at the foot of `sql/volume_regime_flow.sql`. Forgetting one gives a 403,
+not an empty panel.
 
 `v2_vol_regime_perf_by_strategy` and `v2_vol_regime_days_by_strategy` are
-SPY-only, because the signal log is. On QQQ the tab shows the profile and
-status for QQQ and a banner in place of the regime table, rather than an empty
-table that would read as "no trades won".
+SPY-only, because the signal log is. `v2_vol_regime_flow_by_strategy` is
+half-SPY-only: it returns its volume columns for either symbol and NULL — never
+0 — in the signal columns otherwise, with `has_signals` saying which, so the
+client can tell "no signals in this bucket" from "not applicable to this
+strategy". On QQQ the tab shows the flow table's volume columns and the status
+panel for QQQ, and a banner in place of the signal columns and the regime
+table, rather than empty cells that would read as "no trades won".
 
 QQQ has 26 sessions of bucket data against SPY's 45, and 855 of its 1,944 bars
 fall on bad sessions. Its baselines are correspondingly thin.

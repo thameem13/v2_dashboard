@@ -873,3 +873,297 @@
     [data-theme="dark"] .vr-warn {
       background: rgba(210, 153, 34, 0.10);
     }
+
+    /* ══════════════════════════════════════════════════════
+       SESSION FLOW TABLE (Volume Regime tab, lead panel)
+       ══════════════════════════════════════════════════════
+       The bars live in table cells and stretch with their column, so every
+       width here is a percentage of the cell and the only fixed sizes are
+       heights and the numeric gutter beside each bar. The number is what a
+       reader compares across columns; the bar is only there so the shape of
+       one column can be taken in at a glance. */
+
+    .vr-flow-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: 2px 0 8px;
+    }
+
+    .vr-hz { display: flex; align-items: center; gap: 8px; }
+
+    .vr-hz-lab {
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    /* Segmented, like the preset buttons on the premium tab: the three
+       horizons are one choice, not three independent toggles. */
+    .vr-hz-btn {
+      padding: 5px 11px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      color: var(--txt);
+      cursor: pointer;
+    }
+
+    .vr-hz-btn:first-of-type { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+    .vr-hz-btn:last-of-type  { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .vr-hz-btn + .vr-hz-btn  { border-left: 0; }
+    .vr-hz-btn:hover         { background: var(--btn-hover-bg); }
+
+    .vr-hz-btn.on {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    /* ── the focus card ── */
+    .vr-focus {
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--blue);
+      border-radius: var(--r-md);
+      background: var(--panel2);
+      padding: 12px 14px;
+      margin: 8px 0;
+    }
+
+    .vr-focus-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .vr-focus-lab {
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .vr-focus-range {
+      font-family: var(--font-data);
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--txt);
+    }
+
+    /* Four tiles that wrap to two, then one. Each is its own card so the
+       label, the number and the n it rests on stay visually bound together
+       when the row breaks. */
+    .vr-tiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .vr-tile {
+      flex: 1 1 140px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      background: var(--panel);
+      padding: 8px 10px;
+    }
+
+    .vr-tile-lab {
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      color: var(--dim);
+    }
+
+    .vr-tile-val {
+      margin-top: 1px;
+      font-family: var(--font-data);
+      font-size: var(--fs-3xl);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--txt);
+      line-height: 1.15;
+    }
+
+    .vr-tile-sub {
+      margin-top: 2px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-xs);
+      color: var(--dim);
+    }
+
+    .vr-unit { font-size: var(--fs-sm); font-weight: 500; }
+    .vr-slash { color: var(--dim); font-weight: 500; }
+
+    .vr-focus-sent {
+      margin: 10px 0 0;
+      font-family: var(--font-ui);
+      font-size: var(--fs-md);
+      line-height: 1.5;
+      color: var(--txt);
+    }
+
+    /* ── legend ── */
+    .vr-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      margin: 8px 0 2px;
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      color: var(--dim);
+    }
+
+    .vr-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+    .vr-sw {
+      width: 13px;
+      height: 9px;
+      border-radius: 2px;
+      flex: 0 0 auto;
+    }
+
+    .vr-sw-vol  { background: var(--blue); opacity: 0.75; }
+    .vr-sw-win  { background: var(--green); }
+    .vr-sw-loss { background: var(--red); opacity: 0.45; }
+
+    /* Hatched, not merely faded: a thin bucket has to be distinguishable from
+       a short one, and opacity alone reads as "small" rather than "unproven". */
+    .vr-sw-thin {
+      background: repeating-linear-gradient(135deg,
+        var(--track-bg) 0 3px, var(--line) 3px 5px);
+      border: 1px solid var(--dim);
+    }
+
+    /* ── the table ── */
+    /* Seven columns with two bars in them do not fit a narrow pane, and the
+       page shell is overflow:hidden - so the scroll is owned here rather than
+       left to the tab. */
+    .vr-flow-scroll { overflow-x: auto; }
+    .vr-flow-table  { min-width: 700px; }
+
+    .vr-flow-table td { vertical-align: middle; }
+
+    .vr-flow-row { cursor: pointer; }
+    .vr-flow-row:hover { background: var(--ov-hover-weak); }
+    .vr-flow-row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+
+    /* The selected row is marked on the left edge as well as by its tint: on
+       the dark theme a tint this light is nearly invisible. */
+    .vr-flow-row.vr-sel {
+      background: var(--ov-hover);
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .vr-time { white-space: nowrap; }
+
+    /* Bar and number share a cell. The number keeps a fixed gutter so the
+         digits line up down the column even as the bars stretch. */
+    .vr-cellbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vr-cellbar .vr-num {
+      flex: 0 0 auto;
+      min-width: 46px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .vr-cellbar .vr-num .vr-n { text-align: right; }
+
+    .vr-bar {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 40px;
+      height: 11px;
+      border-radius: 2px;
+      background: var(--track-bg);
+      overflow: hidden;
+    }
+
+    .vr-bar-fill,
+    .vr-wl-w,
+    .vr-wl-l {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+    }
+
+    .vr-bar-fill { background: var(--blue); opacity: 0.75; }
+    .vr-wl-w     { background: var(--green); }
+    .vr-wl-l     { background: var(--red); opacity: 0.45; }
+
+    .vr-bar.vr-bar-thin {
+      background: repeating-linear-gradient(135deg,
+        var(--track-bg) 0 3px, var(--line) 3px 5px);
+      outline: 1px solid var(--dim);
+      outline-offset: -1px;
+    }
+
+    /* Diverging: zero is the middle of the track, gains grow right and losses
+       left, so sign is read from direction before the digits are read at all. */
+    .vr-div {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 56px;
+      height: 13px;
+      border-radius: 2px;
+      background: var(--track-bg);
+      overflow: hidden;
+    }
+
+    .vr-div-zero {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--dim);
+    }
+
+    .vr-div-pos,
+    .vr-div-neg {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+    }
+
+    .vr-div-pos { left: 50%;  background: var(--green); border-radius: 0 2px 2px 0; }
+    .vr-div-neg { right: 50%; background: var(--red);   border-radius: 2px 0 0 2px; }
+
+    .vr-pos { color: var(--green); }
+    .vr-neg { color: var(--red); }
+    .vr-net { font-weight: 700; }
+
+    /* The session row is a check on the column above it - volume to 100%,
+       signals to the log - so it is separated rather than striped. */
+    .vr-flow-table tr.vr-total td {
+      border-top: 2px solid var(--line);
+      border-bottom: none;
+      font-weight: 700;
+      background: var(--panel2);
+    }
+
+    @media (max-width: 700px) {
+      .vr-flow-bar { justify-content: flex-start; }
+      .vr-tile-val { font-size: var(--fs-xl); }
+    }
+
+    [data-theme="dark"] .vr-focus,
+    [data-theme="dark"] .vr-tile {
+      border-color: var(--line);
+    }

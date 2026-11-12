@@ -96,12 +96,20 @@
        strategy switch refetches rather than showing SPY numbers under a QQQ
        heading. */
     let volRegimePerf = null;
-    let volRegimeProfile = null;
+    let volRegimeFlow = null;
     let volRegimeStatus = null;
     let volRegimeDays = null;
     let volRegimeKey = null;
     let volRegimeLoading = false;
     let volRegimeFailed = false;
+    /* View state for the Session Flow table, not data: the horizon the
+       result columns are read at, and the bucket the focus card describes.
+       Both survive a strategy switch deliberately - a reader comparing SPY
+       and QQQ at the same half hour should not be thrown back to 09:30 and
+       +30 min on every switch. loadVolRegime clamps the index if the new
+       result set is shorter. */
+    let volRegimeHz = '30';
+    let volRegimeSel = 0;
 
     let premRows = null;
     let premKey = null;
