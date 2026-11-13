@@ -17,10 +17,18 @@ package-lock.json
 .wrangler/
 supabase/
 
+# Claude Code project skill. Reference material for working ON the dashboard,
+# not part of it - and .claude/skills/dashflow/references/security.md walks
+# through this project's own security posture, which has no business being
+# served from the dashboard's origin even behind Access.
+.claude/
+
 # Internal notes. They are in a public repo, but there is still no reason to
 # serve them from the dashboard's own origin.
 RELEASE.md
 FEASIBILITY_REVIEW.md
+VOLUME_REGIME.md
+SECURITY.md
 
 # Deleted 2026-10-29: it carried a live Supabase publishable key, and this
 # repo is public. Kept listed as a guard, so if anyone ever restores the file
