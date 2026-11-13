@@ -335,9 +335,14 @@
         <span><i class="vr-sw vr-sw-thin"></i>Under n = ${minN}, not yet reliable</span>
       </div>`;
 
-      const banner = hasSig ? '' : `<div class="vr-banner">The signal log is SPY-only - it has no
-        symbol column - so the signal, win-rate and basis-point columns are not available for this
-        strategy. The volume columns are for the selected symbol.</div>`;
+      /* Unreachable today: has_signals is true for every strategy now that the
+         signal set is derived per symbol rather than read from a SPY-only log.
+         Kept because the column still carries a real distinction - "no signals
+         in this bucket" is not "no signal set for this strategy" - and a
+         strategy added without bucket data would need it again. */
+      const banner = hasSig ? '' : `<div class="vr-banner">No signal set for this strategy, so the
+        signal, win-rate and basis-point columns are not available. The volume columns are for the
+        selected symbol.</div>`;
 
       return head
         + `<div class="vr-flow-bar">
@@ -386,21 +391,21 @@
           ? tile('Signals fired', t.nFired == null ? '-' : t.nFired,
               t.nM === t.nFired ? `all have a ${escapeHtml(hz.label)} result`
                 : `${t.nM} have a ${escapeHtml(hz.label)} result`)
-          : tile('Signals fired', 'n/a', 'SPY-only log'),
+          : tile('Signals fired', 'n/a', 'no signal set'),
         hasSig
           ? tile('Won / lost', `<span class="vr-pos">${t.w}</span><span class="vr-slash"> / </span><span class="vr-neg">${t.l}</span>`,
               t.rate == null ? 'no measured result' : `win rate ${Math.round(t.rate)}% of n = ${t.nM}`)
-          : tile('Won / lost', 'n/a', 'SPY-only log'),
+          : tile('Won / lost', 'n/a', 'no signal set'),
         hasSig
           ? tile('Net result', t.net == null ? '-' : `${vrSign(t.net, 0)} <span class="vr-unit">bp</span>`,
               t.avg == null ? '' : `avg ${vrSign(t.avg, 1)} bp per signal`, vrPn(t.net))
-          : tile('Net result', 'n/a', 'SPY-only log'),
+          : tile('Net result', 'n/a', 'no signal set'),
       ].join('');
 
       let sentence;
       if (!hasSig) {
         sentence = `${range} ET carries ${t.vol == null ? 'no measured share' : t.vol.toFixed(1)
-          + '% of a session\'s option volume'}. Signal results are SPY-only.`;
+          + '% of a session\'s option volume'}. No signal set for this strategy.`;
       } else if (!t.nFired) {
         sentence = `${range} ET carries ${t.vol.toFixed(1)}% of a session's option volume and has
           not fired a single signal yet, so there is nothing to score.`;
@@ -444,10 +449,13 @@
       const head = '<div class="vr-section-head">Performance by regime'
         + '<span class="vr-sub">signed basis points - positive means the signal\'s direction was right</span></div>';
 
+      /* Was the SPY-only banner. Both symbols have a derived signal set now,
+         so an empty result means genuinely no signals yet rather than a
+         structural gap - which is a different sentence. */
       if (!rows.length) {
-        return head + `<div class="vr-banner">The signal log is SPY-only - it has no symbol column -
-          so there are no per-regime results for this strategy. The profile and current status above
-          are for the selected symbol.</div>`;
+        return head + `<div class="vr-banner">No signals have fired for this strategy yet, so there
+          is nothing to break down by regime. The session flow and current status above are for the
+          selected symbol.</div>`;
       }
 
       const minN = rows[0].min_n_reliable;

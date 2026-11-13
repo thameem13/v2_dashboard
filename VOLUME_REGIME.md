@@ -284,14 +284,61 @@ browser — only functions are, and only once their names are in `ALLOWED` in
 fifth at the foot of `sql/volume_regime_flow.sql`. Forgetting one gives a 403,
 not an empty panel.
 
-`v2_vol_regime_perf_by_strategy` and `v2_vol_regime_days_by_strategy` are
-SPY-only, because the signal log is. `v2_vol_regime_flow_by_strategy` is
-half-SPY-only: it returns its volume columns for either symbol and NULL — never
-0 — in the signal columns otherwise, with `has_signals` saying which, so the
-client can tell "no signals in this bucket" from "not applicable to this
-strategy". On QQQ the tab shows the flow table's volume columns and the status
-panel for QQQ, and a banner in place of the signal columns and the regime
-table, rather than empty cells that would read as "no trades won".
+All five RPCs work for both symbols. They did not always: see below.
+
+## The signal set is derived, not logged
+
+Until 2026-11-12 every signal number here came from `v2_signal_log`, whose
+columns are `signal_time, direction, grade, atm_strike, logged_at` — **no
+symbol**. Two consequences, one known and one not:
+
+1. QQQ could never have signal numbers. The tab said `n/a` and explained why.
+2. The log is written by something outside this repo — not `worker.js`, not
+   `pg_cron` — and **it stopped on 2026-11-06**. On 2026-11-12 the tab was
+   scoring 250 signals while the rule had actually fired 277. Six days and 27
+   signals of silent drift, with nothing on the page to show it.
+
+(2) is the real argument. A log kept by an external writer is a dependency that
+can die quietly, and a tab built to make quiet losses visible should not rest
+on one.
+
+`v2_signal_enriched_by_strategy(p_strategy)` in `sql/volume_regime_signals.sql`
+derives the signal set from `v2_dashboard_range_by_strategy` — the same
+function the Flow Signal tab reads — rather than duplicating the rule. One
+definition of "what is a signal", so the two tabs cannot disagree. It joins the
+regime from `v2_volume_regime` and prices from `intraday_all`, both per symbol,
+and the three signal-bearing RPCs read it.
+
+### Validation before the switch (2026-11-12)
+
+Derived SPY signals against the log, over the log's whole life:
+
+| | |
+|---|---|
+| derived | 277 |
+| logged | 250 |
+| matched on timestamp | 250 |
+| direction / grade / `atm_strike` mismatches | 0 / 0 / 0 |
+| logged rows **not** in the derived set | 0 |
+
+The derived set reproduces the log exactly and is a strict superset. Day for
+day the two agree through 2026-11-06; the extra 27 are that day's last signal
+plus every signal on 11-10, 11-11 and 11-12, when the writer was already dead.
+Not a change of definition — the same set, brought up to date and extended to
+QQQ (153 signals over 29 sessions).
+
+Deriving the whole history costs ~117 ms (277 signals out of 3,798 bars). Three
+RPCs call it per tab load, in parallel, so no materialized view is warranted.
+
+`intraday_all` carries four duplicated QQQ timestamps (5,937 rows, 5,933
+distinct), exact duplicates to the cent. The price CTE is `DISTINCT ON (ny)`
+for that reason: leaving them would double-count any signal landing on one of
+those four bars, and a doubled trade is invisible in every column except `n`.
+
+`v2_signal_enriched`, the old log-reading view, is deliberately left in place
+and no longer read by this tab. It is the last thing that can still show what
+the log itself contains, which is the only way to notice the writer has come
+back.
 
 QQQ has 26 sessions of bucket data against SPY's 45, and 855 of its 1,944 bars
 fall on bad sessions. Its baselines are correspondingly thin.
