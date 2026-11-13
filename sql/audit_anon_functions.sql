@@ -16,6 +16,24 @@
  * HOW TO READ IT
  *   ZERO ROWS          -> nothing to do. No SECURITY DEFINER function is
  *                         reachable by anon, authenticated or PUBLIC.
+ *
+ * ⚠ FIXED 2026-11-12 - THIS QUERY COULD NOT SEE PUBLIC GRANTS.
+ *   It tested coalesce(a.grantee::regrole::text, 'PUBLIC'). For a PUBLIC
+ *   grant aclexplode sets grantee = 0, and 0::regrole::text is '-', NOT
+ *   NULL - so the coalesce never fired, '-' never matched the IN list, and a
+ *   PUBLIC grant was reported as nothing at all.
+ *
+ *   That is not hypothetical. Every function Postgres creates gets a default
+ *   EXECUTE grant to PUBLIC, written '=X/owner'. On 2026-11-12 twelve
+ *   functions in this schema still carried it, anon could execute all of
+ *   them through it, and this audit had been returning zero rows throughout.
+ *   See sql/hotfix_revoke_anon_mutating_fns.sql.
+ *
+ *   The test is now `a.grantee = 0`. Do not "simplify" it back.
+ *
+ *   The good news from the same re-run: no SECURITY DEFINER function carried
+ *   a PUBLIC grant, so the specific bug this file hunts was genuinely absent -
+ *   it was the non-definer functions that were open.
  *   ANY ROW            -> each one is a potential open door. Same fix as
  *                         before:
  *                           revoke execute on function public.<name>(<args>)
@@ -30,7 +48,8 @@
  */
 select
   p.proname                                    as function_name,
-  coalesce(a.grantee::regrole::text, 'PUBLIC') as granted_to,
+  case when a.grantee = 0 then 'PUBLIC'
+       else a.grantee::regrole::text end       as granted_to,
   pg_get_function_identity_arguments(p.oid)    as args,
   pg_get_userbyid(p.proowner)                  as runs_as,
   'revoke execute on function public.' || p.proname
@@ -42,6 +61,6 @@ join aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
      on a.privilege_type = 'EXECUTE'
 where n.nspname = 'public'
   and p.prosecdef                                     -- SECURITY DEFINER only
-  and coalesce(a.grantee::regrole::text, 'PUBLIC')
-      in ('anon', 'authenticated', 'PUBLIC')
+  and (a.grantee = 0                                  -- 0 = PUBLIC; see above
+       or a.grantee::regrole::text in ('anon', 'authenticated'))
 order by p.proname;
