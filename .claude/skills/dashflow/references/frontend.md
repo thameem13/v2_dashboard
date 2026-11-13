@@ -1,5 +1,12 @@
 # Frontend conventions and design system
 
+This file is **how this codebase does things** — match it and your change will
+look native. For **what good looks like**, and which existing patterns are debt
+rather than precedent, read
+[frontend-craft.md](frontend-craft.md) alongside it. Notably: the tab bar and
+the alert stack have real accessibility gaps, so "copy the nearest pattern" is
+the wrong instinct in those two places.
+
 No framework, no build step, no bundler, **no external requests at all** - zero
 CDN scripts, zero webfonts. Everything is served from the Worker's own origin.
 Keep it that way: the page sits behind Cloudflare Access and a third-party
@@ -298,8 +305,16 @@ Suppressed while typing in an input and while the modal is open.
 
 ## Accessibility
 
-Keep up what is already there: `role="img"` + `aria-label` on charts,
+What is already here and worth matching: `role="img"` + `aria-label` on charts,
 `aria-busy` on the refresh button during load, `aria-pressed` on filter chips
 (and deliberately **not** on the theme toggle - it is a mode, not an on/off,
-so "pressed" would have no honest value), icon buttons carrying a text label,
-`env(safe-area-inset-*)` padding for the notch.
+so "pressed" would have no honest value), `role="group"` on the grade chips,
+`role="status"` on the build notice, 37 `<label>`s, icon buttons carrying a
+text label, `env(safe-area-inset-*)` padding for the notch.
+
+**But the existing markup is not the bar.** The tab bar is five `<div
+onclick>` with no `role`, `aria-selected` or `tabindex`; there are zero
+`aria-live` regions, so sticky alerts are silent to assistive tech; and the
+journal modal is not a `role="dialog"` and does not trap focus. New
+interactive markup should not copy those. The standard, and the full list of
+gaps, is in [frontend-craft.md](frontend-craft.md).

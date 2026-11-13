@@ -63,6 +63,7 @@ reads. Every RPC takes `p_strategy`. Details, field lists and types:
 | [references/bucket-model.md](references/bucket-model.md) | The six buckets, `divergence_flow`, the 5-part score, grades A-D, the six `has_signal` gates, the volume-regime definitions |
 | [references/data-layer.md](references/data-layer.md) | Every table and RPC the dashboard reads, with columns and types; the proxy; paging; refresh and polling |
 | [references/frontend.md](references/frontend.md) | File layout, how to add a tab / card / chart, the token system, type scale, theming, the render-guard pattern |
+| [references/frontend-craft.md](references/frontend-craft.md) | The quality bar: accessibility, performance on the 10s poll path, XSS discipline, state rules, a review checklist, and the known gaps that are debt rather than precedent |
 | [references/deployment.md](references/deployment.md) | Cloudflare Workers Builds, the custom domain, Access, local preview, the version bump, rollback |
 | [references/security.md](references/security.md) | What may and may not be committed, the RLS audit as actually verified, and the open findings |
 | [references/new-strategies.md](references/new-strategies.md) | Adding a strategy or a whole new model as a modular addition |
@@ -107,6 +108,9 @@ The dashboard is **read-only monitoring**. In this repo:
    never a literal hex), and the result was checked in **both** themes.
 6. **Empty, loading and failed states** all render something honest - an empty
    chart must not read as "no signal today".
+7. **Every `${}` touching RPC data is wrapped in `escapeHtml()`**, and nothing
+   new was added to the 10s poll path. The fuller bar, including
+   accessibility, is in [references/frontend-craft.md](references/frontend-craft.md).
 
 ## Open questions
 
