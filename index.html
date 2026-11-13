@@ -20,7 +20,7 @@
        used to be a second copy in config.js; it drifted, and a drifted copy
        makes the page insist a newer build is live when it is already running
        it. -->
-  <meta name="build" content="2.12.0">
+  <meta name="build" content="2.12.1">
   <meta name="build-ts" content="2026-11-13T03:46Z">
 
   <title>Trade Flow Dashboard Pro</title>
@@ -58,14 +58,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.12.0">
-  <link rel="stylesheet" href="css/base.css?v=2.12.0">
-  <link rel="stylesheet" href="css/cards.css?v=2.12.0">
-  <link rel="stylesheet" href="css/tables.css?v=2.12.0">
-  <link rel="stylesheet" href="css/layout.css?v=2.12.0">
-  <link rel="stylesheet" href="css/panels.css?v=2.12.0">
-  <link rel="stylesheet" href="css/overlays.css?v=2.12.0">
-  <link rel="stylesheet" href="css/widgets.css?v=2.12.0">
+  <link rel="stylesheet" href="css/tokens.css?v=2.12.1">
+  <link rel="stylesheet" href="css/base.css?v=2.12.1">
+  <link rel="stylesheet" href="css/cards.css?v=2.12.1">
+  <link rel="stylesheet" href="css/tables.css?v=2.12.1">
+  <link rel="stylesheet" href="css/layout.css?v=2.12.1">
+  <link rel="stylesheet" href="css/panels.css?v=2.12.1">
+  <link rel="stylesheet" href="css/overlays.css?v=2.12.1">
+  <link rel="stylesheet" href="css/widgets.css?v=2.12.1">
 </head>
 
 <body>
@@ -773,25 +773,25 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.12.0"></script>
-  <script src="js/alerts.js?v=2.12.0"></script>
-  <script src="js/chrome.js?v=2.12.0"></script>
-  <script src="js/news.js?v=2.12.0"></script>
-  <script src="js/signal.js?v=2.12.0"></script>
-  <script src="js/format.js?v=2.12.0"></script>
-  <script src="js/filters.js?v=2.12.0"></script>
-  <script src="js/charts.js?v=2.12.0"></script>
-  <script src="js/perf.js?v=2.12.0"></script>
+  <script src="js/config.js?v=2.12.1"></script>
+  <script src="js/alerts.js?v=2.12.1"></script>
+  <script src="js/chrome.js?v=2.12.1"></script>
+  <script src="js/news.js?v=2.12.1"></script>
+  <script src="js/signal.js?v=2.12.1"></script>
+  <script src="js/format.js?v=2.12.1"></script>
+  <script src="js/filters.js?v=2.12.1"></script>
+  <script src="js/charts.js?v=2.12.1"></script>
+  <script src="js/perf.js?v=2.12.1"></script>
   <!-- After format.js (uses escapeHtml, tsKey) and before render.js, which
        calls signalWallFlag() while building each flow row. -->
-  <script src="js/pin.js?v=2.12.0"></script>
-  <script src="js/rpc.js?v=2.12.0"></script>
-  <script src="js/render.js?v=2.12.0"></script>
-  <script src="js/premium.js?v=2.12.0"></script>
+  <script src="js/pin.js?v=2.12.1"></script>
+  <script src="js/rpc.js?v=2.12.1"></script>
+  <script src="js/render.js?v=2.12.1"></script>
+  <script src="js/premium.js?v=2.12.1"></script>
   <!-- After format.js (escapeHtml, fmt helpers) and rpc.js (rpcWithRetry).
        Loaded on demand by switchTab, like premium.js. -->
-  <script src="js/volregime.js?v=2.12.0"></script>
-  <script src="js/main.js?v=2.12.0"></script>
+  <script src="js/volregime.js?v=2.12.1"></script>
+  <script src="js/main.js?v=2.12.1"></script>
 </body>
 
 </html>

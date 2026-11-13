@@ -345,7 +345,7 @@
       const maxDays = Math.max(0, ...items.map(t => t.daysN));
       const firedAll = items.reduce((a, t) => a + (t.nFired || 0), 0);
       const coverage = `<span class="vr-coverage">Full history &middot;
-        <b>${maxDays}</b> session${maxDays === 1 ? '' : 's'} of volume${hasSig
+        <b>${maxDays}</b> clean session${maxDays === 1 ? '' : 's'} of volume${hasSig
           ? ` &middot; <b>${firedAll}</b> signal${firedAll === 1 ? '' : 's'}` : ''}.
         The date range above does not apply to this tab.</span>`;
 
@@ -389,9 +389,18 @@
             </tr></thead>
             <tbody>${body}${foot}</tbody>
           </table></div>`
-        + `<div class="vr-rest">Volume is an average over every session on record, bad feeds
-            included, so the column is the whole shape of the day and sums to 100%. The signal
-            columns likewise count every signal, including the
+        /* The two halves of this table count sessions differently, on purpose,
+           so the note says so rather than leaving a reader to assume one rule.
+           Volume takes CLEAN sessions only: a frozen or part-day feed reports
+           zero volume in every bar it missed, which does not average out - it
+           tilts the whole shape of the day toward whenever the feed died. A
+           price result has no such defect, so the signal columns keep every
+           session. */
+        + `<div class="vr-rest">Volume is an average over the ${maxDays} clean session${
+            maxDays === 1 ? '' : 's'} on record and sums to 100%. Sessions with a frozen or
+            part-day feed are left out of it, including today&rsquo;s until it closes, because a
+            missing bar reads as zero volume and tilts the shape of the day. The signal columns
+            are the other way round: they count every signal, including the
             ${items.reduce((a, t) => a + t.nBad, 0)} on sessions the LOW/NORMAL/HIGH baselines
             below exclude &mdash; a frozen option feed does not invalidate a price. Click a row
             to read it on its own.</div>`;
