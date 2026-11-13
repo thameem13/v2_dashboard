@@ -6,3 +6,16 @@ node_modules/
 # Supabase CLI local cache (the linked project ref and the CLI version it
 # last checked for). Regenerated on demand; nothing here belongs in the repo.
 supabase/.temp/
+
+# Local Worker secrets for `npx wrangler dev`. This file holds
+# SUPABASE_SECRET_KEY, which bypasses RLS, and this repo is PUBLIC - so it is
+# listed here BEFORE anyone creates it. RELEASE.md tells you to create it; it
+# used to warn that there was no .gitignore at all, which stopped being true
+# without the warning being resolved, so a `git add -A` would have committed
+# the key.
+.dev.vars
+.dev.vars.*
+
+# Same reasoning, for any other shape of local env file.
+.env
+.env.*

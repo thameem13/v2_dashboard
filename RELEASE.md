@@ -133,9 +133,10 @@ It needs the Supabase key, which is correctly not in the repo. Create
 SUPABASE_SECRET_KEY=<from the Cloudflare dashboard: Settings -> Variables>
 ```
 
-> **⚠️ This repo has no `.gitignore`.** `.dev.vars` will show up as an untracked
-> file, and a `git add -A` would commit your Supabase service key. Add a
-> `.gitignore` containing `.dev.vars` **before** you create that file.
+> **`.dev.vars` is already covered by `.gitignore`** — along with `.env*` — so
+> creating it is safe. Do not remove those lines: this repo is public, and
+> `SUPABASE_SECRET_KEY` bypasses RLS, so one `git add -A` without them would
+> publish it. Confirm with `git check-ignore -v .dev.vars` if in doubt.
 
 `SUPABASE_SECRET_KEY`, `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are Secrets
 in the Cloudflare dashboard, never in the repo — see the note at the bottom of
