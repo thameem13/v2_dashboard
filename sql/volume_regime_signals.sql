@@ -190,18 +190,43 @@ AS $function$
     SELECT coalesce((SELECT s.symbol FROM strategies s WHERE s.id = p_strategy), 'SPY') AS symbol
   ),
   cfg AS (SELECT * FROM v2_vol_regime_config),
-  /* -- volume side: every session, shares averaged per day ----------------
-     Zero-filled against the full bucket grid. Averaging only the days that
-     reached a bucket makes 09:30 an average of 47 sessions and 11:00 an
-     average of 48, and the column stops being a distribution - measured that
-     way it sums to 100.98 instead of 100. Crossing every session against
-     every bucket keeps one denominator for the whole column.
+  /* -- volume side: CLEAN sessions only, shares averaged per day ----------
+     day_quality = 'CLEAN' is the fix for a bug visible on 2026-11-13 at
+     12:30: the IN-PROGRESS session was in here, contributing a zero to every
+     bucket that had not happened yet. The afternoon rows read low all day and
+     recovered at the close, and the 13:00-16:00 rows carried a "2 sessions
+     blank" footnote in which one of the blanks was simply the present.
 
-     A session whose feed never reached a bucket contributes 0 there, which is
-     what the data says rather than what the market did: 2026-09-09's first
-     bar is 10:55. days_gap counts those sessions per bucket so the row can
-     admit it instead of reading as a quiet half hour. One session of 48 on
-     09:30, 10:00 and 15:30; zero everywhere else. */
+     It also tilted the profile toward the morning, because every bucket is a
+     share of that day's total and the partial day's total only contained
+     mornings. 09:30 read 11.39% against 10.79% over clean sessions.
+
+     The deeper point is consistency. baseline_calc in volume_regime.sql goes
+     to considerable trouble to exclude the day being scored - the
+     ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING frame, the line that
+     file calls the single most important one in the build, because including
+     the scored day is exactly the look-ahead that turned a reported +4 bp
+     edge into +0.2 bp. This column sits in the same tab and was not applying
+     the same discipline.
+
+     Filtering on day_quality rather than on "is today" is deliberate: the
+     flags already describe every way a session misrepresents a volume
+     distribution - frozen feed, short session, late start - and an
+     in-progress day fails them on its own without being special-cased. On
+     2026-11-13 the live session was already flagged BAD_FROZEN. The database
+     knew; this query had not asked.
+
+     Cost: SPY 49 sessions -> 38, QQQ 30 -> 16. days_n is on screen, so the
+     smaller n is visible rather than silent, which is this tab's whole rule.
+
+     Zero-fill against the full grid is KEPT. Averaging only the days that
+     reached a bucket gives each bucket its own denominator and the column
+     stops being a distribution - measured that way it summed to 100.98
+     instead of 100. Crossing every session against every bucket keeps one
+     denominator for the whole column. days_gap still counts genuine
+     mid-session feed gaps; as of this change every clean session reaches
+     every bucket, so it is 0 throughout and the footnote correctly
+     disappears. */
   bucketed AS (
     SELECT r.ny_date,
            (date_trunc('hour', (r.tod - interval '5 minutes')::interval)
@@ -210,6 +235,7 @@ AS $function$
            sum(r.bar_vol) AS bucket_vol
     FROM v2_volume_regime r
     WHERE r.symbol = (SELECT symbol FROM sym)
+      AND r.day_quality = 'CLEAN'
     GROUP BY 1, 2
   ),
   day_tot AS (
