@@ -178,20 +178,34 @@ Defined in `sql/volume_regime.sql`. Four of the five RPCs behind the tab are in
 `sql/volume_regime_flow.sql`, which also adds `min_n_bucket` to the config
 table.
 
-### The flow RPC, and its two populations
+### The flow RPC counts every session
 
 `v2_vol_regime_flow_by_strategy` returns one row per 30-minute bucket with the
-volume side and the signal side together. They are **different populations and
-do not share an n**:
+volume side and the signal side together. **Both sides span every session**,
+and the regime table below it is the only thing here that still filters:
 
 | Side | Sessions counted | Why |
 |---|---|---|
-| `avg_pct`, `days_n` | clean only | a frozen feed drags whichever buckets it spans toward zero and bends the shape of the curve |
+| `avg_pct`, `days_n` | **all** | the shape of the day is a different question from the baseline, and it wants all the volume there is: a session that froze at 14:00 or started at 10:55 is still part of how this symbol trades |
 | `n`, `win_*`, `avg_bp_*`, `sum_bp_*` | **all** | a frozen *option* feed says nothing about the price log the returns come from, so dropping those signals would discard real outcomes for an unrelated fault |
+| regime baselines (`vratio`) | clean only | a feed frozen inside the 30-minute window is exactly what a ratio against a baseline would misread |
 
-`n_bad` is how many of a bucket's signals fell on an excluded session, so the
-tab can disclose the overlap rather than hide it. Bad days are excluded from
-baselines, not from P&L.
+`n_bad` is how many of a bucket's signals fell on a session the baselines
+exclude, so the tab can disclose the overlap rather than hide it.
+
+**Why zero-fill.** Shares are averaged per session, so every row has to divide
+by the same number of sessions. Averaging only the sessions that *reached* a
+bucket makes 09:30 an average of 47 and 11:00 an average of 48, and the column
+stops being a distribution — measured that way SPY sums to **100.98%** instead
+of 100. `grid` crosses every session against every bucket and a missing bar
+counts as 0.
+
+That is true of the data and not of the market: on 2026-09-09 the feed's first
+bar is 10:55, and the market certainly traded at 09:30. `days_gap` counts the
+sessions with no bar in a bucket so the row can say "1 session blank" and the
+focus card can call the share a floor rather than a reading. Today that is one
+session of 48 on three SPY buckets, and the shift against clean-only is at
+most 0.56pp — small, but small in a column that now actually totals 100.
 
 Signals are bucketed on the **same shifted stamp as the bars**: a bar stamped
 10:00 covers 09:55–10:00 and belongs to the opening half hour, and so does the

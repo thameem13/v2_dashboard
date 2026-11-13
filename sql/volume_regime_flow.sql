@@ -52,12 +52,12 @@ ALTER TABLE public.v2_vol_regime_config
 /* --------------------------------------------------------------------------
    2. The flow RPC
    --------------------------------------------------------------------------
-   FULL OUTER JOIN, not LEFT: the volume side is clean sessions only and the
-   signal side is every session, so in principle a bucket can hold signals
-   with no clean-session bars behind it. Today none does. A LEFT JOIN would
-   silently drop those signals and the table's own total would stop matching
-   the signal log, which is exactly the class of quiet loss this tab exists to
-   make visible.
+   FULL OUTER JOIN, not LEFT: both sides now span every session, so the two
+   grids should agree - but "should" is not "does", and a bucket holding
+   signals with no volume bars behind it is a real possibility the moment a
+   feed gaps. A LEFT JOIN would silently drop those signals and the table's
+   own total would stop matching the signal log, which is exactly the class of
+   quiet loss this tab exists to make visible.
 
    DROP first: the function is new, but naming it here keeps a later
    return-type change from failing with 42P13 the way (c) did. */
@@ -70,7 +70,8 @@ RETURNS TABLE(
   bucket_start  time without time zone,
   bucket_label  text,
   avg_pct       numeric,   -- avg share of a session's option volume
-  days_n        integer,   -- clean sessions behind avg_pct
+  days_n        integer,   -- sessions behind avg_pct (all of them)
+  days_gap      integer,   -- of those, sessions with no bar in this bucket
   n             integer,   -- signals that fired on this bucket's bars
   n_bad         integer,   -- of those, how many on an excluded session
   n_30          integer,
@@ -97,7 +98,18 @@ AS $function$
   ),
   cfg AS (SELECT * FROM v2_vol_regime_config),
 
-  /* -- volume side: clean sessions only, shares averaged per day ---------- */
+  /* -- volume side: every session, shares averaged per day ----------------
+     Zero-filled against the full bucket grid. Averaging only the days that
+     reached a bucket makes 09:30 an average of 47 sessions and 11:00 an
+     average of 48, and the column stops being a distribution - measured that
+     way it sums to 100.98 instead of 100. Crossing every session against
+     every bucket keeps one denominator for the whole column.
+
+     A session whose feed never reached a bucket contributes 0 there, which is
+     what the data says rather than what the market did: 2026-09-09's first
+     bar is 10:55. days_gap counts those sessions per bucket so the row can
+     admit it instead of reading as a quiet half hour. One session of 48 on
+     09:30, 10:00 and 15:30; zero everywhere else. */
   bucketed AS (
     SELECT r.ny_date,
            (date_trunc('hour', (r.tod - interval '5 minutes')::interval)
@@ -106,19 +118,26 @@ AS $function$
            sum(r.bar_vol) AS bucket_vol
     FROM v2_volume_regime r
     WHERE r.symbol = (SELECT symbol FROM sym)
-      AND r.day_quality = 'CLEAN'
     GROUP BY 1, 2
   ),
-  shares AS (
-    SELECT ny_date, bucket_start,
-           100.0 * bucket_vol / nullif(sum(bucket_vol) OVER (PARTITION BY ny_date), 0) AS pct
-    FROM bucketed
+  day_tot AS (
+    SELECT ny_date, sum(bucket_vol) AS day_vol FROM bucketed GROUP BY 1
+  ),
+  grid AS (
+    SELECT d.ny_date, k.bucket_start,
+           coalesce(b.bucket_vol, 0) AS bucket_vol, d.day_vol
+    FROM day_tot d
+    CROSS JOIN (SELECT DISTINCT bucket_start FROM bucketed) k
+    LEFT JOIN bucketed b
+      ON b.ny_date = d.ny_date AND b.bucket_start = k.bucket_start
+    WHERE d.day_vol > 0
   ),
   vol AS (
     SELECT bucket_start,
-           round(avg(pct), 2) AS avg_pct,
-           count(*)::integer  AS days_n
-    FROM shares
+           round(avg(100.0 * bucket_vol / day_vol), 2)     AS avg_pct,
+           count(*)::integer                               AS days_n,
+           count(*) FILTER (WHERE bucket_vol = 0)::integer AS days_gap
+    FROM grid
     GROUP BY bucket_start
   ),
 
@@ -153,6 +172,7 @@ AS $function$
     to_char(coalesce(v.bucket_start, g.bucket_start), 'HH24:MI') AS bucket_label,
     v.avg_pct,
     coalesce(v.days_n, 0)                                        AS days_n,
+    coalesce(v.days_gap, 0)                                      AS days_gap,
     g.n, g.n_bad, g.n_30, g.n_60, g.n_eod,
     g.win_30, g.win_60, g.win_eod,
     g.avg_bp_30, g.avg_bp_60, g.avg_bp_eod,

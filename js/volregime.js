@@ -198,7 +198,7 @@
         + '<span class="vr-sub">per 30-minute bucket: share of a session\'s option volume,'
         + ' the signals that fired on those bars, and what they made or lost</span></div>';
 
-      if (!rows.length) return head + '<div class="chart-empty" style="height:60px">No clean sessions yet</div>';
+      if (!rows.length) return head + '<div class="chart-empty" style="height:60px">No sessions yet</div>';
 
       /* has_signals is false for a non-SPY strategy, which is not the same
          fact as a bucket having no signals in it. The volume half of the table
@@ -225,6 +225,11 @@
           end: i + 1 < rows.length ? rows[i + 1].bucket_label : '16:00',
           vol, cum,
           daysN: +(r.days_n || 0),
+          /* Sessions of those that hold no bar in this bucket at all - a feed
+             that started at 10:55 or stopped at 15:15. They count as 0% so
+             the column keeps one denominator, which is true of the data and
+             not of the market, so the row discloses it. */
+          daysGap: +(r.days_gap || 0),
           nFired: r.n == null ? null : +r.n,
           nBad: r.n_bad == null ? 0 : +r.n_bad,
           nM, w, l: nM - w,
@@ -248,8 +253,9 @@
         const volCell = t.vol == null
           ? '<td class="vr-na">-</td>'
           : `<td><span class="vr-cellbar">
-               <span class="vr-bar"><span class="vr-bar-fill" style="width:${pct(t.vol, maxVol).toFixed(1)}%"></span></span>
-               <span class="vr-num">${t.vol.toFixed(1)}%</span>
+               <span class="vr-bar ${t.daysGap ? 'vr-bar-gap' : ''}"><span class="vr-bar-fill" style="width:${pct(t.vol, maxVol).toFixed(1)}%"></span></span>
+               <span class="vr-num">${t.vol.toFixed(1)}%${t.daysGap
+                 ? `<span class="vr-n">${t.daysGap} session${t.daysGap === 1 ? '' : 's'} blank</span>` : ''}</span>
              </span></td>`;
 
         /* "Traded by then" is cumulative; the n line underneath is this
@@ -335,13 +341,11 @@
          history; one session would spread five signals over thirteen buckets
          and read as noise) but a control that silently does nothing is the
          exact failure this tab exists to prevent, so the table says what it
-         is actually built from. maxDays over the buckets rather than a single
-         count: a bucket at the edge of the session can have one clean session
-         fewer than the rest. */
+         is actually built from. */
       const maxDays = Math.max(0, ...items.map(t => t.daysN));
       const firedAll = items.reduce((a, t) => a + (t.nFired || 0), 0);
       const coverage = `<span class="vr-coverage">Full history &middot;
-        <b>${maxDays}</b> clean session${maxDays === 1 ? '' : 's'} of volume${hasSig
+        <b>${maxDays}</b> session${maxDays === 1 ? '' : 's'} of volume${hasSig
           ? ` &middot; <b>${firedAll}</b> signal${firedAll === 1 ? '' : 's'}` : ''}.
         The date range above does not apply to this tab.</span>`;
 
@@ -350,6 +354,8 @@
         <span><i class="vr-sw vr-sw-win"></i>Signals that won</span>
         <span><i class="vr-sw vr-sw-loss"></i>Signals that lost</span>
         <span><i class="vr-sw vr-sw-thin"></i>Under n = ${minN}, not yet reliable</span>
+        ${items.some(t => t.daysGap)
+          ? '<span><i class="vr-sw vr-sw-gap"></i>Some sessions have no bar here</span>' : ''}
       </div>`;
 
       /* Unreachable today: has_signals is true for every strategy now that the
@@ -383,10 +389,12 @@
             </tr></thead>
             <tbody>${body}${foot}</tbody>
           </table></div>`
-        + `<div class="vr-rest">Volume is an average over clean sessions only; the signal columns
-            count every signal, including the ${items.reduce((a, t) => a + t.nBad, 0)} on excluded
-            sessions, because a frozen option feed does not invalidate a price. Click a row to
-            read it on its own.</div>`;
+        + `<div class="vr-rest">Volume is an average over every session on record, bad feeds
+            included, so the column is the whole shape of the day and sums to 100%. The signal
+            columns likewise count every signal, including the
+            ${items.reduce((a, t) => a + t.nBad, 0)} on sessions the LOW/NORMAL/HIGH baselines
+            below exclude &mdash; a frozen option feed does not invalidate a price. Click a row
+            to read it on its own.</div>`;
     }
 
     /* The focus card exists because the table answers the question in seven
@@ -404,7 +412,8 @@
 
       const tiles = [
         tile('Option volume', t.vol == null ? '-' : `${t.vol.toFixed(1)}%`,
-          t.vol == null ? 'no clean sessions' : `of a session &middot; ${t.daysN} sessions`),
+          t.vol == null ? 'no sessions' : `of a session &middot; ${t.daysN} session${
+            t.daysN === 1 ? '' : 's'}${t.daysGap ? `, ${t.daysGap} with no bar here` : ''}`),
         hasSig
           ? tile('Signals fired', t.nFired == null ? '-' : t.nFired,
               t.nM === t.nFired ? `all have a ${escapeHtml(hz.label)} result`
@@ -435,7 +444,10 @@
           ${t.nM} of those have a result ${hz.when}: ${t.w} right, ${t.l} wrong, for ${verdict}
           of ${vrSign(t.net, 0)} bp.`
           + (t.thin ? ` Only ${t.nM} measured signals, under the n = ${minN} this tab trusts - provisional.` : '')
-          + (t.nBad ? ` ${t.nBad} of them fired on a session excluded from the volume baselines.` : '');
+          + (t.nBad ? ` ${t.nBad} of them fired on a session the regime baselines exclude.` : '')
+          + (t.daysGap ? ` ${t.daysGap} of the ${t.daysN} sessions ${t.daysGap === 1 ? 'holds' : 'hold'}
+             no bar in this window at all and ${t.daysGap === 1 ? 'counts' : 'count'} as 0%, so the
+             share is a floor rather than a reading.` : '');
       }
 
       return `<div class="vr-focus">

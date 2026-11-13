@@ -1057,6 +1057,13 @@
       border: 1px solid var(--dim);
     }
 
+    /* A dashed edge, not a fill: the bar's length is still a real measurement,
+       it is the denominator behind it that has a hole in it. */
+    .vr-sw-gap {
+      background: var(--track-bg);
+      border: 1px dashed var(--dim);
+    }
+
     /* ── the table ── */
     /* Seven columns with two bars in them do not fit a narrow pane, and the
        page shell is overflow:hidden - so the scroll is owned here rather than
@@ -1136,6 +1143,14 @@
       background: repeating-linear-gradient(135deg,
         var(--track-bg) 0 3px, var(--line) 3px 5px);
       outline: 1px solid var(--dim);
+      outline-offset: -1px;
+    }
+
+    /* Some session in this bucket has no bar at all and was counted as 0%, so
+       the share is a floor. Marked on the track rather than the fill: the
+       volume that is there was really there. */
+    .vr-bar.vr-bar-gap {
+      outline: 1px dashed var(--dim);
       outline-offset: -1px;
     }
 
