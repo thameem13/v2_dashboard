@@ -328,6 +328,23 @@
         `<button class="vr-hz-btn ${volRegimeHz === k ? 'on' : ''}" onclick="volRegimeSetHz('${k}')"
            aria-pressed="${volRegimeHz === k}">${VR_HZ[k].label}</button>`).join('');
 
+      /* The date range at the top of the page does NOT reach this tab: the
+         RPCs take a strategy and nothing else, and loadAll() - which every
+         range change calls - does not call loadVolRegime at all. That is the
+         right behaviour (a bucket holds 10-40 signals across the whole
+         history; one session would spread five signals over thirteen buckets
+         and read as noise) but a control that silently does nothing is the
+         exact failure this tab exists to prevent, so the table says what it
+         is actually built from. maxDays over the buckets rather than a single
+         count: a bucket at the edge of the session can have one clean session
+         fewer than the rest. */
+      const maxDays = Math.max(0, ...items.map(t => t.daysN));
+      const firedAll = items.reduce((a, t) => a + (t.nFired || 0), 0);
+      const coverage = `<span class="vr-coverage">Full history &middot;
+        <b>${maxDays}</b> clean session${maxDays === 1 ? '' : 's'} of volume${hasSig
+          ? ` &middot; <b>${firedAll}</b> signal${firedAll === 1 ? '' : 's'}` : ''}.
+        The date range above does not apply to this tab.</span>`;
+
       const legend = `<div class="vr-legend">
         <span><i class="vr-sw vr-sw-vol"></i>Share of session option volume</span>
         <span><i class="vr-sw vr-sw-win"></i>Signals that won</span>
@@ -346,6 +363,7 @@
 
       return head
         + `<div class="vr-flow-bar">
+             ${coverage}
              <div class="vr-hz" role="group" aria-label="Result horizon">
                <span class="vr-hz-lab">Result measured</span>${toggle}
              </div>
