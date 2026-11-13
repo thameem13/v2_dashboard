@@ -166,7 +166,12 @@ select
   (select exists (select 1 from vault.decrypted_secrets
                    where name = 'edge_function_key'
                      and decrypted_secret like 'sb_secret_%'))      as key_present,
-  (select bool_or(command ~ '(eyJ|sb_secret_)')
+  /* The bare prefixes eyJ / sb_secret_ CANNOT be used here: step 3's own
+     guard contains the literal "sb_secret_%", so that test matches the fixed
+     job body and reports a credential that is not there. It did, on the
+     first run of this file. Require characters that only a real key would
+     carry. */
+  (select bool_or(command ~ '(eyJ[A-Za-z0-9_-]{10}|sb_secret_[A-Za-z0-9]{4})')
      from cron.job where jobname like '%option-premium%')           as command_has_secret,
   (select count(*) from net._http_response
     where status_code between 200 and 299)                          as responses_2xx,
