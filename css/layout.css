@@ -668,8 +668,7 @@
          Hoisting the media block to the end of the file would have fixed it
          too and flipped thirteen other selectors that depend on the current
          order - see the load-order note in index.html. */
-      .preset-bar.preset-bar,
-      .vol-toolbar.vol-toolbar {
+      .preset-bar.preset-bar {
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -679,9 +678,44 @@
         flex: 0 0 auto;
       }
 
+      /* .vol-toolbar is NOT in the rule above, and that is a correction.
+
+         It was listed beside .preset-bar in the original nowrap rule, so the
+         intent was clearly one scrolling strip for it too - but that rule had
+         never taken effect (widgets.css sets .vol-toolbar{flex-wrap:wrap} and
+         loads later), and the first build where it did showed why the intent
+         was wrong. This element holds two unlike things: the Σ Session
+         summary, which is a bordered card, and the preset chips. Forced onto
+         one nowrap line the card was squeezed to its min-content width and
+         its six items wrapped into a ~350px vertical column with the chips
+         beside it.
+
+         They get a line each instead, and each line scrolls on its own. */
+      .vol-toolbar.vol-toolbar {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
       .vol-toolbar .vol-preset-bar {
-        flex: 0 0 auto;
+        flex: 1 1 100%;
         min-width: 0;
+      }
+
+      /* Full width, and it keeps the wrap it already has from widgets.css -
+         six items over two rows, about 110px.
+
+         A horizontal scroller would save ~55px and was the first thing tried
+         here, but two of the six are the data-quality flags: DIVERGENT, and
+         GRID EDGE, which says the captured strike grid is truncating the OTM
+         buckets so every total on the tab understates. Those are exactly the
+         items that would have ended up off the right-hand edge, and a warning
+         behind a swipe is a warning nobody reads. All six stay visible. */
+      .vol-session-strip {
+        flex: 1 1 100%;
+      }
+
+      .vol-session-strip > * {
+        flex: 0 0 auto;
       }
 
       #foot {
@@ -816,9 +850,15 @@
         border-right: 0;
       }
 
+      /* height:auto undoes the table's fixed --row-h here, and it matters
+         more than it looks. A 30px row rhythm is what makes a wide table
+         scannable, but inside a card every labelled line inherited it too, so
+         a four-value card was 120px of boxes around ~80px of text. These are
+         lines in a card, not rows in a table; the padding sets their rhythm. */
       #tbl-flow td, #tbl-vol td, #tbl-anomaly td {
         grid-column: 1 / -1;
         display: flex;
+        height: auto;
         justify-content: space-between;
         align-items: baseline;
         gap: 14px;
