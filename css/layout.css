@@ -84,13 +84,29 @@
     }
 
     /* ── COLUMN VISIBILITY MENU ── */
+    /* position:fixed, not absolute.
+
+       Absolute made the menu a child of #top, which is both height-capped and
+       overflow-y:auto. Two things followed from that. A menu taller than the
+       space left in the band was clipped by it - the last row, Sign out, was
+       cut in half - and, worse, an absolutely positioned child still counts
+       as overflowing content, so opening the menu made #top scrollable and
+       the command bar could scroll out of view behind it. Collapsing the
+       header made it unmissable, because the band is then barely taller than
+       the bar itself.
+
+       Fixed takes the menu out of that scroll box entirely. The trade is that
+       it no longer follows its button, so positionMenu() in chrome.js sets
+       top/right from the button's rect whenever one opens, and the menus
+       close on a resize, on a header collapse, on Escape and on a click
+       outside rather than being left floating somewhere stale.
+
+       The top/right here are only the pre-JS fallback. */
     .col-menu {
       display: none;
-      position: absolute;
-      /* Was top:42px - the height of the controls row, so taller buttons
-         would have left the menu floating. Anchored to the row instead. */
-      top: calc(100% + 6px);
-      right: 0;
+      position: fixed;
+      top: 56px;
+      right: 14px;
       background: var(--panel);
       border: 1px solid transparent;
       border-radius: var(--r-2xl);
@@ -98,6 +114,12 @@
       z-index: 300;
       box-shadow: var(--sh-menu);
       min-width: 220px;
+      /* A menu with more rows than the window has room for scrolls itself
+         instead of running off the bottom edge. positionMenu() replaces this
+         with the exact room below the button. */
+      max-height: calc(100vh - 72px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .col-menu.visible {

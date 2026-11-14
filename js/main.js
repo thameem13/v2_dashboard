@@ -195,6 +195,11 @@
           break;
         case 'escape':
           e.preventDefault();
+          /* Dismiss before clear: if a menu is open, Esc is far more likely to
+             mean "close this" than "wipe my filters", and wiping them is not
+             something you want to do by accident. Only falls through to
+             clearFilters() when nothing was open to close. */
+          if (anyMenuOpen()) { closeColumnMenus(); break; }
           clearFilters();
           break;
         case 't':

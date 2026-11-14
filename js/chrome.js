@@ -101,6 +101,11 @@
       if (!top) return;
       const collapsed = !top.classList.contains('collapsed');
       applyHeaderCollapsed(collapsed);
+      /* This control is reached from inside the overflow menu, and collapsing
+         the band moves the button that menu is pinned under. The click-outside
+         handler deliberately ignores clicks inside a menu, so this is the one
+         place that has to close it. */
+      closeColumnMenus();
       try { localStorage.setItem('v2-header-collapsed', collapsed ? '1' : '0'); } catch (e) { }
     }
 
@@ -189,6 +194,26 @@
        COLUMN VISIBILITY MANAGEMENT
        ══════════════════════════════════════════════════════ */
     // The Columns button opens whichever menu belongs to the active tab.
+    /* The menus are position:fixed, so they do not follow their button the way
+       an absolutely positioned child would - see the .col-menu comment in
+       layout.css for why they had to stop being children of #top. This places
+       one against the button that opened it, at the moment it opens.
+
+       Anchored to #more-btn rather than to #cols-btn: the column menu is
+       opened from inside the overflow menu, which this call closes first, so
+       by the time we measure, #cols-btn has no box to measure. */
+    function positionMenu(menu, btn) {
+      if (!menu || !btn) return;
+      const r = btn.getBoundingClientRect();
+      const gap = 6;
+      menu.style.top = (r.bottom + gap) + 'px';
+      // Clamped so a button near the right edge cannot push the menu off it.
+      menu.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+      // Never taller than the room below the button, or the last row is
+      // unreachable on a short window.
+      menu.style.maxHeight = Math.max(120, window.innerHeight - r.bottom - gap - 10) + 'px';
+    }
+
     function toggleColumnMenu() {
       const flowMenu = document.getElementById('col-menu');
       const volMenu = document.getElementById('col-menu-vol');
@@ -199,11 +224,23 @@
       /* #cols-btn lives inside the overflow menu now, so this is reached with
          that menu open and both would be stacked on the same corner. */
       closeMoreMenu();
-      if (target) target.classList.toggle('visible');
+      if (!target) return;
+      const show = !target.classList.contains('visible');
+      target.classList.toggle('visible', show);
+      if (show) positionMenu(target, document.getElementById('more-btn'));
+    }
+
+    const MENU_IDS = ['col-menu', 'col-menu-vol', 'more-menu'];
+
+    function anyMenuOpen() {
+      return MENU_IDS.some(id => {
+        const m = document.getElementById(id);
+        return m && m.classList.contains('visible');
+      });
     }
 
     function closeColumnMenus() {
-      ['col-menu', 'col-menu-vol', 'more-menu'].forEach(id => {
+      MENU_IDS.forEach(id => {
         const m = document.getElementById(id);
         if (m) m.classList.remove('visible');
       });
@@ -230,8 +267,41 @@
         const m = document.getElementById(id);
         if (m) m.classList.remove('visible');
       });
-      setExpanded('more-btn', menu.classList.toggle('visible'));
+      const show = menu.classList.toggle('visible');
+      if (show) positionMenu(menu, document.getElementById('more-btn'));
+      setExpanded('more-btn', show);
     }
+
+    /* A fixed menu cannot track a button that has moved, and a resize moves it
+       - the control row rewraps. Reposition rather than close: `resize` also
+       fires on a phone when the URL bar collapses or the keyboard opens, and
+       dismissing a menu the user just opened because the chrome moved would
+       be the browser's accident, not their intent.
+
+       Collapsing the header is different and does close them - see
+       toggleHeader(). */
+    window.addEventListener('resize', () => {
+      const btn = document.getElementById('more-btn');
+      MENU_IDS.forEach(id => {
+        const m = document.getElementById(id);
+        if (m && m.classList.contains('visible')) positionMenu(m, btn);
+      });
+    });
+
+    /* Click-outside. Both menus are dismissible by clicking their own button
+       again, but nothing else dismissed them, so one left open sat over the
+       table until the next tab switch.
+
+       Bubble phase, so the inline onclick that opened the menu has already
+       run by the time this fires; the two guards below are what stop it from
+       closing the menu on the very click that opened it. */
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || typeof t.closest !== 'function') return;
+      if (t.closest('.col-menu')) return;   // a click inside a menu
+      if (t.closest('#more-btn')) return;   // the button that toggles it
+      closeColumnMenus();
+    });
 
     function closeMoreMenu() {
       const menu = document.getElementById('more-menu');
