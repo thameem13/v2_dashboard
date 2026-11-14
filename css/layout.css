@@ -370,29 +370,115 @@
         padding-top: max(8px, env(safe-area-inset-top));
       }
 
-      /* Five KPI cells across a phone would be 70px each. 2-up, and the
-         regime pair and the sentiment meter each take a full row under them -
-         the rail is already wrapping by this width. */
+      /* ── PHONE RAIL ──
+         One horizontally scrolling line of compact cells, about 52px tall,
+         rather than a block that stacks.
+
+         Five KPI cells 2-up plus the regime pair plus the sentiment meter was
+         three wrapped rows, ~185px, which is why the band used to be
+         collapsed by default on a phone and why a phone user saw no price, no
+         signal count and no flow at all. A strip this short is worth its
+         space, so the auto-collapse is gone - see initHeaderCollapse() in
+         chrome.js.
+
+         The cards are laid out with flex here, not grid: #cards is a grid on
+         desktop and .status spans 1/-1 inside it, but in a single scrolling
+         line the live-signal banner should be the first thing in the strip
+         rather than a full-width row above it. order:-1 guarantees that even
+         though render.js writes it first anyway. */
       .rail {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px;
+        scrollbar-width: none;
       }
 
+      .rail::-webkit-scrollbar {
+        display: none;
+      }
+
+      .rail > * {
+        flex: 0 0 auto;
+      }
+
+      /* flex:0 0 auto restated here, and it is not redundant. The desktop
+         rule is `.rail .grid { flex: 1 1 auto; min-width: 0 }` at (0,2,0),
+         which outranks the `.rail > *` above at (0,1,0) - so the strip's
+         widest member kept its licence to shrink and squeezed every KPI cell
+         until the labels were clipped mid-word. In a scroller nothing
+         shrinks; it scrolls. */
       .rail .grid {
-        flex: 1 1 100%;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
+        flex: 0 0 auto;
+        min-width: auto;
+        gap: 6px;
       }
 
-      .rail-regime {
-        flex: 1 1 100%;
+      .rail .card {
+        min-width: 96px;
+        padding: 6px 9px;
       }
 
-      .rail-regime .card {
-        flex: 1 1 0;
+      .rail .status {
+        order: -1;
+        align-self: stretch;
+        white-space: nowrap;
+      }
+
+      /* The decorations that make a card tall. Each is a second reading of a
+         number the card already states, and on a 52px strip there is no room
+         for a second reading: the sparkline repeats the value's direction,
+         the value-area gauge repeats POC/VAL/VAH, and its legend names the
+         three colours in the gauge that is no longer there. The full versions
+         are all still on the desktop layout. */
+      .rail .sparkline-wrap,
+      .rail .va-track,
+      .rail .va-legend {
+        display: none;
+      }
+
+      /* Two lines of flow numbers and a bar, for a reading that is already in
+         the Flow column of every row below it. */
+      .rail .sentiment-card {
+        display: none;
+      }
+
+      /* The date bar is a scroller too. It is two wrapped rows otherwise -
+         RANGE plus two 16px date fields, then the five presets - for about
+         85px, and the presets are the whole of how a range gets picked on a
+         phone. The fields stay reachable at the head of the strip. */
+      .date-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .date-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .date-bar > *,
+      .date-presets > * {
+        flex: 0 0 auto;
+      }
+
+      .date-bar input[type="date"] {
+        font-size: var(--fs-lg);
+        padding: 4px 6px;
       }
 
       /* ── Controls: one horizontally scrollable strip on its own line,
-         instead of 3-4 wrapped rows stacked under the title. ── */
+         instead of 3-4 wrapped rows stacked under the title. ──
+         order puts it after the pinned buttons so the wrap lands between
+         them: the title, the state chip and the two pinned controls share
+         line one, and this strip takes line two. In source order it comes
+         first and would otherwise push .cmd-pinned onto a third line of its
+         own. */
       .controls {
+        order: 2;
         flex: 1 1 100%;
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -567,8 +653,23 @@
         padding-bottom: 6px;
       }
 
-      .preset-bar,
-      .vol-toolbar {
+      /* .preset-bar.preset-bar, not .preset-bar. The doubled class is the
+         whole point and must stay.
+
+         panels.css sets `.preset-bar { flex-wrap: wrap }` as a plain rule and
+         loads AFTER this file. A media query adds no specificity, so the
+         plain rule was winning and the Quick Filters strip wrapped to two or
+         three rows on a phone instead of scrolling as one - roughly 70px of
+         screen, and the comment further up this file claiming it is "already
+         a nowrap overflow-x scroller" was describing something that had never
+         actually happened.
+
+         Doubling the class takes this to (0,2,0) and settles it in place.
+         Hoisting the media block to the end of the file would have fixed it
+         too and flipped thirteen other selectors that depend on the current
+         order - see the load-order note in index.html. */
+      .preset-bar.preset-bar,
+      .vol-toolbar.vol-toolbar {
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -595,8 +696,13 @@
         display: none !important;
       }
 
-      /* Fixed rather than absolute: it is a DOM child of .controls, which is
-         now an overflow-x scroller that would otherwise clip it. */
+      /* A bottom sheet on a phone, rather than a panel hanging off a button
+         at the top of the screen: it is within thumb reach and it does not
+         need to be measured against anything.
+
+         positionMenu() in chrome.js deliberately does nothing at this width
+         and clears its own inline top/right/max-height, because an inline
+         style would outrank every declaration here. */
       .col-menu {
         position: fixed;
         top: auto;
@@ -786,6 +892,80 @@
         margin-top: 6px;
         padding-top: 6px;
         border-top: 1px solid var(--line);
+      }
+
+      /* ══════════════════════════════════════════════════════
+         FLOW CARD — THREE LINES
+         ══════════════════════════════════════════════════════
+         Overrides the labelled card above for #tbl-flow only. Volume and
+         Anomalies keep it: their columns are figures that genuinely need
+         naming, and you read those tables a screen at a time. The flow table
+         is a tape - you scan down it looking for the one row that fired - and
+         a tape has to be dense.
+
+         Before: six lines, one per value, each a label on the left and a
+         figure ~380px away on the right, 175px per card. Three rows fitted on
+         an 844px phone and an ordinary session ran to 1,900px of scrolling.
+
+         After:   4:00 PM          754.25   [D]  (pin)
+                  ▬▬ -0.495   PUT       TICK +252
+                  flow below threshold
+
+         about 85px, so seven or eight rows fit. The labels go because the
+         shapes carry the meaning at this density: the bar says which figure
+         is flow, PUT/CALL says itself, the pill is a grade. TICK keeps its
+         label - a bare signed number next to a signed flow is genuinely
+         ambiguous, and the th's explanatory title has no hover on a phone.
+
+         Strike is dropped here, not hidden by accident: at 0DTE the ATM
+         strike is the price rounded, so it sat in the card repeating the
+         figure beside it. Tapping the row still opens the journal with every
+         field, which is also where the gate columns and the score live. */
+      #tbl-flow tr {
+        grid-template-columns: auto 1fr auto auto;
+        grid-template-areas:
+          "time   price  grade  pin"
+          "flow   dir    tick   tick"
+          "reason reason reason reason"
+          "strat  strat  strat  strat";
+        column-gap: 10px;
+        row-gap: 2px;
+        align-items: baseline;
+        padding: 8px 12px 7px;
+        margin-bottom: 6px;
+      }
+
+      #tbl-flow td:first-child { grid-area: pin; }
+      #tbl-flow .col-time      { grid-area: time; padding-bottom: 0; }
+      #tbl-flow .col-price     { grid-area: price; justify-content: flex-end; }
+      #tbl-flow .col-grade     { grid-area: grade; justify-content: flex-end; }
+      #tbl-flow .col-flow      { grid-area: flow; justify-content: flex-start; }
+      #tbl-flow .col-dir       { grid-area: dir; justify-content: flex-start; }
+      #tbl-flow .col-tick      { grid-area: tick; justify-content: flex-end; gap: 6px; }
+      #tbl-flow .reason-col    { grid-area: reason; margin-top: 5px; padding-top: 5px; }
+      #tbl-flow .col-strat     { grid-area: strat; }
+
+      /* Only in the aggregate view; td:empty hides it everywhere else, and an
+         empty grid area costs nothing but its row-gap. */
+      #tbl-flow .col-strat::before { content: 'Strategy'; }
+
+      /* The labels the dense card drops. Not deleted above, because the rules
+         that set them are shared with the two tables that keep theirs. */
+      #tbl-flow .col-strike::before,
+      #tbl-flow .col-flow::before,
+      #tbl-flow .col-dir::before,
+      #tbl-flow .col-grade::before {
+        content: none;
+      }
+
+      #tbl-flow .col-strike { display: none; }
+
+      /* Line 2 sits quieter than line 1: the time and price are what you scan
+         for, these are what you check once you have stopped. */
+      #tbl-flow .col-flow,
+      #tbl-flow .col-dir,
+      #tbl-flow .col-tick {
+        font-size: var(--fs-base);
       }
 
       /* The pin shares the heading line rather than floating over it. */

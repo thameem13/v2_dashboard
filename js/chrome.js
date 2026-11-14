@@ -114,10 +114,16 @@
       try { saved = localStorage.getItem('v2-header-collapsed'); } catch (e) { }
       if (saved === '1') { applyHeaderCollapsed(true); return; }
       if (saved === '0') return;
-      // On a phone the header band would own the whole screen before a single
-      // table row is visible, so start collapsed -- but only when the user has
-      // made no choice yet, and without persisting this as their choice.
-      if (window.matchMedia('(max-width: 700px)').matches) applyHeaderCollapsed(true);
+      /* The phone used to start collapsed, because the band owned the whole
+         screen before a single table row was visible. The cost of that was
+         that a phone opened on no price, no signal count and no flow - the
+         band hid everything, so the one screen a trader glances at on the
+         move carried the least information.
+
+         The band is a ~52px scrolling strip at this width now, so it earns
+         its space and the default is expanded. The control itself is
+         untouched and still remembered: anyone who collapses it keeps it
+         collapsed. */
     }
 
     function initTheme() {
@@ -204,6 +210,25 @@
        by the time we measure, #cols-btn has no box to measure. */
     function positionMenu(menu, btn) {
       if (!menu || !btn) return;
+
+      /* The phone layout already has a better answer: the 700px block pins
+         these to left/right/bottom as a sheet with a 60dvh cap. Anchoring one
+         to a button there would fight that rule and win, because inline
+         styles beat a stylesheet - the sheet kept its CSS `bottom` and took
+         this function's `top` as well, so it stretched from the button to the
+         foot of the screen as a full-height panel.
+
+         Clearing the three properties this function sets hands the element
+         back to the stylesheet, and matters on a window that crossed the
+         breakpoint while a menu was open - the resize handler routes through
+         here, so the sheet is restored rather than left mispositioned. */
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        menu.style.top = '';
+        menu.style.right = '';
+        menu.style.maxHeight = '';
+        return;
+      }
+
       const r = btn.getBoundingClientRect();
       const gap = 6;
       menu.style.top = (r.bottom + gap) + 'px';

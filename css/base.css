@@ -118,12 +118,24 @@
       box-shadow: inset 0 0 0 1px var(--line);
     }
 
+    /* min-width:0 is what makes the ellipsis work. A flex item's floor is its
+       min-content width, which for nowrap text is the whole string, so
+       without this the chip simply grew to fit "Session 2026-11-13 | 78
+       candles | latest 4:00 PM" and pushed the controls off a narrow bar
+       instead of truncating. overflow:hidden alone cannot override that
+       floor. */
     .statechip .sub {
       margin-top: 0;
+      min-width: 0;
       font-size: var(--fs-sm);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    /* Never squeezed out by the chip beside it. */
+    .cmd-pinned {
+      flex: 0 0 auto;
     }
 
     /* rpc.js writes 'Load failed' into #sub. Amber, not red: the last good
