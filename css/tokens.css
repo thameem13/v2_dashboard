@@ -5,49 +5,77 @@
     :root {
       box-sizing: border-box;
 
-      /* ── LIGHT, the default ──────────────────────────────────────────── */
-      --bg: #f7f7f5;
+      /* ── LIGHT, the default ────────────────────────────────────────────
+         --bg used to be #f7f7f5 against a #ffffff panel: about 2% apart, so
+         every card edge rested entirely on its shadow and the page read flat
+         in daylight. The ground is now cooler and four steps darker, which
+         lets a card separate on value with the shadow only supporting it.
+         The neutrals carry a slight blue bias toward --accent rather than the
+         old beige one, so they read as chosen rather than as unpainted. */
+      --bg: #e9ecf1;
       --panel: #ffffff;
-      --panel2: #f0f0ed;
-      --line: #e3e3de;
-      --txt: #16181d;
-      --dim: #6a6f7a;
+      --panel2: #f2f4f8;
+      --line: #dce1e9;
+      --txt: #0e131a;
+      --dim: #616b7a;
 
       /* Accents are NOT shared between themes. The dark hues (#3fb950 etc)
          fail contrast on white, which is why the old light theme - which
          overrode only 7 tokens and left these alone - never really worked. */
-      --green: #0f7a43;
-      --red: #c0352b;
-      --amber: #8a6400;
-      --blue: #2563a8;
-      --a: #0f7a43;
-      --b: #2563a8;
-      --pulse-green: rgba(15, 122, 67, 0.25);
+      --green: #0a7146;
+      --red: #bd2f2f;
+      --amber: #8a5a05;
+      --blue: #2d53b8;
+      --a: #0a7146;
+      --b: #2d53b8;
+      --pulse-green: rgba(10, 113, 70, 0.25);
+
+      /* ── THE CHROME ACCENT ───────────────────────────────────────────────
+         New, and the point of the colour pass. --blue used to do two jobs at
+         once: "grade B / value area" in the data AND "this control is active"
+         in the chrome, which is why green, red, amber and blue between them
+         carried grades, direction, flow sign, gates, presets, date mode and
+         the selected tab. When eight things are coloured, none of them reads
+         as urgent.
+
+         --accent is the only hue the chrome may use: active tab, pressed
+         chip, focused field, selected preset. Green / red / amber / blue stay
+         for market data alone. It is deliberately NOT a tint of --blue, so
+         an accent chip beside a grade-B pill cannot be mistaken for one. */
+      --accent: #3b55c4;
+      --accent-soft: #e7ebfb;
 
       /* ── Derived, theme-specific ──────────────────────────────────────
          Each of these replaced a [data-theme="light"] rule that patched one
          selector. Defining them here means a theme states its surfaces once
          instead of chasing every rule that paints one. */
-      --btn-hover-bg: #e6e6e2;
-      --track-bg: #e0e0db;
-      --sig-cell-bg: #eaf6ee;
-      --sig-row-bg: rgba(15, 122, 67, 0.07);
-      --sig-hover-bg: rgba(15, 122, 67, 0.12);
+      --btn-hover-bg: #e2e7ef;
+      --track-bg: #dce1e9;
+      /* The signal row's fill is lighter than it was (0.07 -> 0.05). The row
+         already carries a 3px green rail on its first cell, and with both at
+         full strength the whole row shouted; the rail is the marker and the
+         wash is only there to group it. */
+      --sig-cell-bg: #e8f4ed;
+      --sig-row-bg: rgba(10, 113, 70, 0.05);
+      --sig-hover-bg: rgba(10, 113, 70, 0.10);
       --date-icon-filter: none;
 
       /* Grade pills are a solid accent fill, so the label has to flip with
          the theme or it is dark-on-dark. */
       --pill-fg: #ffffff;
-      --pill-muted-bg: #e3e3de;
+      --pill-muted-bg: #dce1e9;
 
-      --ov-hover: rgba(0, 0, 0, 0.035);
-      --ov-hover-weak: rgba(0, 0, 0, 0.022);
-      --sh-float: 0 4px 20px rgba(0, 0, 0, 0.10);
-      --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.12);
-      --sh-modal: 0 16px 48px rgba(0, 0, 0, 0.18);
+      --ov-hover: rgba(16, 24, 40, 0.04);
+      --ov-hover-weak: rgba(16, 24, 40, 0.025);
+      --sh-float: 0 4px 20px rgba(16, 24, 40, 0.10);
+      --sh-menu: 0 6px 24px rgba(16, 24, 40, 0.13);
+      --sh-modal: 0 16px 48px rgba(16, 24, 40, 0.20);
       /* Panels sit on elevation rather than a hairline border. Two layers:
-         a tight one for the edge, a wide soft one for the lift. */
-      --sh-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.05);
+         a tight one for the edge, a wide soft one for the lift. The lift is
+         now directional (offset down, negative spread) rather than an even
+         halo, which is what made cards look like they were glowing on the
+         old near-white ground. */
+      --sh-card: 0 1px 1px rgba(16, 24, 40, 0.04), 0 6px 16px -6px rgba(16, 24, 40, 0.10);
 
       /* ── Non-colour tokens ──────────────────────────────────────────────
          Added at today's exact values, so defining them changed nothing on
@@ -60,16 +88,54 @@
       --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       --font-data: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-      /* Radii. An irregular scale because it grew by hand - the redesign
-         collapses it upward (cards to --r-3xl and beyond). */
+      /* ── SPACING ─────────────────────────────────────────────────────────
+         New. There was no spacing scale at all: padding was a literal in
+         roughly forty places, typically 5-8px in cells and 8-12px in cards,
+         and no two panels agreed. A 4px grid, named, so a new panel inherits
+         the rhythm instead of guessing at it.
+
+         --sp-2 (8px) is the page's default gap and --sp-4 (16px) its gutter;
+         those two cover most of it. Cells stay on --sp-1/--sp-2 because the
+         table's density is the product. */
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-5: 24px;
+      --sp-6: 32px;
+
+      /* ── RADII ───────────────────────────────────────────────────────────
+         Seven steps, several only 2px apart, read as noise rather than as
+         hierarchy - nothing on screen was distinguishable by a 4px vs a 6px
+         corner. The NAMES all stay, because ~130 literals across 8 files
+         reference them and renaming would be a far larger diff than it is
+         worth, but the VALUES collapse onto four real steps:
+
+           4px   hairline details (dots, legend swatches, 2px bars)
+           6px   controls - buttons, chips, inputs, cells
+           10px  panels - cards, menus, the table shell
+           14px  overlays - modals, the one surface that floats over others
+
+         So --r-sm and --r-md are now the same corner, as are --r-lg/--r-xl
+         and --r-2xl/--r-3xl. That is the intent: a button and an input should
+         not disagree by 2px just because two authors picked different tokens
+         on different days. */
       --r-xs: 4px;
       --r-sm: 6px;
-      --r-md: 8px;
+      --r-md: 6px;
       --r-lg: 10px;
-      --r-xl: 12px;
+      --r-xl: 10px;
       --r-2xl: 14px;
-      --r-3xl: 16px;
+      --r-3xl: 14px;
       --r-full: 50%;
+
+      /* The table's row rhythm. Rows used to be sized by their content, so a
+         cell holding a pill was taller than one holding a number and the eye
+         had to re-find the baseline on every row. Fixed, the eye tracks
+         straight across. Not a min-height: the cells set `height`, which a
+         table row treats as a floor anyway, so a wrapped reason string still
+         grows its row rather than clipping. */
+      --row-h: 30px;
 
       /* The pin column width. Load-bearing, not cosmetic: #tbl-vol's sticky
          Time column is offset by exactly this, so the two must never drift.
@@ -105,38 +171,46 @@
     }
 
     /* ── DARK ────────────────────────────────────────────────────────────
-       Every value here is what :root held before the flip, so dark mode is
-       unchanged by this phase - light is added, dark is not touched. */
+       Moved with light rather than left behind. The ground drops a little
+       (#0b0e11 -> #090c11) and the panel lifts (#151a21 -> #11161e) so the
+       two separate by more than they did, and the hues gain the same blue
+       bias the light neutrals took. The accents are brighter than GitHub's
+       originals because they now sit on a darker ground. */
     [data-theme="dark"] {
-      --bg: #0b0e11;
-      --panel: #151a21;
-      --panel2: #1b222b;
-      --line: #2a333f;
-      --txt: #e6edf3;
-      --dim: #8b98a8;
-      --green: #3fb950;
-      --red: #f85149;
-      --amber: #d29922;
-      --blue: #58a6ff;
-      --a: #3fb950;
-      --b: #58a6ff;
-      --pulse-green: rgba(63, 185, 80, 0.4);
+      --bg: #090c11;
+      --panel: #11161e;
+      --panel2: #19202a;
+      --line: #232c39;
+      --txt: #e8eef6;
+      --dim: #8995a6;
+      --green: #3fcf74;
+      --red: #ff6b61;
+      --amber: #e0a52a;
+      --blue: #74a4ff;
+      --a: #3fcf74;
+      --b: #74a4ff;
+      --pulse-green: rgba(63, 207, 116, 0.4);
 
-      --btn-hover-bg: #222b37;
-      --track-bg: #222b37;
-      --sig-cell-bg: #15221d;
-      --sig-row-bg: rgba(63, 185, 80, 0.08);
-      --sig-hover-bg: rgba(63, 185, 80, 0.14);
+      /* Lighter than --blue on purpose, for the same reason as in light: an
+         active control must not read as a grade-B pill. */
+      --accent: #7d97ff;
+      --accent-soft: #1a2236;
+
+      --btn-hover-bg: #212a36;
+      --track-bg: #212a36;
+      --sig-cell-bg: #10211a;
+      --sig-row-bg: rgba(63, 207, 116, 0.06);
+      --sig-hover-bg: rgba(63, 207, 116, 0.12);
       --date-icon-filter: invert(0.7);
 
-      --pill-fg: #04260d;
-      --pill-muted-bg: #30363d;
+      --pill-fg: #04210f;
+      --pill-muted-bg: #2b3442;
 
-      --ov-hover: rgba(255, 255, 255, 0.04);
+      --ov-hover: rgba(255, 255, 255, 0.045);
       --ov-hover-weak: rgba(255, 255, 255, 0.03);
-      --sh-float: 0 4px 24px rgba(0, 0, 0, 0.4);
-      --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.4);
-      --sh-modal: 0 12px 40px rgba(0, 0, 0, 0.5);
+      --sh-float: 0 4px 24px rgba(0, 0, 0, 0.45);
+      --sh-menu: 0 6px 24px rgba(0, 0, 0, 0.45);
+      --sh-modal: 0 12px 40px rgba(0, 0, 0, 0.55);
       /* Shadows read weakly on a dark background, so dark keeps a hairline
          and uses elevation only to separate, not to lift. */
       --sh-card: 0 1px 2px rgba(0, 0, 0, 0.3);

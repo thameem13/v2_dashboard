@@ -33,7 +33,7 @@
     }
 
     .date-bar input[type="date"]:focus {
-      border-color: var(--blue);
+      border-color: var(--accent);
     }
 
     .date-bar input[type="date"]::-webkit-calendar-picker-indicator {
@@ -52,8 +52,8 @@
     }
 
     .date-presets button.active-preset {
-      border-color: var(--blue);
-      color: var(--blue);
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     .date-mode-badge {
@@ -67,15 +67,15 @@
     }
 
     .date-mode-badge.live {
-      background: rgba(63, 185, 80, 0.15);
+      background: color-mix(in srgb, var(--green) 15%, transparent);
       color: var(--green);
-      border: 1px solid rgba(63, 185, 80, 0.3);
+      border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
     }
 
     .date-mode-badge.historical {
-      background: rgba(88, 166, 255, 0.15);
-      color: var(--blue);
-      border: 1px solid rgba(88, 166, 255, 0.3);
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     }
 
     .date-sep {
@@ -131,137 +131,177 @@
 
     .col-menu-item input {
       cursor: pointer;
-      accent-color: var(--blue);
+      accent-color: var(--accent);
     }
 
-    /* ── MARKET NEWS PANEL (inline, next to cards) ── */
-    /* Header is a 3-column band: KPI cards | regime + sentiment | news.
-       Previously regime and sentiment each took their own full-width row,
-       which pushed the table down while the right half sat empty. */
-    .top-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 320px;
+    /* ── OVERFLOW MENU ────────────────────────────────────────────────────
+       Reuses .col-menu for the surface, anchoring and z-index, and adds the
+       row styling the column menu's checkbox grid did not need. Grouped under
+       three headings because eight flat rows is the wall of equal-weight
+       controls this menu exists to get rid of, only vertical. */
+    .more-menu {
+      min-width: 232px;
+    }
+
+    .more-menu h4:not(:first-child) {
+      margin-top: var(--sp-3);
+    }
+
+    .menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    /* A full-width row, not a chip: these keep the border and background of a
+       button in the bar otherwise, which in a vertical list reads as eight
+       stacked buttons rather than a menu. */
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-1);
+      width: 100%;
+      padding: 6px var(--sp-2);
+      border: 1px solid transparent !important;
+      border-radius: var(--r-sm);
+      background: transparent !important;
+      color: var(--txt);
+      font-size: var(--fs-md);
+      text-align: left;
+    }
+
+    @media (hover: hover) {
+      .menu-item:hover {
+        background: var(--ov-hover) !important;
+      }
+    }
+
+    /* setIconBtn() puts .active-toggle on the three alert toggles and on the
+       compact-header button. In the bar that was a border and a tint; in a
+       menu row the label itself carries it, which is why the border above is
+       forced transparent. */
+    .menu-item.active-toggle {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .menu-item kbd {
+      margin-left: auto;
+      font-family: var(--font-data);
+      font-size: var(--fs-xs);
+      color: var(--dim);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--r-xs);
+      padding: 0 4px;
+    }
+
+    /* ── THE RAIL ─────────────────────────────────────────────────────────
+       Replaces .top-row's three-column grid. One row: the five KPI cells, the
+       two inlined regime readings, and the sentiment meter. It has no internal
+       breakpoints above phone width, which is the point - the old band was
+       re-laid out at 1500, 1000 and 700px and each of those arrangements had a
+       different height.
+
+       flex, not grid, so the three parts can be sized by what they hold: the
+       cards take the slack, the regime pair is intrinsic, and sentiment has a
+       floor wide enough for its bar to mean anything. */
+    .rail {
+      display: flex;
       align-items: stretch;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-2);
     }
 
-    /* No header column may be sized by its own overflowing content. */
-    .top-row > * {
+    /* No rail cell may be sized by its own overflowing content. */
+    .rail > * {
       min-height: 0;
-    }
-
-    .top-row .grid {
       min-width: 0;
-      margin-bottom: 0;
-      align-content: start;
     }
 
     /* The card grid has a FIXED set of 5 cards. auto-fit used to spawn as many
        130px columns as the viewport allowed (~14 on a wide monitor), so the 5
        cards bunched up on the left and the rest of the row was dead space. */
-    .top-row .grid {
+    .rail .grid {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-bottom: 0;
+      align-content: start;
       grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
-    .top-mid {
+    /* VIX1D and TICK, inlined from the regime strip. Two .card cells of its
+       own rather than two more children of #cards, because renderCards()
+       replaces that element's entire innerHTML on every poll and would wipe
+       them ten seconds after renderRegime() wrote them. */
+    .rail-regime {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 0;
+      gap: var(--sp-2);
+      flex: 0 0 auto;
     }
 
-    .top-mid .regime-strip {
-      margin-bottom: 0;
-      flex: 1;
-      align-items: center;
+    .rail-regime .card {
+      min-width: 92px;
     }
 
-    .top-mid .sentiment-card {
+    .rail .sentiment-card {
+      flex: 0 1 300px;
+      min-width: 190px;
       margin-top: 0;
-      flex-shrink: 0;
+      justify-content: center;
     }
 
-    /* Collapse the whole header for maximum table room. The pin strip is a
-       sibling of .top-row, not a child, so it needs naming here or the
-       collapse button leaves it behind - which is the one thing the button
-       exists to prevent. */
-    #top.collapsed .top-row,
+    /* ── DISCLOSURE PANELS ────────────────────────────────────────────────
+       Regime and news. Blocks in the flow of #top rather than popovers, so
+       reading one never covers the table rows you opened it to compare
+       against. The `hidden` attribute does the hiding; this only spaces them.
+
+       :not([hidden]) rather than a class, so the attribute is the single
+       source of truth and chrome.js has one thing to set. */
+    .disclosure:not([hidden]) {
+      display: block;
+      margin-bottom: var(--sp-2);
+    }
+
+    /* Collapse the whole header for maximum table room. The pin strip and the
+       disclosures are siblings of .rail, not children, so each needs naming
+       here or the collapse button leaves it behind - which is the one thing
+       the button exists to prevent. */
+    #top.collapsed .rail,
     #top.collapsed #pin-card,
+    #top.collapsed .disclosure,
     #top.collapsed .date-bar {
       display: none;
     }
 
     #collapse-btn.active-toggle {
-      border-color: var(--blue);
-      color: var(--blue);
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
-    /* Mid widths: cards and news stay side by side on row 1, regime+sentiment
-       move to a full-width row 2. Placement must be explicit — letting
-       .top-mid span 1/-1 with auto-flow would push news onto a third row and
-       make the header TALLER than the original layout. */
-    @media (max-width: 1500px) {
-      .top-row {
-        grid-template-columns: minmax(0, 1fr) 300px;
+    /* The 1500px and 1000px blocks that used to live here are gone.
+
+       They existed to re-place four grid items at two widths - cards and news
+       side by side on row 1 with regime + sentiment on a full-width row 2,
+       then everything stacked - and between them they were eight placement
+       rules and two flex resets, each guarding against a way the old band
+       could grow taller as the window got narrower.
+
+       The rail needs none of it. With news and regime behind disclosures
+       there are three things in the row, and flex wraps the sentiment meter
+       under the cards on its own once the row no longer fits. The only
+       remaining header breakpoint is the phone block below, where the KPI
+       cells go 2-up. */
+    @media (max-width: 1150px) {
+      /* Sentiment drops below the cards rather than squeezing them. Its bar
+         stops meaning anything much under ~190px, and five KPI values are
+         what the row is for. */
+      .rail {
+        flex-wrap: wrap;
       }
 
-      .top-row .grid {
-        grid-column: 1;
-        grid-row: 1;
-      }
-
-      .top-row .news-col {
-        grid-column: 2;
-        grid-row: 1;
-      }
-
-      .top-mid {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        flex-direction: row;
-        align-items: stretch;
-      }
-
-      .top-mid .regime-strip {
-        flex: 1 1 auto;
-      }
-
-      .top-mid .sentiment-card {
-        flex: 1 1 340px;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 1000px) {
-      .top-row {
-        grid-template-columns: minmax(0, 1fr);
-      }
-
-      .top-row .grid {
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-        grid-column: 1;
-        grid-row: 1;
-      }
-
-      .top-row .news-col {
-        grid-column: 1;
-        grid-row: 3;
-        min-height: 130px;
-      }
-
-      .top-mid {
-        grid-column: 1;
-        grid-row: 2;
-        flex-direction: column;
-      }
-
-      /* Reset the row-layout flex from the 1500px block: once the direction is
-         column, a flex-basis of 340px becomes a HEIGHT and balloons the card. */
-      .top-mid .regime-strip,
-      .top-mid .sentiment-card {
-        flex: 0 0 auto;
-        justify-content: flex-start;
+      .rail .sentiment-card {
+        flex: 1 1 100%;
       }
     }
 
@@ -308,14 +348,24 @@
         padding-top: max(8px, env(safe-area-inset-top));
       }
 
-      /* The 1000px block hands this back to auto-fit, which yields one
-         full-width column on a phone. Five KPI cards read better 2-up. */
-      .top-row .grid {
+      /* Five KPI cells across a phone would be 70px each. 2-up, and the
+         regime pair and the sentiment meter each take a full row under them -
+         the rail is already wrapping by this width. */
+      .rail {
+        flex-wrap: wrap;
+      }
+
+      .rail .grid {
+        flex: 1 1 100%;
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .news-col {
-        min-height: 160px;
+      .rail-regime {
+        flex: 1 1 100%;
+      }
+
+      .rail-regime .card {
+        flex: 1 1 0;
       }
 
       /* ── Controls: one horizontally scrollable strip on its own line,

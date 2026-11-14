@@ -95,13 +95,52 @@
       return (+v).toFixed(dp == null ? 2 : dp);
     }
 
+    /* The two regime readings that stay on the rail while the other four live
+       in the disclosure. VIX1D is the 0DTE regime gate and TICK is the breadth
+       confirmation, so these are the two a signal is read against minute by
+       minute; the rest - dealer imbalance, walls, implied move - are session
+       context you consult rather than watch.
+
+       Painted from renderRegime() below, in the same pass that fills the
+       strip. Two views of one value, both written by the one function that
+       owns it, neither reading the other: the same shape as syncGradeChips()
+       painting the phone's grade chips beside the desktop row's. */
+    function renderRegimeMini(r, vixCls, tick) {
+      const mini = document.getElementById('regime-mini');
+      if (!mini) return;
+
+      if (!r) {
+        mini.hidden = true;
+        mini.innerHTML = '';
+        return;
+      }
+
+      const vix = r.vix1d == null ? null : +r.vix1d;
+      mini.innerHTML = `
+        <div class="card" title="VIX1D — 1-day implied vol. The 0DTE regime gate: under 10 is calm, 15+ means position smaller. Full regime is behind the Regime button.">
+          <div class="label">VIX1D</div>
+          <div class="val ${vixCls}">${num(vix, 2)}</div>
+        </div>
+        <div class="card" title="NYSE TICK — advancing minus declining issues across the whole exchange. Market-wide breadth, not per-symbol.">
+          <div class="label">TICK</div>
+          <div class="val ${signedCls(tick)}">${tick == null ? '-' : (tick > 0 ? '+' : '') + Math.round(tick)}</div>
+        </div>`;
+      mini.hidden = false;
+    }
+
     function renderRegime(r) {
       const strip = document.getElementById('regime-strip');
       const body = document.getElementById('regime-body');
       if (!strip || !body) return;
 
+      /* The Regime button is pointless when there is no regime row to show,
+         and a button that opens an empty panel reads as a broken feature. */
+      const btn = document.getElementById('regime-btn');
+      if (btn) btn.style.display = r ? '' : 'none';
+
       if (!r) {
         strip.style.display = 'none';
+        renderRegimeMini(null);
         return;
       }
       strip.style.display = 'flex';
@@ -166,5 +205,8 @@
       }
 
       body.innerHTML = items.join('') + staleHtml;
+
+      // The rail's two cells, from the same values the strip just used.
+      renderRegimeMini(r, vixClass(vix), tick);
     }
 

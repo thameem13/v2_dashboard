@@ -20,8 +20,8 @@
        used to be a second copy in config.js; it drifted, and a drifted copy
        makes the page insist a newer build is live when it is already running
        it. -->
-  <meta name="build" content="2.12.1">
-  <meta name="build-ts" content="2026-11-13T03:46Z">
+  <meta name="build" content="2.13.0">
+  <meta name="build-ts" content="2026-11-14T00:40Z">
 
   <title>Trade Flow Dashboard Pro</title>
 
@@ -36,7 +36,9 @@
        being 302'd to login, defeating recoverSession(). iOS needs no service
        worker for add-to-home-screen, and Android installs without one. -->
   <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
-  <meta name="theme-color" content="#f7f7f5">
+  <!-- Kept in step with --bg (light) in css/tokens.css by hand; applyTheme()
+       in js/chrome.js rewrites it on a theme switch. -->
+  <meta name="theme-color" content="#e9ecf1">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <!-- iOS ignores the manifest icons and reads only this one. -->
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -58,14 +60,14 @@
 
        ?v= must be bumped with BUILD so a stylesheet cannot be served stale
        against a newer page. -->
-  <link rel="stylesheet" href="css/tokens.css?v=2.12.1">
-  <link rel="stylesheet" href="css/base.css?v=2.12.1">
-  <link rel="stylesheet" href="css/cards.css?v=2.12.1">
-  <link rel="stylesheet" href="css/tables.css?v=2.12.1">
-  <link rel="stylesheet" href="css/layout.css?v=2.12.1">
-  <link rel="stylesheet" href="css/panels.css?v=2.12.1">
-  <link rel="stylesheet" href="css/overlays.css?v=2.12.1">
-  <link rel="stylesheet" href="css/widgets.css?v=2.12.1">
+  <link rel="stylesheet" href="css/tokens.css?v=2.13.0">
+  <link rel="stylesheet" href="css/base.css?v=2.13.0">
+  <link rel="stylesheet" href="css/cards.css?v=2.13.0">
+  <link rel="stylesheet" href="css/tables.css?v=2.13.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.13.0">
+  <link rel="stylesheet" href="css/panels.css?v=2.13.0">
+  <link rel="stylesheet" href="css/overlays.css?v=2.13.0">
+  <link rel="stylesheet" href="css/widgets.css?v=2.13.0">
 </head>
 
 <body>
@@ -116,14 +118,41 @@
     <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
     <symbol id="ic-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
     <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <!-- The overflow menu. Filled dots rather than stroked circles: at 14px a
+         1.75-stroke ring of r=1 is a grey smudge. -->
+    <symbol id="ic-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
   </svg>
 
   <div id="top">
-    <div class="row">
-      <div>
-        <h1>Trade Flow Dashboard <span id="live-dot" class="dot pulse" style="display:none"></span></h1>
-        <div class="sub" id="sub">Connecting to Supabase...</div>
-      </div>
+    <!-- COMMAND BAR
+         Was .row: a title block with a two-line stack on the left and eleven
+         equal-weight controls wrapping on the right. One flex line now, at a
+         fixed height, because the header band's job is to be small - see the
+         .rail comment below for what that bought.
+
+         position:relative lives on this element in base.css and is NOT
+         cosmetic: the three .col-menu popovers are anchored to
+         top:calc(100% + 6px) and nothing in their ancestor chain was
+         positioned, so 100% was resolving against the viewport. -->
+    <div class="cmdbar">
+      <!-- The dot means "a signal is live on the latest candle", which is not
+           the same fact as the Live/Historical badge beside it (that one is
+           which data you are looking at). Both kept, both now in one place;
+           they used to sit in different bands 200px apart. -->
+      <h1>Trade Flow<span id="live-dot" class="dot pulse" style="display:none"
+            title="A signal is live on the latest candle"></span></h1>
+
+      <!-- SESSION STATE
+           One object carrying the three things that were scattered: the data
+           mode (#date-mode-badge, moved up out of the date bar), the session
+           summary (#sub), and the failure state. Every id is unchanged, so
+           main.js, render.js, rpc.js and chrome.js keep writing exactly what
+           they wrote before - this is a regrouping, not a rewrite.
+           role="status" because rpc.js writes 'Load failed' here. -->
+      <span class="statechip" id="state-chip" role="status">
+        <span class="date-mode-badge live" id="date-mode-badge">Live</span>
+        <span class="sub" id="sub">Connecting to Supabase...</span>
+      </span>
       <!-- The row is unchanged structurally - still one wrapping flex line - but
            its eleven equal-weight buttons are now read as four zones. The
            stateful toggles are icon-only: the word "ON" in a label is debug
@@ -160,61 +189,100 @@
 
         <span class="ctrl-sep"></span>
 
+        <!-- DISCLOSURES
+             Regime and News were two of the three columns in the old header
+             band, and between them they were most of its height: .news-col
+             set a 150px floor on the grid row through its own min-height, and
+             below 1500px the regime strip took a full-width row of its own.
+             Behind a button each, the band is a third as tall and both are
+             one click away. The two regime numbers that gate a signal - VIX1D
+             and TICK - stay on screen in the rail, so nothing a trader reads
+             every minute moved behind a click. -->
         <div class="ctrl-group">
-          <button id="alert-btn" class="icon-btn" onclick="toggleStickyAlerts()"
-                  aria-pressed="true" aria-label="Sticky alerts" title="Sticky alerts: on">
-            <svg class="ico"><use href="#ic-pin"></use></svg>
+          <button id="regime-btn" onclick="toggleDisclosure('regime')"
+                  aria-expanded="false" aria-controls="regime-panel"
+                  title="Session regime: VIX1D, TICK, dealer imbalance, walls, implied move">
+            <svg class="ico"><use href="#ic-gauge"></use></svg>Regime
           </button>
-          <button id="push-btn" class="icon-btn" onclick="togglePushNotifications()"
-                  aria-pressed="false" aria-label="Push notifications" title="Push notifications: off">
-            <svg class="ico"><use href="#ic-bell"></use></svg>
-          </button>
-          <button id="sound-btn" class="icon-btn" onclick="toggleSound()"
-                  aria-pressed="true" aria-label="Alert chime" title="Alert chime: on (S)">
-            <svg class="ico"><use href="#ic-volume"></use></svg>
+          <button id="news-btn" onclick="toggleDisclosure('news')"
+                  aria-expanded="false" aria-controls="news-panel-wrap"
+                  title="Market headlines">
+            <svg class="ico"><use href="#ic-news"></use></svg>News
           </button>
         </div>
 
         <span class="ctrl-sep"></span>
 
         <div class="ctrl-group">
-          <button id="cols-btn" class="icon-btn" onclick="toggleColumnMenu()"
-                  aria-label="Toggle columns" title="Show or hide columns">
-            <svg class="ico"><use href="#ic-eye"></use></svg>
-          </button>
-          <button id="collapse-btn" class="icon-btn" onclick="toggleHeader()"
-                  aria-pressed="false" aria-label="Compact header"
-                  title="Collapse the header band for maximum table height (H)">
-            <svg class="ico"><use href="#ic-chevron-up"></use></svg>
-          </button>
           <!-- A mode, not a toggle, so no aria-pressed: the icon names the
                theme you would switch TO, matching the label it replaced. -->
           <button id="theme-btn" class="icon-btn" onclick="toggleTheme()"
                   aria-label="Switch theme" title="Switch to dark theme (T)">
             <svg class="ico"><use href="#ic-moon"></use></svg>
           </button>
-        </div>
-
-        <span class="ctrl-sep"></span>
-
-        <!-- These two keep their words: they carry no state to show, and an
-             unlabelled export is a button nobody dares press. -->
-        <div class="ctrl-group">
-          <button onclick="exportCurrentCSV()">
-            <svg class="ico"><use href="#ic-download"></use></svg>Export CSV
-          </button>
-          <button onclick="clearFilters()">
-            <svg class="ico"><use href="#ic-filter-off"></use></svg>Clear filters
+          <button id="more-btn" class="icon-btn" onclick="toggleMoreMenu()"
+                  aria-expanded="false" aria-controls="more-menu"
+                  aria-label="More controls" title="More controls">
+            <svg class="ico"><use href="#ic-more"></use></svg>
           </button>
         </div>
 
-        <span class="ctrl-sep"></span>
+        <!-- OVERFLOW MENU
+             The eight controls that used to sit in the bar as equal-weight
+             icons. None of them is a per-minute action: three are set-once
+             alert preferences, two are view modes with keyboard shortcuts,
+             and three are occasional. Refresh, the poll interval, the two
+             disclosures and the theme stayed out because they are used while
+             watching the tape.
 
-        <div class="ctrl-group">
-          <button id="logout-btn" class="icon-btn" onclick="logout()"
-                  aria-label="Sign out" title="Sign out of Cloudflare Access on this device">
-            <svg class="ico"><use href="#ic-logout"></use></svg>
-          </button>
+             Each button keeps its id, its onclick and its aria-pressed, so
+             setIconBtn() in chrome.js still finds it and still swaps its icon
+             and tooltip - it writes title and the <use> href, never
+             textContent, which is exactly why these can carry a text label
+             now that they have room for one. -->
+        <div class="col-menu more-menu" id="more-menu">
+          <h4>Alerts</h4>
+          <div class="menu-list">
+            <button id="alert-btn" class="menu-item" onclick="toggleStickyAlerts()"
+                    aria-pressed="true" title="Sticky alerts: on">
+              <svg class="ico"><use href="#ic-pin"></use></svg>Sticky alerts
+            </button>
+            <button id="push-btn" class="menu-item" onclick="togglePushNotifications()"
+                    aria-pressed="false" title="Push notifications: off">
+              <svg class="ico"><use href="#ic-bell"></use></svg>Push notifications
+            </button>
+            <button id="sound-btn" class="menu-item" onclick="toggleSound()"
+                    aria-pressed="true" title="Alert chime: on (S)">
+              <svg class="ico"><use href="#ic-volume"></use></svg>Alert chime<kbd>S</kbd>
+            </button>
+          </div>
+
+          <h4>View</h4>
+          <div class="menu-list">
+            <button id="cols-btn" class="menu-item" onclick="toggleColumnMenu()"
+                    title="Show or hide columns">
+              <svg class="ico"><use href="#ic-eye"></use></svg>Columns&hellip;
+            </button>
+            <button id="collapse-btn" class="menu-item" onclick="toggleHeader()"
+                    aria-pressed="false"
+                    title="Collapse the header band for maximum table height (H)">
+              <svg class="ico"><use href="#ic-chevron-up"></use></svg>Compact header<kbd>H</kbd>
+            </button>
+          </div>
+
+          <h4>Data</h4>
+          <div class="menu-list">
+            <button class="menu-item" onclick="exportCurrentCSV()">
+              <svg class="ico"><use href="#ic-download"></use></svg>Export CSV
+            </button>
+            <button class="menu-item" onclick="clearFilters()">
+              <svg class="ico"><use href="#ic-filter-off"></use></svg>Clear filters<kbd>Esc</kbd>
+            </button>
+            <button id="logout-btn" class="menu-item" onclick="logout()"
+                    title="Sign out of Cloudflare Access on this device">
+              <svg class="ico"><use href="#ic-logout"></use></svg>Sign out
+            </button>
+          </div>
         </div>
 
         <!-- COLUMN VISIBILITY MENU -->
@@ -279,7 +347,11 @@
         <button onclick="setDatePreset('5d')">Last 5d</button>
         <button onclick="setDatePreset('all')">All</button>
       </div>
-      <span class="date-mode-badge live" id="date-mode-badge">● Live</span>
+      <!-- #date-mode-badge used to sit here. It is the same element with the
+           same id, moved into the state chip in the command bar: "which data
+           am I looking at" belongs beside "what is the data doing", not at
+           the end of the control that happens to set it. main.js still writes
+           it through updateDateMode() and knows nothing about the move. -->
     </div>
 
     <!-- PIN / CHOP DETECTOR — a full-width strip rather than a fourth column
@@ -290,7 +362,19 @@
          a single pair of wall levels would be wrong for most rows. -->
     <div id="pin-card" style="display:none"></div>
 
-    <div class="top-row">
+    <!-- THE RAIL
+         Was .top-row: a three-column grid (KPI cards | regime + sentiment |
+         news) that re-laid itself out at 1500, 1000 and 700px. It was the
+         reason #top ran 380-580px tall, and on a 900px laptop that was half
+         the viewport spent before the first signal row.
+
+         One row now, one height, no internal breakpoints above the phone. The
+         five KPI cells keep their ids and their classes - renderCards() in
+         render.js writes exactly the markup it wrote before - so what changed
+         is the box they sit in, not what fills it. Regime and news moved
+         behind the two disclosure buttons in the command bar; the sentiment
+         meter is small enough to stay. -->
+    <div class="rail">
       <div class="grid" id="cards">
         <!-- Skeleton loading state shown on first load -->
         <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
@@ -300,37 +384,49 @@
         <div class="skeleton-card"><div class="skel-label"></div><div class="skel-val"></div></div>
       </div>
 
-      <!-- MIDDLE COLUMN: regime + sentiment, stacked beside the cards so they
-           no longer consume their own full-width rows -->
-      <div class="top-mid">
-        <!-- REGIME CONTEXT STRIP -->
-        <div class="regime-strip" id="regime-strip" style="display:none">
-          <div class="rg-title panel-title"><svg class="ico"><use href="#ic-gauge"></use></svg>Regime</div>
-          <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
-        </div>
+      <!-- The two regime values that gate a signal, kept on screen while the
+           other four live in the disclosure. Written by renderRegime() in the
+           same pass that fills the strip, for the same reason the phone's
+           grade chips are painted alongside the desktop ones: one writer,
+           two views, never one view reading the other. Stays hidden until
+           there is a regime row, so it never shows a dash as if it were a
+           reading. -->
+      <div class="rail-regime" id="regime-mini" hidden></div>
 
-        <!-- SESSION SENTIMENT BAR -->
-        <div class="sentiment-card" id="sentiment-card">
-          <div class="sentiment-header">
-            <span class="panel-title" style="white-space:nowrap"><svg class="ico"><use href="#ic-chart"></use></svg>Session Flow Sentiment</span>
-            <span id="sentiment-bias-label">Calculating sentiment...</span>
-          </div>
-          <div class="sentiment-bar-track" title="Call (Green) vs Put (Red) Flow Ratio">
-            <div class="sentiment-bar-fill" id="sentiment-bar-fill" style="width:50%"></div>
-          </div>
+      <!-- SESSION SENTIMENT -->
+      <div class="sentiment-card" id="sentiment-card">
+        <div class="sentiment-header">
+          <span class="panel-title" style="white-space:nowrap"><svg class="ico"><use href="#ic-chart"></use></svg>Session Flow Sentiment</span>
+          <span id="sentiment-bias-label">Calculating sentiment...</span>
+        </div>
+        <div class="sentiment-bar-track" title="Call (Green) vs Put (Red) Flow Ratio">
+          <div class="sentiment-bar-fill" id="sentiment-bar-fill" style="width:50%"></div>
         </div>
       </div>
+    </div>
 
-      <!-- MARKET NEWS PANEL (inline) — the wrapper is what the grid sizes;
-           the panel is absolutely positioned inside it so a long headline list
-           can never stretch the header row. -->
-      <div class="news-col">
-        <div class="news-inline" id="news-panel">
-          <h4 class="panel-title"><svg class="ico"><use href="#ic-news"></use></svg>Market News
-            <button class="icon-btn" onclick="loadNews(true)" aria-label="Refresh news" title="Reload headlines"><svg class="ico"><use href="#ic-refresh"></use></svg></button>
-          </h4>
-          <div id="news-body">Loading...</div>
-        </div>
+    <!-- DISCLOSURE PANELS
+         Both are plain blocks in the flow of #top, toggled with the `hidden`
+         attribute, NOT floating popovers. A popover over a live table would
+         cover the rows you opened it to compare against, and these are
+         reference panels you read beside the data rather than menus you pick
+         from. Opening one grows the band; closing it gives the space back.
+
+         #regime-strip and #news-panel keep their ids and their inner markup
+         untouched, so renderRegime() and loadNews() are unaware of the move. -->
+    <div class="disclosure" id="regime-panel" hidden>
+      <div class="regime-strip" id="regime-strip" style="display:none">
+        <div class="rg-title panel-title"><svg class="ico"><use href="#ic-gauge"></use></svg>Regime</div>
+        <div id="regime-body" style="display:flex;flex:1;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <div class="disclosure" id="news-panel-wrap" hidden>
+      <div class="news-inline" id="news-panel">
+        <h4 class="panel-title"><svg class="ico"><use href="#ic-news"></use></svg>Market News
+          <button class="icon-btn" onclick="loadNews(true)" aria-label="Refresh news" title="Reload headlines"><svg class="ico"><use href="#ic-refresh"></use></svg></button>
+        </h4>
+        <div id="news-body">Loading...</div>
       </div>
     </div>
   </div>
@@ -773,25 +869,25 @@
        what it calls. main.js is last because it holds the startup calls.
 
        ?v= tracks BUILD so a cached script cannot pair with a newer page. -->
-  <script src="js/config.js?v=2.12.1"></script>
-  <script src="js/alerts.js?v=2.12.1"></script>
-  <script src="js/chrome.js?v=2.12.1"></script>
-  <script src="js/news.js?v=2.12.1"></script>
-  <script src="js/signal.js?v=2.12.1"></script>
-  <script src="js/format.js?v=2.12.1"></script>
-  <script src="js/filters.js?v=2.12.1"></script>
-  <script src="js/charts.js?v=2.12.1"></script>
-  <script src="js/perf.js?v=2.12.1"></script>
+  <script src="js/config.js?v=2.13.0"></script>
+  <script src="js/alerts.js?v=2.13.0"></script>
+  <script src="js/chrome.js?v=2.13.0"></script>
+  <script src="js/news.js?v=2.13.0"></script>
+  <script src="js/signal.js?v=2.13.0"></script>
+  <script src="js/format.js?v=2.13.0"></script>
+  <script src="js/filters.js?v=2.13.0"></script>
+  <script src="js/charts.js?v=2.13.0"></script>
+  <script src="js/perf.js?v=2.13.0"></script>
   <!-- After format.js (uses escapeHtml, tsKey) and before render.js, which
        calls signalWallFlag() while building each flow row. -->
-  <script src="js/pin.js?v=2.12.1"></script>
-  <script src="js/rpc.js?v=2.12.1"></script>
-  <script src="js/render.js?v=2.12.1"></script>
-  <script src="js/premium.js?v=2.12.1"></script>
+  <script src="js/pin.js?v=2.13.0"></script>
+  <script src="js/rpc.js?v=2.13.0"></script>
+  <script src="js/render.js?v=2.13.0"></script>
+  <script src="js/premium.js?v=2.13.0"></script>
   <!-- After format.js (escapeHtml, fmt helpers) and rpc.js (rpcWithRetry).
        Loaded on demand by switchTab, like premium.js. -->
-  <script src="js/volregime.js?v=2.12.1"></script>
-  <script src="js/main.js?v=2.12.1"></script>
+  <script src="js/volregime.js?v=2.13.0"></script>
+  <script src="js/main.js?v=2.13.0"></script>
 </body>
 
 </html>

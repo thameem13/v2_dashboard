@@ -52,38 +52,105 @@
     /* TOP SECTION */
     #top {
       flex-shrink: 0;
-      padding: 10px 14px 0;
+      padding: var(--sp-2) 14px 0;
       background: var(--bg);
-      /* Safety net only. The natural header is ~356px (measured at 1505px wide
-         with the news list loaded), so the floor of 380px guarantees this never
-         clips real content; the ceiling of 560px stops a runaway band — a long
-         news list once inflated it to ~900px and pushed the table off-screen.
-         A plain vh cap was wrong: at 42vh it engaged on an 850px-tall window
-         and cut off the news panel. */
-      max-height: clamp(380px, 60vh, 580px);
-      /* Scroll rather than clip: if the cap ever does engage (e.g. a narrow
-         window where the band stacks to one column), the content stays
-         reachable instead of being silently cut off. */
+      /* Safety net only, and a much lower one than it was.
+
+         It used to be clamp(380px, 60vh, 580px): the natural band really was
+         ~356px, because .news-col set a 150px floor on the grid row and the
+         regime strip took a row of its own below 1500px. With both behind
+         disclosures the band is ~150px closed and ~360px with both open, so
+         the floor exists only to stop the cap engaging on the closed state
+         and the ceiling only to stop a runaway - a long news list once
+         inflated this to ~900px and pushed the table off-screen. */
+      max-height: clamp(180px, 52vh, 470px);
+      /* Scroll rather than clip: if the cap ever does engage (both
+         disclosures open on a short window), the content stays reachable
+         instead of being silently cut off. */
       overflow-y: auto;
       overflow-x: hidden;
     }
 
-    .row {
+    /* ── COMMAND BAR ──────────────────────────────────────────────────────
+       Replaces .row. The old shape was a two-line title block on the left and
+       a wrapping field of eleven controls on the right, which at 1100px broke
+       onto a second and sometimes third line and moved everything below it.
+       One line, one height, and the controls that remain are few enough that
+       it does not wrap above phone width.
+
+       position:relative is load-bearing. The three .col-menu popovers are
+       anchored to `top: calc(100% + 6px); right: 0`, and NOTHING in their
+       ancestor chain was positioned - not .controls, not .row, not #top - so
+       100% was resolving against the initial containing block, i.e. the
+       viewport height. They are anchored to this element now. */
+    .cmdbar {
+      position: relative;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-2);
+      min-height: 34px;
       flex-wrap: wrap;
     }
 
+    /* ── SESSION STATE CHIP ───────────────────────────────────────────────
+       Groups the three things that each said something true about the session
+       but were scattered across two bands: the live-signal dot, the
+       Live/Historical data mode, and the session summary line. They are not
+       redundant with each other - that was the first guess and it was wrong -
+       so none of them is dropped. They are one object now, which is what
+       makes a disagreement between them visible rather than invisible. */
+    .statechip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      min-width: 0;
+      /* Even on both sides: #live-dot is display:none unless a signal is live
+         on the latest candle, so a left padding tuned to the dot's presence
+         would be wrong most of the time. */
+      padding: 3px var(--sp-2);
+      border-radius: var(--r-lg);
+      background: var(--panel);
+      box-shadow: var(--sh-card);
+    }
+
+    [data-theme="dark"] .statechip {
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .statechip .sub {
+      margin-top: 0;
+      font-size: var(--fs-sm);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* rpc.js writes 'Load failed' into #sub. Amber, not red: the last good
+       rows are still on screen and still true, so this is staleness, not an
+       error - and red beside a red PUT value would read as market data. */
+    .statechip.failed {
+      box-shadow: inset 0 0 0 1px var(--amber);
+    }
+
+    .statechip.failed .sub {
+      color: var(--amber);
+      font-weight: 600;
+    }
+
+    /* 22px was the right size for a title owning its own line. In a 34px
+       command bar beside a select and a status chip it was the loudest thing
+       on a page whose loudest thing should be a grade-A signal, so it drops to
+       the top of the body scale. --fs-title is now unused and stays defined in
+       tokens.css for whatever wants a page title next. */
     h1 {
-      font-size: var(--fs-title);
+      font-size: var(--fs-xl);
       font-weight: 650;
-      letter-spacing: -0.4px;
+      letter-spacing: -0.3px;
       display: flex;
       align-items: center;
       gap: 6px;
+      flex: none;
     }
 
     .sub {
@@ -92,11 +159,19 @@
       margin-top: 2px;
     }
 
+    /* Pushed right by the chip's margin rather than by its own auto margin.
+       The note further down this file about auto margins in a wrapping flex
+       container still applies - .controls can still wrap at phone width - so
+       the spacer is the chip's, which never wraps away. */
     .controls {
       display: flex;
       gap: 6px;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .cmdbar .statechip {
+      margin-right: auto;
     }
 
     button,
@@ -128,8 +203,8 @@
     }
 
     button.active-toggle {
-      border-color: var(--green);
-      color: var(--green);
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
 
@@ -219,7 +294,7 @@
       display: block;
       height: 100%;
       width: 35%;
-      background: var(--blue);
+      background: var(--accent);
       animation: load-slide 1.1s ease-in-out infinite;
     }
 

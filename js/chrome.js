@@ -38,6 +38,15 @@
       if (label) btn.title = label;
     }
 
+    /* The session chip's failure state. Its own function rather than a class
+       written inline from rpc.js, because the chip now carries three writers'
+       output (#sub, #date-mode-badge, #live-dot) and the wrapper itself should
+       have exactly one. */
+    function setChipFailed(failed) {
+      const chip = document.getElementById('state-chip');
+      if (chip) chip.classList.toggle('failed', !!failed);
+    }
+
     function applyTheme(name) {
       const html = document.documentElement;
       if (name === 'dark') html.setAttribute('data-theme', 'dark');
@@ -49,8 +58,11 @@
         icon: name === 'dark' ? 'ic-sun' : 'ic-moon',
         label: name === 'dark' ? 'Switch to light theme (T)' : 'Switch to dark theme (T)'
       });
+      /* These two are literals rather than a read of --bg because the browser
+         chrome needs a colour, not a token. They must be kept in step with
+         --bg in tokens.css by hand; they moved with it in the token pass. */
       const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', name === 'dark' ? '#0b0e11' : '#f7f7f5');
+      if (meta) meta.setAttribute('content', name === 'dark' ? '#090c11' : '#e9ecf1');
     }
 
     function toggleTheme() {
@@ -184,13 +196,98 @@
       const target = wantVol ? volMenu : flowMenu;
       const other = wantVol ? flowMenu : volMenu;
       if (other) other.classList.remove('visible');
+      /* #cols-btn lives inside the overflow menu now, so this is reached with
+         that menu open and both would be stacked on the same corner. */
+      closeMoreMenu();
       if (target) target.classList.toggle('visible');
     }
 
     function closeColumnMenus() {
+      ['col-menu', 'col-menu-vol', 'more-menu'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m) m.classList.remove('visible');
+      });
+      setExpanded('more-btn', false);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       OVERFLOW MENU
+       ══════════════════════════════════════════════════════
+       Holds the eight controls that used to sit in the command bar as
+       equal-weight icon buttons. Shares .col-menu's surface and anchoring, so
+       there is one popover shape on the page rather than two.
+       ══════════════════════════════════════════════════════ */
+    function setExpanded(id, open) {
+      const btn = document.getElementById(id);
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function toggleMoreMenu() {
+      const menu = document.getElementById('more-menu');
+      if (!menu) return;
+      // One popover at a time; the column menus anchor to the same corner.
       ['col-menu', 'col-menu-vol'].forEach(id => {
         const m = document.getElementById(id);
         if (m) m.classList.remove('visible');
+      });
+      setExpanded('more-btn', menu.classList.toggle('visible'));
+    }
+
+    function closeMoreMenu() {
+      const menu = document.getElementById('more-menu');
+      if (!menu) return;
+      menu.classList.remove('visible');
+      setExpanded('more-btn', false);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       DISCLOSURES — REGIME AND NEWS
+       ══════════════════════════════════════════════════════
+       Both were columns in the old header band and between them were most of
+       its height. They are blocks in the flow of #top, not popovers, because
+       they are reference panels read BESIDE the table rather than menus picked
+       FROM: a popover would cover the rows you opened one to compare against.
+
+       The `hidden` attribute is the only state. The CSS reads
+       .disclosure:not([hidden]) directly, so there is no class to keep in
+       step with it.
+       ══════════════════════════════════════════════════════ */
+    const DISCLOSURES = {
+      regime: { panel: 'regime-panel', btn: 'regime-btn' },
+      news: { panel: 'news-panel-wrap', btn: 'news-btn' }
+    };
+
+    function toggleDisclosure(name, force) {
+      const d = DISCLOSURES[name];
+      if (!d) return;
+      const panel = document.getElementById(d.panel);
+      if (!panel) return;
+
+      const open = force === undefined ? panel.hidden : !!force;
+      panel.hidden = !open;
+      setExpanded(d.btn, open);
+
+      const btn = document.getElementById(d.btn);
+      if (btn) btn.classList.toggle('active-toggle', open);
+
+      try { localStorage.setItem('v2-disc-' + name, open ? '1' : '0'); } catch (e) { }
+
+      /* News is fetched on arrival, the way a tab's data is. It used to load
+         on startup and again every five minutes whether or not anyone could
+         see it; a closed panel should cost nothing. loadNews() caches, so
+         every open after the first is free. */
+      if (open && name === 'news' && typeof loadNews === 'function') loadNews();
+    }
+
+    /* Which panels were open is a per-device preference, like the theme and
+       the collapsed header, so it survives a reload. Default closed: the band
+       being small is the point, and a trader who wants regime on screen opens
+       it once. */
+    function initDisclosures() {
+      Object.keys(DISCLOSURES).forEach(name => {
+        let saved = null;
+        try { saved = localStorage.getItem('v2-disc-' + name); } catch (e) { }
+        toggleDisclosure(name, saved === '1');
       });
     }
 

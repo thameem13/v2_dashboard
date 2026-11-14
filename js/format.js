@@ -115,6 +115,36 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       FLOW MAGNITUDE BAR
+       ══════════════════════════════════════════════════════
+       A centre-out bar beside the flow number, so a scan down the column reads
+       magnitude without reading digits. divergence_flow runs roughly
+       -1.8..+1.9, so FLOW_FULL is the value at which a half-bar is full;
+       beyond it the bar clamps rather than overflowing its cell.
+
+       EMITS NO TEXT NODES, and that is load-bearing. The flow column's
+       textContent is read verbatim in three places - applyFlowFilters() via
+       c[4].textContent, the sort comparator, and the CSV export - so a bar
+       that contributed even one character to the cell would break the filter,
+       the sort and the export together. Every element here is empty.
+
+       The fill takes its colour from currentColor, which the wrapper's
+       flowpos/flowneg class sets. That is deliberate rather than lazy: the bar
+       then cannot disagree with the number it sits beside, and this function
+       makes no judgement of its own about what a sign means. Only the
+       direction of growth is geometry - right of centre for positive, left for
+       negative. */
+    const FLOW_FULL = 1.9;
+
+    function flowBar(v) {
+      const n = +v;
+      if (v == null || v === '' || isNaN(n) || n === 0) return '';
+      const pct = (Math.min(Math.abs(n) / FLOW_FULL, 1) * 50).toFixed(1);
+      const side = n > 0 ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`;
+      return `<span class="flowbar" aria-hidden="true"><i style="${side}"></i></span>`;
+    }
+
+    /* ══════════════════════════════════════════════════════
        RELATIVE "LAST SYNCED" TIMER (#4)
        ══════════════════════════════════════════════════════ */
     function updateSyncAge() {

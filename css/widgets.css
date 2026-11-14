@@ -753,7 +753,7 @@
     .vr-warn {
       border: 1px solid var(--amber);
       border-radius: var(--r-sm);
-      background: rgba(138, 100, 0, 0.08);
+      background: color-mix(in srgb, var(--amber) 8%, transparent);
       padding: 8px 10px;
       margin: 8px 0;
       font-family: var(--font-ui);
@@ -868,11 +868,12 @@
       border-color: var(--line);
     }
 
-    /* --amber is a different hue in dark mode, so the tint is restated
-       rather than inherited from the light-theme rgba. */
-    [data-theme="dark"] .vr-warn {
-      background: rgba(210, 153, 34, 0.10);
-    }
+    /* The dark restatement of .vr-warn's tint is gone. It existed because the
+       base rule held a literal rgba() of the LIGHT amber, which dark had to
+       patch; the tint is now color-mix() over var(--amber), so it follows the
+       token and one rule covers both themes. Same reason the 30 other
+       hardcoded tints across these files went: a literal tuned for one
+       palette is a rule that has to be remembered twice. */
 
     /* ══════════════════════════════════════════════════════
        SESSION FLOW TABLE (Volume Regime tab, lead panel)

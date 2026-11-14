@@ -117,14 +117,19 @@
       const badge = document.getElementById('date-mode-badge');
       const pollSelect = document.getElementById('poll-interval');
 
+      /* The bullet is gone from both labels. It was the badge's own marker
+         while it sat alone at the end of the date bar; inside the state chip
+         it sits next to #live-dot, which is a real dot meaning a real thing
+         (a signal on the latest candle), and two dots 6px apart read as one
+         indicator saying two different things. */
       if (ctx.isLive) {
-        badge.textContent = '● Live';
+        badge.textContent = 'Live';
         badge.className = 'date-mode-badge live';
         // Re-enable auto-poll
         pollSelect.disabled = false;
         changeInterval();
       } else {
-        badge.textContent = '● Historical';
+        badge.textContent = 'Historical';
         badge.className = 'date-mode-badge historical';
         // Disable auto-poll for historical data
         if (pollTimer) clearInterval(pollTimer);
@@ -244,11 +249,18 @@
     initPremParams();
     initPush();
     initSound();
+    initDisclosures();  // re-opens regime/news if they were left open; may call loadNews()
     loadAll();
     loadStrategies();   // fills the dropdown; loadAll already has the saved id
     changeInterval();
-    loadNews();
-    setInterval(() => loadNews(), 5 * 60 * 1000);
+    /* News refreshes only while its panel is open. It used to be fetched on
+       load and every five minutes regardless; behind a disclosure, a closed
+       panel should not be spending a request. initDisclosures() above does the
+       first load when the panel was left open. */
+    setInterval(() => {
+      const panel = document.getElementById('news-panel-wrap');
+      if (panel && !panel.hidden) loadNews();
+    }, 5 * 60 * 1000);
 
     /* Build-staleness check. Deliberately not on the 10s data poll: a deploy
        is a rare event and one small HTML fetch every 5 minutes is enough.

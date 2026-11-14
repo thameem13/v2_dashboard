@@ -315,6 +315,14 @@
       const senti = document.getElementById('sentiment-card');
       if (senti) senti.style.display = 'none';
 
+      /* The regime strip's two other views have to go with it, or the rail
+         keeps showing SPY's VIX1D under an all-strategies heading and the
+         Regime button opens a panel that is deliberately empty. */
+      const mini = document.getElementById('regime-mini');
+      if (mini) { mini.hidden = true; mini.innerHTML = ''; }
+      const regimeBtn = document.getElementById('regime-btn');
+      if (regimeBtn) regimeBtn.style.display = 'none';
+
       const liveDot = document.getElementById('live-dot');
 
       if (!rows.length) {
@@ -477,7 +485,7 @@
         <td class="col-time">${fmtTime(x.candle_time_ny)}</td>
         <td class="col-price">${escapeHtml(x.price)}</td>
         <td class="col-strike">${escapeHtml(x.atm_strike)}${x.is_flip ? ' (flip)' : ''}</td>
-        <td class="col-flow ${flowCls}">${escapeHtml(x.flow)}</td>
+        <td class="col-flow"><span class="flow-cell ${flowCls}">${escapeHtml(x.flow)}${flowBar(x.flow)}</span></td>
         <td class="col-dir ${dirCls}">${x.direction === 'none' ? '-' : escapeHtml(x.direction)}</td>
         <td class="col-poc muted">${x.poc == null ? '-' : escapeHtml(x.poc)}</td>
         <td class="col-room">${x.room == null ? '-' : escapeHtml(x.room)}</td>

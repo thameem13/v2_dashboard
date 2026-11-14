@@ -135,6 +135,12 @@
       refBtn.setAttribute('aria-busy', 'true');
       setBusy(true, loadingLabel());
       document.getElementById('err').innerHTML = '';
+      /* Cleared on the way in, not on success: the renderers put the real
+         summary back into #sub when the data lands, and if this fetch fails
+         too the catch below sets it again. Clearing it here means the chip is
+         never left asserting a failure that a later poll already recovered
+         from. */
+      setChipFailed(false);
 
       // (#6) Save scroll positions before re-render
       const flowWrap = document.getElementById('flow-wrap');
@@ -277,6 +283,12 @@
           // (#18) Error boundary — show user-friendly message
           document.getElementById('err').innerHTML = `<div class="err">Could not load data: ${escapeHtml(e.message)}</div>`;
           document.getElementById('sub').textContent = 'Load failed';
+          /* The rows still on screen are the last ones that did load, and
+             they are still true - just older than they look. Marking the chip
+             says so at the one place that otherwise keeps claiming the
+             session is current. Amber, not red: this is staleness, and a red
+             chip beside a red PUT value would read as market data. */
+          setChipFailed(true);
         }
       } finally {
         isFetching = false;
