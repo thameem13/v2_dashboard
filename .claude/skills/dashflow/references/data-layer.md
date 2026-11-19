@@ -127,6 +127,28 @@ created_at  timestamptz
 
 Two rows today. This table is the seam that makes new strategies additive.
 
+### `v2_regime_day` / `v2_regime_config` - the advisory regime verdict
+
+```
+v2_regime_day   (PK trade_date)
+  open_vix1d  open_impl_move  open_vix1d_captured_ny  intraday_rows   frozen at the open
+  regime_band  regime_band_fine  verdict  confidence_label  band_sample_days
+  event_context    text  PRE_EVENT | POST_EVENT | CLEAN | UNSET, set by hand
+  candles_logged  realized_range  path  net_move  efficiency_pct
+  realized_vs_implied  data_complete  scored_at                      recomputed
+```
+
+Written by `v2_regime_snapshot(p_date)`, which the read RPCs call themselves -
+there is no cron. The open columns and the verdict are **write-once**; only the
+outcome columns are recomputed. `v2_regime_config` is one row holding every
+threshold, like `v2_vol_regime_config`.
+
+`v2_regime_source` is the view behind it: price math from **deduplicated**
+`spy_bucket_log_v2`, `vix1d` / `impl_move` from `spy_intraday_log` because they
+exist nowhere else. SPY-only for that reason, whatever `p_strategy` says.
+
+Source and the reasoning: `sql/regime_verdict.sql`, `REGIME_VERDICT.md`.
+
 ### Supporting views
 
 | View | Contents |
@@ -161,6 +183,10 @@ All `SECURITY DEFINER`, `search_path` pinned to `public, pg_temp`, and **no**
 | `v2_signal_performance_by_strategy` | `p_start, p_end, p_strategy` | forward returns per signal |
 | `v2_pin_series_by_strategy` | `p_start, p_end, p_strategy` | per-candle `call_wall` / `put_wall` |
 | `v2_premium_sources` | - | which strategies have a premium feed |
+| `v2_regime_today_by_strategy` | `p_date, p_strategy` | the regime verdict card; **also upserts** the snapshot |
+| `v2_regime_history_by_strategy` | `p_date, p_days, p_strategy` | the last N sessions, verdict vs outcome |
+| `v2_regime_tally_by_strategy` | `p_date, p_strategy` | running record per verdict and per raw band |
+| `v2_regime_set_event_by_strategy` | `p_date, p_context, p_strategy` | **the only mutating RPC on the allowlist** - sets `event_context`, nothing else |
 | `v2_premium_backtest_by_strategy` | `p_start, p_end, p_strategy, p_tp, p_sl, p_grades, p_entry_lag_min, p_entry_window_min` | the trade ledger |
 | `v2_vol_regime_profile_by_strategy` | `p_strategy` | |
 | `v2_vol_regime_perf_by_strategy` | `p_strategy` | signal performance by regime |

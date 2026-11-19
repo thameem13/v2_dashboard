@@ -46,6 +46,26 @@ const ALLOWED = new Set([
   'v2_vol_regime_status_by_strategy',
   'v2_vol_regime_days_by_strategy',
   'v2_vol_regime_flow_by_strategy',
+  // "Today's Regime" advisory verdict card. The first three are reads; they
+  // also upsert today's snapshot row, which is why they are not described as
+  // read-only here even though the dashboard treats them as reads.
+  //
+  // v2_regime_set_event_by_strategy is THE ONLY MUTATING CALL ON THIS
+  // ALLOWLIST. Until it, the dashboard wrote nothing at all, and that was a
+  // property worth having: an allowlist of pure reads cannot be turned into a
+  // write primitive by anything that gets past Access. It is here because the
+  // event tag has to be entered by hand and has to persist.
+  //
+  // What keeps the surface narrow is in SQL, not here: the function takes one
+  // date and one of four literal values, rejects anything else with 22023,
+  // cannot create a row for a date that has no logged session, and can touch
+  // no column but event_context. It cannot reach a verdict, an open, an
+  // outcome, or any table the signal path reads. If a fifth value is ever
+  // wanted, that is a migration - not a change in this file.
+  'v2_regime_today_by_strategy',
+  'v2_regime_history_by_strategy',
+  'v2_regime_tally_by_strategy',
+  'v2_regime_set_event_by_strategy',
   // The original SPY-only set. Kept callable so a cached page from before the
   // switch keeps working, and so there is something to fall back to.
   'v2_dashboard_today',

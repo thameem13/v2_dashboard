@@ -257,6 +257,13 @@
     initDisclosures();  // re-opens regime/news if they were left open; may call loadNews()
     loadAll();
     loadStrategies();   // fills the dropdown; loadAll already has the saved id
+    /* The regime verdict, fetched once rather than on the 10s poll: it is
+       frozen at the open by definition. Unlike the news panel it loads even
+       when its disclosure is closed, because the verdict word is mirrored
+       onto the Regime button - a morning read you have to go hunting for is
+       one that gets skipped on the morning it matters. Advisory only; nothing
+       in loadAll() or the alert path waits on it or reads it. */
+    loadRegimeVerdict();
     changeInterval();
     /* News refreshes only while its panel is open. It used to be fetched on
        load and every five minutes regardless; behind a disclosure, a closed
