@@ -80,14 +80,17 @@ const REGIME_EVENT_LABEL = {
   'PRE_EVENT': 'Pre-event',
   'POST_EVENT': 'Post-event',
   'CLEAN': 'Clean',
-  'UNSET': 'Unset'
+  /* Not "Unset". The stored UNSET now means "no manual override, use the
+     calendar" - the day still gets a context, derived from v2_market_event.
+     Calling that "Unset" would read as untagged when it usually is not. */
+  'UNSET': 'Auto (calendar)'
 };
 
 const REGIME_EVENT_HELP = {
-  'PRE_EVENT': 'Known catalyst after today’s close',
+  'PRE_EVENT': 'Known catalyst still ahead — after today’s close, or later today',
   'POST_EVENT': 'Major catalyst resolved since the last close',
   'CLEAN': 'No scheduled catalyst either side',
-  'UNSET': 'Not tagged'
+  'UNSET': 'Take the context from the event calendar'
 };
 
 
@@ -110,8 +113,8 @@ async function loadRegimeVerdict(force) {
        reads as "no history", which is a claim about the data rather than a
        loading state. */
     let [today, hist, tally] = await Promise.all([
-      rpcWithRetry('v2_regime_today_by_strategy', null, { p_date: want, p_strategy: currentStrategy }),
-      rpcWithRetry('v2_regime_history_by_strategy', null, { p_date: want, p_strategy: currentStrategy }),
+      rpcWithRetry('v2_regime_card_by_strategy', null, { p_date: want, p_strategy: currentStrategy }),
+      rpcWithRetry('v2_regime_strip_by_strategy', null, { p_date: want, p_strategy: currentStrategy }),
       rpcWithRetry('v2_regime_tally_by_strategy', null, { p_date: want, p_strategy: currentStrategy })
     ]);
 
@@ -124,7 +127,7 @@ async function loadRegimeVerdict(force) {
     if ((!today || !today.length) && hist && hist.length) {
       shown = hist[hist.length - 1].trade_date;
       regimeVerdictStale = true;
-      today = await rpcWithRetry('v2_regime_today_by_strategy', null,
+      today = await rpcWithRetry('v2_regime_card_by_strategy', null,
         { p_date: shown, p_strategy: currentStrategy });
     }
 
@@ -256,7 +259,33 @@ function renderRegimeVerdict() {
   const conf = d.confidence_label || 'no sample';
   const confCls = /hypothesis|untested|no sample/.test(conf) ? 'rv-conf-weak' : 'rv-conf';
 
-  const downgraded = !!d.downgrade_reason;
+  /* A POST_EVENT day whose band verdict is ALREADY CAUTION produced
+     "downgraded from CAUTION to CAUTION", which is noise dressed as a
+     finding. The reason still travels on the row - the history and the
+     tally want it - but the banner only earns its place when the downgrade
+     actually changed something. */
+  const downgraded = !!d.downgrade_reason && d.verdict !== d.effective_verdict;
+
+  /* The select shows the OVERRIDE, not the effective context: 'manual' means
+     a human set it, anything else means the calendar decided and the control
+     sits at Auto. */
+  const evSource = d.event_source || 'none';
+  const overrideVal = evSource === 'manual' ? (d.event_context || 'UNSET') : 'UNSET';
+
+  let evNote;
+  if (evSource === 'manual') {
+    evNote = 'Set by hand, overriding the calendar. Choose Auto to hand it back.';
+  } else if (evSource === 'derived') {
+    evNote = 'From the calendar: ' + escapeHtml(String(d.event_detail || ''))
+      + '. Override it if that is wrong.';
+  } else {
+    /* Not "no events today". The calendar is hand-seeded and only claims
+       CLEAN inside a window someone has declared complete - outside one,
+       silence means nobody has checked, which is not the same thing and
+       must not be shown as if it were. */
+    evNote = 'No calendar entry for this date, and the calendar is not confirmed'
+      + ' complete here — so no context is claimed. Set one by hand if you know better.';
+  }
 
   /* Warnings about the INPUT, which this card cannot fix and must not hide. */
   const warn = [];
@@ -335,6 +364,14 @@ function renderRegimeVerdict() {
         </div>` : ''}
 
       <div class="rv-event">
+        <!-- The context now comes from the event calendar by default, so this
+             control is an OVERRIDE, not a daily chore. Its value is the
+             manual tag if one is set and "Auto" otherwise - never the
+             derived value, or selecting Auto would look like a no-op.
+
+             What the calendar concluded, and why, is printed beside it:
+             a derived tag that cannot be questioned is worse than no tag,
+             because the calendar is hand-seeded and will be wrong sometimes. -->
         <label for="rv-event">Event context</label>
         <!-- ctrl-select, not a bare select: that class is what themes a
              control on this page. Without it the dropdown rendered as the
@@ -342,11 +379,10 @@ function renderRegimeVerdict() {
              the 36px tap target the phone rules give every other control. -->
         <select id="rv-event" class="ctrl-select" onchange="setRegimeEvent(this.value)">
           ${['UNSET', 'PRE_EVENT', 'POST_EVENT', 'CLEAN'].map(k => `
-            <option value="${k}" title="${escapeHtml(REGIME_EVENT_HELP[k])}"${d.event_context === k ? ' selected' : ''}>${escapeHtml(REGIME_EVENT_LABEL[k])}</option>
+            <option value="${k}" title="${escapeHtml(REGIME_EVENT_HELP[k])}"${overrideVal === k ? ' selected' : ''}>${escapeHtml(REGIME_EVENT_LABEL[k])}</option>
           `).join('')}
         </select>
-        <span class="rv-note" id="rv-event-note">Tagged by hand and saved against
-          ${escapeHtml(regimeVerdictDate || '')}. Post-event downgrades the verdict.</span>
+        <span class="rv-note" id="rv-event-note">${evNote}</span>
       </div>
 
       ${warn.length ? `<div class="rv-warn">${warn.map(w => `<div>${iconMarkup('ic-alert')}${w}</div>`).join('')}</div>` : ''}
@@ -404,9 +440,18 @@ function renderRegimeTally() {
      scale instead. */
   const fineOrder = { 'LT10': 0, 'MID_10_13': 1, 'MID_13_17': 2, 'GTE17': 3, 'NONE': 4 };
   const fine = byKind('fine_band').sort((a, b) => (fineOrder[a.label] ?? 9) - (fineOrder[b.label] ?? 9));
+  const evOrder = { 'PRE_EVENT': 0, 'POST_EVENT': 1, 'CLEAN': 2, 'UNSET': 3 };
+  const ev = byKind('event').sort((a, b) => (evOrder[a.label] ?? 9) - (evOrder[b.label] ?? 9));
 
+  /* UNSET means two different things in two places. On the control it is
+     "defer to the calendar"; in this table it is "the calendar had no entry
+     and claimed nothing", which is a bucket of unknowns rather than a
+     setting. Same code, different sentence. */
+  const TALLY_LABEL = Object.assign({}, REGIME_FINE_LABEL, REGIME_EVENT_LABEL, {
+    'UNSET': 'No calendar entry'
+  });
   const row = r => `<tr>
-      <td>${escapeHtml(REGIME_FINE_LABEL[r.label] || String(r.label || '-').replace(/_/g, ' '))}</td>
+      <td>${escapeHtml(TALLY_LABEL[r.label] || String(r.label || '-').replace(/_/g, ' '))}</td>
       <td class="num">${escapeHtml(String(r.days ?? '-'))}</td>
       <td class="num">${escapeHtml(String(r.hits ?? '-'))}</td>
       <td class="num">${r.hit_rate_pct === null || r.hit_rate_pct === undefined ? '&mdash;' : escapeHtml(String(r.hit_rate_pct)) + '%'}</td>
@@ -450,6 +495,18 @@ function renderRegimeTally() {
           <thead><tr><th>Band</th><th class="num">Days</th><th class="num">Hits</th>
             <th class="num">Rate</th><th class="num">Median</th><th class="num">Net</th><th class="num">Eff</th></tr></thead>
           <tbody>${fine.map(row).join('')}</tbody>
+        </table></div>
+      </details>` : ''}
+      ${ev.length ? `<details class="rv-details">
+        <summary>By event context (${ev.length})</summary>
+        <div class="rv-sub">Does a day with resolved news behind it deliver less than one with
+          news still ahead? This is the question the event calendar exists to answer. The
+          calendar is hand-seeded and incomplete, so &ldquo;Auto (calendar)&rdquo; here means
+          no entry and no claim &mdash; not a quiet day.</div>
+        <div class="rv-tscroll"><table class="rv-table">
+          <thead><tr><th>Context</th><th class="num">Days</th><th class="num">Hits</th>
+            <th class="num">Rate</th><th class="num">Median</th><th class="num">Net</th><th class="num">Eff</th></tr></thead>
+          <tbody>${ev.map(row).join('')}</tbody>
         </table></div>
       </details>` : ''}
     </details>`;

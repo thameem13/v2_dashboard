@@ -101,6 +101,51 @@ are asymmetric — a wrong CAUTION costs a skipped trade, a wrong FAVOURABLE
 costs a loss — not because one day is evidence. The card labels it
 "untested - no prior session in this band" and should keep doing so.
 
+## The event calendar
+
+The event context is now **derived from a calendar**, not typed in each
+morning. `v2_market_event` holds the handful of dates that plausibly matter;
+`v2_regime_event_derive()` turns them into PRE/POST/CLEAN per session. The
+dropdown on the card is an **override**, not a daily chore - it reads "Auto
+(calendar)" unless a human has overruled it.
+
+Why hand-seeded rather than an API: the hard part was never fetching dates.
+An economic calendar pulled wholesale marks nearly every session as an event
+day, which carries the same information as marking none. The shortlist is the
+judgement, and it lives in rows so that revising it is an INSERT, not a
+deploy.
+
+Windows run against the session clock, so an 08:30 CPI is POST for its own
+day and PRE for the day before, and NVDA at 16:20 on the 17th is PRE for the
+17th and POST for the 18th. That pair now reproduces itself with nobody
+tagging anything.
+
+**FOMC is the awkward case.** It lands 14:00 ET - intraday, neither after a
+close nor before an open. It is treated as PRE for its own day, because what
+matters to a verdict frozen at 09:35 is whether the catalyst is still ahead.
+That widens the original definition and is the one rule here worth arguing
+with.
+
+**CLEAN is never inferred from silence.** A date the calendar does not know
+about derives to UNSET and renders as "no calendar entry", not as a quiet day.
+CLEAN is only asserted inside a window declared complete in
+`v2_market_event_coverage`, and no window is declared yet, because the seeded
+calendar has CPI, FOMC, the jobs report and NVDA but not the other mega-cap
+earnings or PCE.
+
+### First read, on a sample far too small to mean anything
+
+| context | n | median r/i | avg net | efficiency | hit rate |
+|---|---|---|---|---|---|
+| Pre-event | 7 | 0.780 | $7.27 | 14.5% | 43% |
+| Post-event | 3 | 0.493 | $3.18 | 9.1% | 33% |
+| No calendar entry | 38 | 0.667 | $2.81 | 11.3% | 29% |
+
+Directionally this is the hypothesis: days with the catalyst still ahead
+deliver, days priced off resolved news do not. On 7 and 3 sessions it is
+nothing more than a direction, and the 38-day bucket is not a control group -
+it is the days nobody has checked.
+
 ### The event hypothesis this was built to test
 
 2026-11-17 opened 15.92 and delivered $11.81, 0.78 of implied. 2026-11-18
@@ -110,9 +155,8 @@ priced off uncertainty that had already resolved. A vol threshold cannot see
 that difference.
 
 Two of the seven days in the original 13–17 band were pre-NVDA. The band may
-be reading event proximity rather than volatility level. `event_context` is
-tagged by hand — deliberately no calendar scrape — so that this can be found
-out rather than assumed.
+be reading event proximity rather than volatility level, which is what the
+event calendar above exists to find out.
 
 ## Where things live
 

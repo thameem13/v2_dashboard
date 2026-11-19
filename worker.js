@@ -62,6 +62,13 @@ const ALLOWED = new Set([
   // no column but event_context. It cannot reach a verdict, an open, an
   // outcome, or any table the signal path reads. If a fifth value is ever
   // wanted, that is a migration - not a change in this file.
+  // card/strip supersede today/history: their return types gained the event
+  // columns, which CREATE OR REPLACE cannot do, and dropping an RPC the
+  // deployed page is polling leaves a window where it does not exist. The
+  // old pair stays allowlisted so a cached page keeps working and so there
+  // is something to roll back to.
+  'v2_regime_card_by_strategy',
+  'v2_regime_strip_by_strategy',
   'v2_regime_today_by_strategy',
   'v2_regime_history_by_strategy',
   'v2_regime_tally_by_strategy',

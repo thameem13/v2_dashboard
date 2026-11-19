@@ -149,6 +149,21 @@ exist nowhere else. SPY-only for that reason, whatever `p_strategy` says.
 
 Source and the reasoning: `sql/regime_verdict.sql`, `REGIME_VERDICT.md`.
 
+### `v2_market_event` / `v2_market_event_coverage` - the event calendar
+
+Hand-seeded, not scraped. `v2_regime_event_derive(p_date)` turns it into
+PRE_EVENT / POST_EVENT / CLEAN against the **session** clock, so an 08:30 CPI
+is POST for its own day and PRE for the day before. The card's dropdown is an
+override; `event_source` says `manual`, `derived` or `none`.
+
+**`v2_market_event_coverage` is load-bearing.** CLEAN is only asserted for a
+date inside a declared-complete window. Outside one an uneventful date
+derives to UNSET - a missing row is ignorance, not evidence of quiet, and
+without this table every unchecked day would silently count as a quiet one.
+No window is declared today.
+
+Source: `sql/regime_event_calendar.sql`.
+
 ### Supporting views
 
 | View | Contents |
@@ -186,6 +201,8 @@ All `SECURITY DEFINER`, `search_path` pinned to `public, pg_temp`, and **no**
 | `v2_regime_today_by_strategy` | `p_date, p_strategy` | the regime verdict card; **also upserts** the snapshot |
 | `v2_regime_history_by_strategy` | `p_date, p_days, p_strategy` | the last N sessions, verdict vs outcome |
 | `v2_regime_tally_by_strategy` | `p_date, p_strategy` | running record per verdict and per raw band |
+| `v2_regime_card_by_strategy` | `p_date, p_strategy` | **supersedes `v2_regime_today_by_strategy`** - adds the event columns; also upserts the snapshot |
+| `v2_regime_strip_by_strategy` | `p_date, p_days, p_strategy` | **supersedes `v2_regime_history_by_strategy`** - adds the event columns |
 | `v2_regime_set_event_by_strategy` | `p_date, p_context, p_strategy` | **the only mutating RPC on the allowlist** - sets `event_context`, nothing else |
 | `v2_premium_backtest_by_strategy` | `p_start, p_end, p_strategy, p_tp, p_sl, p_grades, p_entry_lag_min, p_entry_window_min` | the trade ledger |
 | `v2_vol_regime_profile_by_strategy` | `p_strategy` | |
