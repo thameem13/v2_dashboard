@@ -1242,6 +1242,7 @@
   letter-spacing: .02em;
   margin-right: auto;
 }
+.rv-adv-short { display: none; }
 .rv-loading { color: var(--dim); font-size: 12px; padding: var(--sp-2) 0; }
 .rv-stale {
   font-size: 11px;
@@ -1344,7 +1345,7 @@
 /* THE STRIP. A column per session: date, verdict initial, open VIX1D,
    delivered or not. Scrolls rather than wraps - the sessions are a sequence
    and a wrapped sequence stops reading as one. */
-.rv-strip-wrap { margin-top: var(--sp-4); }
+.rv-strip-wrap { margin-top: var(--sp-3); }
 .rv-sub { font-size: 10px; color: var(--dim); margin-bottom: var(--sp-2); }
 .rv-strip {
   display: flex;
@@ -1370,7 +1371,32 @@
 .rv-sq-miss { color: var(--red); }
 .rv-sq-na   { color: var(--dim); }
 
-.rv-tally { margin-top: var(--sp-4); }
+/* The running record collapses to a single summary line.
+
+   #top is capped at clamp(180px, 52vh, 470px) with an inner overflow-y:auto,
+   and the band is only ~360px with both disclosures open. A card taller than
+   that is not truncated visibly - it drops below an inner scroll edge with no
+   affordance, which is how the first version of this card managed to be
+   invisible on a 1080p screen while rendering perfectly. Everything below the
+   fold here is deliberately one line until asked for. */
+.rv-tally { margin-top: var(--sp-3); }
+.rv-tally > summary {
+  font-size: 11px;
+  color: var(--txt);
+  cursor: pointer;
+  font-family: var(--font-data);
+}
+.rv-sub-inline {
+  font-family: var(--font-ui);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 10px;
+  margin-right: var(--sp-1);
+}
+/* Seven columns do not fit a phone. The table scrolls inside its own box
+   rather than widening the card past the viewport. */
+.rv-tscroll { overflow-x: auto; margin-top: var(--sp-2); }
 .rv-table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .rv-table th, .rv-table td {
   padding: 3px var(--sp-2);
@@ -1402,8 +1428,37 @@
   vertical-align: middle;
 }
 
+/* ── PHONE ──
+   #top is max-height:55dvh here and the rail becomes one horizontally
+   scrolling line, so the band is tighter still. The card keeps the verdict,
+   the frozen open and the strip at full size - those are the morning read -
+   and gives up the grid's breathing room.
+
+   The badge goes full width rather than sitting beside the figures: at 360px
+   a 190px badge leaves 150px for four figures, which wraps them to one per
+   row and makes the card taller than the side-by-side layout it replaced. */
 @media (max-width: 700px) {
-  .rv-badge { min-width: 0; flex: 1 1 100%; }
+  .rv-card { padding: var(--sp-2); }
+  .rv-body { gap: var(--sp-2); }
+  .rv-badge { min-width: 0; flex: 1 1 100%; padding: var(--sp-2); }
   .rv-verdict { font-size: 19px; }
-  .rv-fig-lead .rv-fig-val { font-size: 21px; }
+  /* Two up, so four figures are two rows rather than four. */
+  .rv-figs { grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); }
+  .rv-fig-val { font-size: 16px; }
+  .rv-fig-lead .rv-fig-val { font-size: 20px; }
+  .rv-head { flex-wrap: wrap; }
+  /* The scope note is the first thing to go when space is short; the verdict
+     word and the sample count are not. */
+  /* The long scope note wrapped the header onto a second line, which cost
+     32px of a band that has about 270px to give. The short form fits beside
+     the title; the claim it drops - that this gates nothing - is in the
+     footer at every width, so nothing is lost by narrowing. */
+  .rv-adv-full { display: none; }
+  .rv-adv-short { display: inline; }
+  .rv-advisory { font-size: 10px; }
+  .rv-fig-lab { font-size: 9px; }
+  .rv-fig-sub { font-size: 9px; }
+  .rv-event { gap: var(--sp-1); }
+  .rv-note { width: 100%; }
+  .rv-foot { font-size: 9px; }
 }

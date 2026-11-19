@@ -68,6 +68,14 @@ const REGIME_VERDICT_CLASS = {
   'NO DATA': 'rv-none'
 };
 
+const REGIME_FINE_LABEL = {
+  'LT10': '< 10',
+  'MID_10_13': '10 – 13',
+  'MID_13_17': '13 – 17',
+  'GTE17': '≥ 17',
+  'NONE': 'no open'
+};
+
 const REGIME_EVENT_LABEL = {
   'PRE_EVENT': 'Pre-event',
   'POST_EVENT': 'Post-event',
@@ -276,7 +284,8 @@ function renderRegimeVerdict() {
         <!-- "SPY session" is not decoration. vix1d and impl_move exist only in
              spy_intraday_log, so this verdict is SPY's whichever strategy is
              selected, and a QQQ reader would otherwise take it for theirs. -->
-        <span class="rv-advisory">SPY session &middot; advisory &middot; does not gate signals</span>
+        <span class="rv-advisory"><span class="rv-adv-full">SPY session &middot; advisory &middot; does not gate signals</span><span
+          class="rv-adv-short">SPY &middot; advisory</span></span>
         <button class="icon-btn" onclick="loadRegimeVerdict(true)" aria-label="Refresh regime verdict" title="Re-read the verdict and the live VIX1D"><svg class="ico"><use href="#ic-refresh"></use></svg></button>
       </div>
 
@@ -308,7 +317,9 @@ function renderRegimeVerdict() {
           <div class="rv-fig">
             <div class="rv-fig-lab">Implied move (open)</div>
             <div class="rv-fig-val rv-fig-dim">$${rvNum(d.open_impl_move, 2)}</div>
-            <div class="rv-fig-sub">band ${escapeHtml(String(d.regime_band_fine || '-')).replace(/_/g, ' ').toLowerCase()}</div>
+            <div class="rv-fig-sub">${d.open_impl_move
+                ? '&plusmn;$' + rvNum(Number(d.open_impl_move) * 2, 2) + ' implied range'
+                : 'no implied move'}</div>
           </div>
           <div class="rv-fig">
             <div class="rv-fig-lab">Delivered so far</div>
@@ -325,7 +336,11 @@ function renderRegimeVerdict() {
 
       <div class="rv-event">
         <label for="rv-event">Event context</label>
-        <select id="rv-event" onchange="setRegimeEvent(this.value)">
+        <!-- ctrl-select, not a bare select: that class is what themes a
+             control on this page. Without it the dropdown rendered as the
+             browser default - white on near-black in dark mode - and missed
+             the 36px tap target the phone rules give every other control. -->
+        <select id="rv-event" class="ctrl-select" onchange="setRegimeEvent(this.value)">
           ${['UNSET', 'PRE_EVENT', 'POST_EVENT', 'CLEAN'].map(k => `
             <option value="${k}" title="${escapeHtml(REGIME_EVENT_HELP[k])}"${d.event_context === k ? ' selected' : ''}>${escapeHtml(REGIME_EVENT_LABEL[k])}</option>
           `).join('')}
@@ -339,9 +354,7 @@ function renderRegimeVerdict() {
       ${renderRegimeStrip()}
       ${renderRegimeTally()}
 
-      <div class="rv-foot">observe &amp; log &mdash; this verdict is unconfirmed. It is a
-        hypothesis being scored in public, not a filter. The signal table and the
-        alerts are unaffected by whatever it says.</div>
+      <div class="rv-foot">observe &amp; log &mdash; unconfirmed, scored in public. Advisory only: it does not gate signals.</div>
     </div>`;
 }
 
@@ -369,7 +382,7 @@ function renderRegimeStrip() {
         <div class="rv-col-h">${mark}</div>
         ${r.event_context && r.event_context !== 'UNSET'
             ? `<div class="rv-col-e" title="${escapeHtml(REGIME_EVENT_HELP[r.event_context] || '')}">${escapeHtml((REGIME_EVENT_LABEL[r.event_context] || '').slice(0, 4))}</div>`
-            : '<div class="rv-col-e"></div>'}
+            : ''}
       </div>`;
   }).join('');
 
@@ -386,10 +399,14 @@ function renderRegimeTally() {
   const byKind = k => all.filter(r => r.grouping_kind === k);
   const order = { 'FAVOURABLE': 0, 'THIN': 1, 'CAUTION': 2, 'NO DATA': 3 };
   const verdicts = byKind('verdict').sort((a, b) => (order[a.label] ?? 9) - (order[b.label] ?? 9));
-  const fine = byKind('fine_band');
+  /* SQL returns these ordered by code, which puts GTE17 first and reads as
+     though the bands run high to low. Order them by where they sit on the
+     scale instead. */
+  const fineOrder = { 'LT10': 0, 'MID_10_13': 1, 'MID_13_17': 2, 'GTE17': 3, 'NONE': 4 };
+  const fine = byKind('fine_band').sort((a, b) => (fineOrder[a.label] ?? 9) - (fineOrder[b.label] ?? 9));
 
   const row = r => `<tr>
-      <td>${escapeHtml(String(r.label || '-').replace(/_/g, ' '))}</td>
+      <td>${escapeHtml(REGIME_FINE_LABEL[r.label] || String(r.label || '-').replace(/_/g, ' '))}</td>
       <td class="num">${escapeHtml(String(r.days ?? '-'))}</td>
       <td class="num">${escapeHtml(String(r.hits ?? '-'))}</td>
       <td class="num">${r.hit_rate_pct === null || r.hit_rate_pct === undefined ? '&mdash;' : escapeHtml(String(r.hit_rate_pct)) + '%'}</td>
@@ -398,24 +415,42 @@ function renderRegimeTally() {
       <td class="num">${rvNum(r.avg_efficiency, 1)}%</td>
     </tr>`;
 
-  return `<div class="rv-tally">
-      <div class="rv-sub">Running record, every scored session</div>
-      <table class="rv-table">
+  /* The headline goes in the <summary>, the tables behind it.
+
+     #top is capped at clamp(180px, 52vh, 470px) and scrolls internally, and
+     the band is only ~360px with both disclosures open. Two seven-column
+     tables rendered flat pushed the card past that cap, which does not
+     truncate visibly - it drops the content into an inner scroll area with
+     no affordance, so the card simply was not there. A verdict you cannot
+     see is worse than no card.
+
+     So the record collapses to one line that still carries the number that
+     matters: hits over days, per verdict. Nothing is hidden that was not
+     already a click away - the fine bands were behind a <details> from the
+     start - and the summary line is the comparison the merge rests on. */
+  const headline = verdicts
+    .filter(r => r.label !== 'NO DATA')
+    .map(r => `${escapeHtml(String(r.label))} ${escapeHtml(String(r.hits ?? 0))}/${escapeHtml(String(r.days ?? 0))}`)
+    .join(' · ');
+
+  return `<details class="rv-tally">
+      <summary><span class="rv-sub-inline">Running record</span> ${headline}</summary>
+      <div class="rv-tscroll"><table class="rv-table">
         <thead><tr><th>Verdict</th><th class="num">Days</th><th class="num">Hits</th>
           <th class="num">Rate</th><th class="num">Median</th><th class="num">Net</th><th class="num">Eff</th></tr></thead>
         <tbody>${verdicts.map(row).join('')}</tbody>
-      </table>
+      </table></div>
       ${fine.length ? `<details class="rv-details">
         <summary>By raw VIX1D band (${fine.length})</summary>
         <div class="rv-sub">The card merges 10&ndash;17 into one green band because the
           sample cannot separate those two. These rows are kept so that decision can be
           revisited rather than buried &mdash; if the record here ever splits them, the
           split belongs back on the card.</div>
-        <table class="rv-table">
+        <div class="rv-tscroll"><table class="rv-table">
           <thead><tr><th>Band</th><th class="num">Days</th><th class="num">Hits</th>
             <th class="num">Rate</th><th class="num">Median</th><th class="num">Net</th><th class="num">Eff</th></tr></thead>
           <tbody>${fine.map(row).join('')}</tbody>
-        </table>
+        </table></div>
       </details>` : ''}
-    </div>`;
+    </details>`;
 }

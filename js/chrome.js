@@ -372,6 +372,29 @@
          see it; a closed panel should cost nothing. loadNews() caches, so
          every open after the first is free. */
       if (open && name === 'news' && typeof loadNews === 'function') loadNews();
+
+      /* Bring the panel you just opened into view.
+
+         #top is capped at clamp(180px, 52vh, 470px) with overflow-y:auto, and
+         the disclosures sit at the bottom of it, below the command bar, the
+         date bar, the pin card and the rail. Past that cap the panel opens
+         into the part of #top you cannot see: the button lights up, the band
+         does not visibly change, and the panel reads as broken rather than as
+         scrolled away. That is exactly what happened to the regime verdict
+         card, which rendered perfectly and was invisible.
+
+         'nearest' rather than 'start': it scrolls the minimum needed, so a
+         panel that was already visible does not move at all, and the command
+         bar is not pushed out of the band when only a few pixels were
+         missing.
+
+         Only on a click. initDisclosures() always passes an explicit boolean
+         and a restored panel must not yank the band on load; the inline
+         onclick handlers pass one argument, so an undefined `force` is the
+         user-initiated path. */
+      if (open && force === undefined && panel.scrollIntoView) {
+        panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
     }
 
     /* Which panels were open is a per-device preference, like the theme and
